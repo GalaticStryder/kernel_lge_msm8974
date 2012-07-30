@@ -246,6 +246,7 @@ struct snd_kcontrol *snd_ctl_new1(const struct snd_kcontrol_new *ncontrol,
 	kctl.count = ncontrol->count ? ncontrol->count : 1;
 	access = ncontrol->access == 0 ? SNDRV_CTL_ELEM_ACCESS_READWRITE :
 		 (ncontrol->access & (SNDRV_CTL_ELEM_ACCESS_READWRITE|
+				      SNDRV_CTL_ELEM_ACCESS_VOLATILE|
 				      SNDRV_CTL_ELEM_ACCESS_INACTIVE|
 				      SNDRV_CTL_ELEM_ACCESS_TLV_READWRITE|
 				      SNDRV_CTL_ELEM_ACCESS_TLV_COMMAND|
@@ -1461,6 +1462,8 @@ static ssize_t snd_ctl_read(struct file *file, char __user *buffer,
 			spin_unlock_irq(&ctl->read_lock);
 			schedule();
 			remove_wait_queue(&ctl->change_sleep, &wait);
+			if (ctl->card->shutdown)
+				return -ENODEV;
 			if (signal_pending(current))
 				return -ERESTARTSYS;
 			spin_lock_irq(&ctl->read_lock);
