@@ -3488,7 +3488,7 @@ unsigned int work_busy(struct work_struct *work)
 	unsigned int ret = 0;
 
 	if (!gcwq)
-		return false;
+		return 0;
 
 	spin_lock_irqsave(&gcwq->lock, flags);
 
