@@ -8,6 +8,10 @@ menu "File systems"
 config DCACHE_WORD_ACCESS
        bool
 
+config FS_SYNC
+	bool "Add fsync sysfs node"
+	default n
+
 if BLOCK
 
 source "fs/ext2/Kconfig"
