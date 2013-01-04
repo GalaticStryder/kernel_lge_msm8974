@@ -96,7 +96,7 @@ static int ipc_memory_callback(struct notifier_block *self,
  *	chain: since msgmni scales to lowmem this callback routine will be
  *	called upon successful memory add / remove to recompute msmgni.
  */
- 
+
 static int __init ipc_init(void)
 {
 	sem_init();
@@ -115,13 +115,14 @@ __initcall(ipc_init);
  *	Set up the sequence range to use for the ipc identifier range (limited
  *	below IPCMNI) then initialise the ids idr.
  */
- 
+
 void ipc_init_ids(struct ipc_ids *ids)
 {
 	init_rwsem(&ids->rw_mutex);
 
 	ids->in_use = 0;
 	ids->seq = 0;
+	ids->next_id = -1;
 	{
 		int seq_limit = INT_MAX/SEQ_MULTIPLIER;
 		if (seq_limit > USHRT_MAX)
@@ -168,16 +169,16 @@ void __init ipc_init_proc_interface(const char *path, const char *header,
 #endif
 
 /**
- *	ipc_findkey	-	find a key in an ipc identifier set	
+ *	ipc_findkey	-	find a key in an ipc identifier set
  *	@ids: Identifier set
  *	@key: The key to find
- *	
+ *
  *	Requires ipc_ids.rw_mutex locked.
  *	Returns the LOCKED pointer to the ipc structure if found or NULL
  *	if not.
  *	If key is found ipc points to the owning ipc structure
  */
- 
+
 static struct kern_ipc_perm *ipc_findkey(struct ipc_ids *ids, key_t key)
 {
 	struct kern_ipc_perm *ipc;
@@ -246,12 +247,13 @@ int ipc_get_maxid(struct ipc_ids *ids)
  *
  *	Called with ipc_ids.rw_mutex held as a writer.
  */
- 
+
 int ipc_addid(struct ipc_ids* ids, struct kern_ipc_perm* new, int size)
 {
 	uid_t euid;
 	gid_t egid;
 	int id, err;
+	int next_id = ids->next_id;
 
 	if (size > IPCMNI)
 		size = IPCMNI;
@@ -268,7 +270,8 @@ int ipc_addid(struct ipc_ids* ids, struct kern_ipc_perm* new, int size)
 	new->cuid = new->uid = euid;
 	new->gid = new->cgid = egid;
 
-	err = idr_get_new(&ids->ipcs_idr, new, &id);
+	err = idr_get_new_above(&ids->ipcs_idr, new,
+				(next_id < 0) ? 0 : ipcid_to_idx(next_id), &id);
 	if (err) {
 		spin_unlock(&new->lock);
 		rcu_read_unlock();
@@ -277,9 +280,14 @@ int ipc_addid(struct ipc_ids* ids, struct kern_ipc_perm* new, int size)
 
 	ids->in_use++;
 
-	new->seq = ids->seq++;
-	if(ids->seq > ids->seq_max)
-		ids->seq = 0;
+	if (next_id < 0) {
+		new->seq = ids->seq++;
+		if (ids->seq > ids->seq_max)
+			ids->seq = 0;
+	} else {
+		new->seq = ipcid_to_seqx(next_id);
+		ids->next_id = -1;
+	}
 
 	new->id = ipc_buildid(id, new->seq);
 	return id;
@@ -420,7 +428,7 @@ retry:
  *	ipc_ids.rw_mutex (as a writer) and the spinlock for this ID are held
  *	before this function is called, and remain locked on the exit.
  */
- 
+
 void ipc_rmid(struct ipc_ids *ids, struct kern_ipc_perm *ipcp)
 {
 	int lid = ipcid_to_idx(ipcp->id);
@@ -441,7 +449,7 @@ void ipc_rmid(struct ipc_ids *ids, struct kern_ipc_perm *ipcp)
  *	Allocate memory from the appropriate pools and return a pointer to it.
  *	NULL is returned if the allocation fails
  */
- 
+
 void* ipc_alloc(int size)
 {
 	void* out;
@@ -515,20 +523,20 @@ static inline int rcu_use_vmalloc(int size)
 }
 
 /**
- *	ipc_rcu_alloc	-	allocate ipc and rcu space 
+ *	ipc_rcu_alloc	-	allocate ipc and rcu space
  *	@size: size desired
  *
  *	Allocate memory for the rcu header structure +  the object.
  *	Returns the pointer to the object.
- *	NULL is returned if the allocation fails. 
+ *	NULL is returned if the allocation fails.
  */
- 
+
 void* ipc_rcu_alloc(int size)
 {
 	void* out;
-	/* 
+	/*
 	 * We prepend the allocation with the rcu struct, and
-	 * workqueue if necessary (for vmalloc). 
+	 * workqueue if necessary (for vmalloc).
 	 */
 	if (rcu_use_vmalloc(size)) {
 		out = vmalloc(HDRLEN_VMALLOC + size);
@@ -562,7 +570,7 @@ static void ipc_do_vfree(struct work_struct *work)
 /**
  * ipc_schedule_free - free ipc + rcu space
  * @head: RCU callback structure for queued work
- * 
+ *
  * Since RCU callback function is called in bh,
  * we need to defer the vfree to schedule_work().
  */
@@ -603,7 +611,7 @@ void ipc_rcu_putref(void *ptr)
  *
  * 	@flag will most probably be 0 or S_...UGO from <linux/stat.h>
  */
- 
+
 int ipcperms(struct ipc_namespace *ns, struct kern_ipc_perm *ipcp, short flag)
 {
 	uid_t euid = current_euid();
@@ -618,7 +626,7 @@ int ipcperms(struct ipc_namespace *ns, struct kern_ipc_perm *ipcp, short flag)
 	else if (in_group_p(ipcp->cgid) || in_group_p(ipcp->gid))
 		granted_mode >>= 3;
 	/* is there some bit set in requested_mode but not in granted_mode? */
-	if ((requested_mode & ~granted_mode & 0007) && 
+	if ((requested_mode & ~granted_mode & 0007) &&
 	    !ns_capable(ns->user_ns, CAP_IPC_OWNER))
 		return -1;
 
@@ -638,7 +646,7 @@ int ipcperms(struct ipc_namespace *ns, struct kern_ipc_perm *ipcp, short flag)
  *	Turn the kernel object @in into a set of permissions descriptions
  *	for returning to userspace (@out).
  */
- 
+
 
 void kernel_to_ipc64_perm (struct kern_ipc_perm *in, struct ipc64_perm *out)
 {
@@ -659,7 +667,7 @@ void kernel_to_ipc64_perm (struct kern_ipc_perm *in, struct ipc64_perm *out)
  *	Turn the new style permissions object @in into a compatibility
  *	object and store it into the @out pointer.
  */
- 
+
 void ipc64_perm_to_ipc_perm (struct ipc64_perm *in, struct ipc_perm *out)
 {
 	out->key	= in->key;
@@ -694,7 +702,7 @@ struct kern_ipc_perm *ipc_lock(struct ipc_ids *ids, int id)
 	}
 
 	spin_lock(&out->lock);
-	
+
 	/* ipc_rmid() may have already freed the ID while ipc_lock
 	 * was spinning: here verify that the structure is still valid
 	 */
@@ -811,11 +819,11 @@ out_up:
  *	ipc_parse_version	-	IPC call version
  *	@cmd: pointer to command
  *
- *	Return IPC_64 for new style IPC and IPC_OLD for old style IPC. 
+ *	Return IPC_64 for new style IPC and IPC_OLD for old style IPC.
  *	The @cmd value is turned from an encoding command and version into
  *	just the command code.
  */
- 
+
 int ipc_parse_version (int *cmd)
 {
 	if (*cmd & IPC_64) {
