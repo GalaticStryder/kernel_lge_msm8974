@@ -147,7 +147,7 @@ void disable_cpufreq(void)
 static LIST_HEAD(cpufreq_governor_list);
 static DEFINE_MUTEX(cpufreq_governor_mutex);
 
-static struct cpufreq_policy *__cpufreq_cpu_get(unsigned int cpu, int sysfs)
+static struct cpufreq_policy *__cpufreq_cpu_get(unsigned int cpu, bool sysfs)
 {
 	struct cpufreq_policy *data;
 	unsigned long flags;
@@ -187,16 +187,19 @@ err_out:
 
 struct cpufreq_policy *cpufreq_cpu_get(unsigned int cpu)
 {
-	return __cpufreq_cpu_get(cpu, 0);
+	if (cpufreq_disabled())
+		return NULL;
+
+	return __cpufreq_cpu_get(cpu, false);
 }
 EXPORT_SYMBOL_GPL(cpufreq_cpu_get);
 
 static struct cpufreq_policy *cpufreq_cpu_get_sysfs(unsigned int cpu)
 {
-	return __cpufreq_cpu_get(cpu, 1);
+	return __cpufreq_cpu_get(cpu, true);
 }
 
-static void __cpufreq_cpu_put(struct cpufreq_policy *data, int sysfs)
+static void __cpufreq_cpu_put(struct cpufreq_policy *data, bool sysfs)
 {
 	if (!sysfs)
 		kobject_put(&data->kobj);
@@ -205,13 +208,16 @@ static void __cpufreq_cpu_put(struct cpufreq_policy *data, int sysfs)
 
 void cpufreq_cpu_put(struct cpufreq_policy *data)
 {
-	__cpufreq_cpu_put(data, 0);
+	if (cpufreq_disabled())
+		return;
+
+	__cpufreq_cpu_put(data, false);
 }
 EXPORT_SYMBOL_GPL(cpufreq_cpu_put);
 
 static void cpufreq_cpu_put_sysfs(struct cpufreq_policy *data)
 {
-	__cpufreq_cpu_put(data, 1);
+	__cpufreq_cpu_put(data, true);
 }
 
 /*********************************************************************
@@ -270,6 +276,9 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 	struct cpufreq_policy *policy;
 
 	BUG_ON(irqs_disabled());
+
+	if (cpufreq_disabled())
+		return;
 
 	freqs->flags = cpufreq_driver->flags;
 	pr_debug("notification %u of frequency transition to %u kHz\n",
@@ -1452,6 +1461,9 @@ int cpufreq_register_notifier(struct notifier_block *nb, unsigned int list)
 {
 	int ret;
 
+	if (cpufreq_disabled())
+		return -EINVAL;
+
 	WARN_ON(!init_cpufreq_transition_notifier_list_called);
 
 	switch (list) {
@@ -1485,6 +1497,9 @@ EXPORT_SYMBOL(cpufreq_register_notifier);
 int cpufreq_unregister_notifier(struct notifier_block *nb, unsigned int list)
 {
 	int ret;
+
+	if (cpufreq_disabled())
+		return -EINVAL;
 
 	switch (list) {
 	case CPUFREQ_TRANSITION_NOTIFIER:
@@ -1563,6 +1578,9 @@ EXPORT_SYMBOL_GPL(cpufreq_driver_target);
 int __cpufreq_driver_getavg(struct cpufreq_policy *policy, unsigned int cpu)
 {
 	int ret = 0;
+
+	if (cpufreq_disabled())
+		return ret;
 
 	if (!(cpu_online(cpu) && cpufreq_driver->getavg))
 		return 0;
