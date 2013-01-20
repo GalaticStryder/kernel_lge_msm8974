@@ -422,6 +422,7 @@ void cpufreq_frequency_table_get_attr(struct cpufreq_frequency_table *table,
 void cpufreq_frequency_table_update_policy_cpu(struct cpufreq_policy *policy);
 
 void cpufreq_frequency_table_put_attr(unsigned int cpu);
+const char *cpufreq_get_current_driver(void);
 
 
 /*********************************************************************
