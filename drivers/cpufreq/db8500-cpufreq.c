@@ -144,8 +144,6 @@ static int __cpuinit db8500_cpufreq_init(struct cpufreq_policy *policy)
 	/* policy sharing between dual CPUs */
 	cpumask_copy(policy->cpus, cpu_present_mask);
 
-	policy->shared_type = CPUFREQ_SHARED_TYPE_ALL;
-
 	return 0;
 }
 
