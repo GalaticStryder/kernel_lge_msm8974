@@ -1053,12 +1053,9 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 		__cpufreq_governor(data, CPUFREQ_GOV_STOP);
 
 #ifdef CONFIG_HOTPLUG_CPU
-	strncpy(per_cpu(cpufreq_policy_save, cpu).gov, data->governor->name,
-			CPUFREQ_NAME_LEN);
-	per_cpu(cpufreq_policy_save, cpu).min = data->user_policy.min;
-	per_cpu(cpufreq_policy_save, cpu).max = data->user_policy.max;
-	pr_debug("Saving CPU%d user policy min %d and max %d\n",
-			cpu, data->user_policy.min, data->user_policy.max);
+	if (!cpufreq_driver->setpolicy)
+		strncpy(per_cpu(cpufreq_cpu_governor, cpu),
+			data->governor->name, CPUFREQ_NAME_LEN);
 #endif
 
 	WARN_ON(lock_policy_rwsem_write(cpu));
