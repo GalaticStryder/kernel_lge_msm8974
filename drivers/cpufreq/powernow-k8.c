@@ -1242,7 +1242,7 @@ struct init_on_cpu {
 	int rc;
 };
 
-static void __cpuinit powernowk8_cpu_init_on_cpu(void *_init_on_cpu)
+static void powernowk8_cpu_init_on_cpu(void *_init_on_cpu)
 {
 	struct init_on_cpu *init_on_cpu = _init_on_cpu;
 
@@ -1264,7 +1264,7 @@ static void __cpuinit powernowk8_cpu_init_on_cpu(void *_init_on_cpu)
 }
 
 /* per CPU init entry point to the driver */
-static int __cpuinit powernowk8_cpu_init(struct cpufreq_policy *pol)
+static int powernowk8_cpu_init(struct cpufreq_policy *pol)
 {
 	static const char ACPI_PSS_BIOS_BUG_MSG[] =
 		KERN_ERR FW_BUG PFX "No compatible ACPI _PSS objects found.\n"
@@ -1550,7 +1550,7 @@ static struct notifier_block cpb_nb = {
 };
 
 /* driver entry point for init */
-static int __cpuinit powernowk8_init(void)
+static int powernowk8_init(void)
 {
 	unsigned int i, supported_cpus = 0, cpu;
 	int rv;
