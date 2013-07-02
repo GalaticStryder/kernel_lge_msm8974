@@ -333,11 +333,12 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 	switch (state) {
 
 	case CPUFREQ_PRECHANGE:
-		if (WARN(policy->transition_ongoing,
+		if (WARN(policy->transition_ongoing ==
+					cpumask_weight(policy->cpus),
 				"In middle of another frequency transition\n"))
 			return;
 
-		policy->transition_ongoing = true;
+		policy->transition_ongoing++;
 
 		/* detect if the driver reported a value as "old frequency"
 		 * which is not equal to what the cpufreq core thinks is
@@ -362,7 +363,7 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 				"No frequency transition in progress\n"))
 			return;
 
-		policy->transition_ongoing = false;
+		policy->transition_ongoing--;
 
 		adjust_jiffies(CPUFREQ_POSTCHANGE, freqs);
 		pr_debug("FREQ: %lu - CPU: %lu", (unsigned long)freqs->new,
