@@ -241,7 +241,6 @@ void cpufreq_unregister_governor(struct cpufreq_governor *governor);
 struct freq_attr;
 
 struct cpufreq_driver {
-	struct module		*owner;
 	char			name[CPUFREQ_NAME_LEN];
 	u8			flags;
 

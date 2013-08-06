@@ -388,7 +388,6 @@ static struct cpufreq_driver speedstep_driver = {
 	.exit		= speedstep_cpu_exit,
 	.get		= speedstep_get,
 	.resume		= speedstep_resume,
-	.owner		= THIS_MODULE,
 	.attr		= speedstep_attr,
 };
 

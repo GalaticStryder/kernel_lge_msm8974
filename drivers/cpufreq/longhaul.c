@@ -948,7 +948,6 @@ static struct cpufreq_driver longhaul_driver = {
 	.init	= longhaul_cpu_init,
 	.exit	= __devexit_p(longhaul_cpu_exit),
 	.name	= "longhaul",
-	.owner	= THIS_MODULE,
 	.attr	= longhaul_attr,
 };
 
