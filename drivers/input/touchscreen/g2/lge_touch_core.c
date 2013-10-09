@@ -3455,6 +3455,9 @@ static irqreturn_t touch_thread_irq_handler(int irq, void *dev_id)
 		TOUCH_INFO_MSG("gesture wakeup\n");
 		queue_delayed_work(touch_wq, &ts->work_gesture_wakeup,
 				msecs_to_jiffies(0));
+		input_report_key(ts->input_dev, KEY_POWER, BUTTON_PRESSED);
+		input_report_key(ts->input_dev, KEY_POWER, BUTTON_RELEASED);
+		input_sync(ts->input_dev);
 		return IRQ_HANDLED;
 	}
 #endif
@@ -5703,6 +5706,11 @@ static int touch_probe(struct i2c_client *client, const struct i2c_device_id *id
 			set_bit(ts->pdata->caps->button_name[ret], ts->input_dev->keybit);
 		}
 	}
+
+#ifdef CUST_G2_TOUCH_WAKEUP_GESTURE
+	set_bit(EV_KEY, ts->input_dev->evbit);
+	set_bit(KEY_POWER, ts->input_dev->keybit);
+#endif
 
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, ts->pdata->caps->x_max, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0,
