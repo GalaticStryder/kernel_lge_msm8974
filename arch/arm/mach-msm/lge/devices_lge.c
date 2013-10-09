@@ -731,12 +731,12 @@ int g_kcal_b = 255;
 
 int kcal_set_values(int kcal_r, int kcal_g, int kcal_b)
 {
-#if 0
+#if 1
 	int is_update = 0;
 
-	int kcal_r_limit = 250;
-	int kcal_g_limit = 250;
-	int kcal_b_limit = 253;
+	int kcal_r_limit = 0;
+	int kcal_g_limit = 0;
+	int kcal_b_limit = 0;
 
 	g_kcal_r = kcal_r < kcal_r_limit ? kcal_r_limit : kcal_r;
 	g_kcal_g = kcal_g < kcal_g_limit ? kcal_g_limit : kcal_g;
