@@ -247,6 +247,24 @@ void bluesleep_sleep_wakeup(void)
 		clear_bit(BT_ASLEEP, &flags);
 		/*Activating UART */
 	}
+/* LG_BTUI : chanha.park@lge.com : Enable Bluesleep-[S] */
+#ifdef CONFIG_LGE_BLUESLEEP
+	else {
+		int wake, host_wake;
+		wake = gpio_get_value(bsi->ext_wake);
+		host_wake = gpio_get_value(bsi->host_wake);
+
+		if (wake == 0 && host_wake == 0) {
+			BT_DBG("Start Timer : check hostwake status when timer expired");
+			mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
+		}
+		if (bsi->uport != NULL && msm_hs_get_bt_uport_clock_state(bsi->uport) == CLOCK_REQUEST_AVAILABLE) {
+			BT_DBG("[LG_BTUI] Enter abnormal status, HAVE to Call hsuart_power(1)!!!!");
+			hsuart_power(1);
+		}
+	}
+#endif
+
 }
 
 static void bluesleep_ext_wake_set_wq(struct work_struct *work)
