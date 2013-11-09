@@ -223,7 +223,7 @@ int bluesleep_can_sleep(void)
 {
 	BT_DBG("can sleep on %d",gpio_get_value(bsi->ext_wake));
 	/* check if WAKE_BT_GPIO and BT_WAKE_GPIO are both deasserted */
-	return (
+	return (!(test_bit(BT_EXT_WAKE, &flags)) &&
                 !gpio_get_value(bsi->host_wake) &&
 		(bsi->uport != NULL));
 }
@@ -237,8 +237,6 @@ void bluesleep_sleep_wakeup(void)
 			pm_qos_update_request(&bsi->dma_qos, 19); 
 		}
 #endif /* BT_DMA_QOS_REQUEST */
-		/*Activating UART */
-		hsuart_power(1);
 		wake_lock(&bsi->wake_lock);
 		/* Start the timer */
 		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
@@ -246,24 +244,8 @@ void bluesleep_sleep_wakeup(void)
 		set_bit(BT_EXT_WAKE, &flags);
 		clear_bit(BT_ASLEEP, &flags);
 		/*Activating UART */
+		hsuart_power(1);
 	}
-/* LG_BTUI : chanha.park@lge.com : Enable Bluesleep-[S] */
-#ifdef CONFIG_LGE_BLUESLEEP
-	else {
-		int wake, host_wake;
-		wake = gpio_get_value(bsi->ext_wake);
-		host_wake = gpio_get_value(bsi->host_wake);
-
-		if (wake == 0 && host_wake == 0) {
-			BT_DBG("Start Timer : check hostwake status when timer expired");
-			mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
-		}
-		if (bsi->uport != NULL && msm_hs_get_bt_uport_clock_state(bsi->uport) == CLOCK_REQUEST_AVAILABLE) {
-			BT_DBG("[LG_BTUI] Enter abnormal status, HAVE to Call hsuart_power(1)!!!!");
-			hsuart_power(1);
-		}
-	}
-#endif
 
 }
 
@@ -365,15 +347,7 @@ static void bluesleep_outgoing_data(void)
 	if (!test_bit(BT_EXT_WAKE, &flags)) {
 		BT_DBG("tx was sleeping");
 
-		/*
-		** Uart Clk should be enabled promptly
-		** before bluedroid write TX data.
-		*/
-		if (test_bit(BT_ASLEEP, &flags)) {
-			hsuart_power(1);
-		}
-
-		bluesleep_tx_data_wakeup();
+		bluesleep_sleep_wakeup();
 	}
 }
 
@@ -382,7 +356,7 @@ struct uart_port *bluesleep_get_uart_port(void)
 {
 	struct uart_port *uport = NULL;
 
-	uport = msm_hs_get_bt_uport(BT_PORT_NUM);
+	uport = msm_hs_get_uart_port(BT_PORT_NUM);
 
 	return uport;
 }
@@ -784,13 +758,6 @@ static struct of_device_id bluesleep_match_table[] = {
         { .compatible = "lge,bcm_bluesleep" },
         {}
 };
-
-#ifdef CONFIG_LGE_BLUESLEEP
-void bluesleep_forced_stop(void) {
-	bluesleep_stop();
-}
-EXPORT_SYMBOL(bluesleep_forced_stop);
-#endif
 
 static int bluesleep_populate_dt_pinfo(struct platform_device *pdev)
 {
