@@ -184,6 +184,7 @@ CONFIG_DEFAULT_IOSCHED="noop"
 # Lambda ~ Sync Utilities
 #
 CONFIG_FS_SYNC=y
+CONFIG_ASYNC_FSYNC=y
 
 #
 # Lamda ~ TCP Congestion Control

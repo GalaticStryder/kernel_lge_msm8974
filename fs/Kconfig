@@ -12,8 +12,14 @@ config FS_SYNC
 	bool "Filesystem Sync"
 	default n
 	help
-	  A simple switcher to make FS sync opt-out to increase
-	  read/write performance.
+	  A simple switcher to make filesystem sync opt-out
+	  to increase read/write performance.
+
+config ASYNC_FSYNC
+	bool "Asynchronous Filesystem Sync"
+	default n
+	help
+	  HTC's asynchronous filesystem sync utility.
 
 if BLOCK
 
