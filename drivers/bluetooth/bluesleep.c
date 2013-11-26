@@ -135,7 +135,7 @@ DECLARE_DELAYED_WORK(bluesleep_stop_workqueue, bluesleep_stop_wq);
 
 
 /* 10 second timeout */
-#define TX_TIMER_INTERVAL  3
+#define TX_TIMER_INTERVAL  10
 
 /* state variable names and bit positions */
 #define BT_PROTO	 0x01
