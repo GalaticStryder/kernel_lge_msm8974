@@ -141,11 +141,14 @@ struct cpufreq_policy {
 	struct rw_semaphore	rwsem;
 };
 
+/* Policy Notifiers  */
 #define CPUFREQ_ADJUST			(0)
 #define CPUFREQ_INCOMPATIBLE		(1)
 #define CPUFREQ_NOTIFY			(2)
 #define CPUFREQ_START			(3)
 #define CPUFREQ_UPDATE_POLICY_CPU	(4)
+#define CPUFREQ_CREATE_POLICY		(5)
+#define CPUFREQ_REMOVE_POLICY		(6)
 
 /* Only for ACPI */
 #define CPUFREQ_SHARED_TYPE_NONE (0) /* None */
