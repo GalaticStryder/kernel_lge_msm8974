@@ -1780,16 +1780,22 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	ttwu_queue(p, cpu);
 stat:
 	ttwu_stat(p, cpu, wake_flags);
-
 out:
-
-	notify = task_notify_on_migrate(p);
-
 	raw_spin_unlock_irqrestore(&p->pi_lock, flags);
 
-	if (src_cpu != cpu && notify)
+	if (src_cpu != cpu && task_notify_on_migrate(p)) {
+		struct migration_notify_data mnd;
+
+		mnd.src_cpu = src_cpu;
+		mnd.dest_cpu = cpu;
+		if (sysctl_sched_ravg_window)
+			mnd.load = div64_u64((u64)p->se.ravg.demand * 100,
+				(u64)(sysctl_sched_ravg_window));
+		else
+			mnd.load = 0;
 		atomic_notifier_call_chain(&migration_notifier_head,
-					   cpu, (void *)src_cpu);
+					   0, (void *)&mnd);
+	}
 	return success;
 }
 
@@ -5274,13 +5280,21 @@ done:
 	ret = 1;
 fail:
 	double_rq_unlock(rq_src, rq_dest);
-
-	notify = task_notify_on_migrate(p);
-
 	raw_spin_unlock(&p->pi_lock);
-	if (moved && notify)
+
+	if (moved && task_notify_on_migrate(p)) {
+		struct migration_notify_data mnd;
+
+		mnd.src_cpu = src_cpu;
+		mnd.dest_cpu = dest_cpu;
+		if (sysctl_sched_ravg_window)
+			mnd.load = div64_u64((u64)p->se.ravg.demand * 100,
+				(u64)(sysctl_sched_ravg_window));
+		else
+			mnd.load = 0;
 		atomic_notifier_call_chain(&migration_notifier_head,
-					   dest_cpu, (void *)src_cpu);
+					   0, (void *)&mnd);
+	}
 	return ret;
 }
 
