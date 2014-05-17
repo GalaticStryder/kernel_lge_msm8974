@@ -79,16 +79,6 @@ config DEVFREQ_GOV_MSM_ADRENO_TZ
 	  Sets the frequency using a "on-demand" algorithm.
 	  This governor is unlikely to be useful for other devices.
 
-config ADRENO_IDLER
-	tristate "MSM Adreno Idler"
-	depends on DEVFREQ_GOV_MSM_ADRENO_TZ
-	default n
-	help
-	  Uses a different calculation method on top of Adreno TZ
-	  just for calculating frequency for idle to reduce the
-	  wasted power coming from stock Adreno TZ while
-	  maintaining high-performance.
-
 config MSM_BIMC_BWMON
 	tristate "MSM BIMC Bandwidth monitor hardware"
 	depends on ARCH_MSM
@@ -127,6 +117,24 @@ config DEVFREQ_GOV_CONSERVATIVE
 	  Chooses frequency based on the recent load on the device. Works
 	  similar as conservative governor of cpufreq does and implements
 	  the useful optimizations from Adreno TZ.
+
+config ADRENO_IDLER
+	tristate "MSM Adreno Idler"
+	depends on DEVFREQ_GOV_MSM_ADRENO_TZ
+	default n
+	help
+	  Uses a different calculation method on top of Adreno TZ
+	  just for calculating frequency for idle to reduce the
+	  wasted power coming from stock Adreno TZ while
+	  maintaining high-performance.
+
+config SIMPLE_GPU_ALGORITHM
+	bool "Simple GPU Algorithm"
+	depends on DEVFREQ_GOV_MSM_ADRENO_TZ
+	default n
+	help
+	  A simple user configurable GPU controlling algorithm for the Adreno TZ
+	  governor.
 
 comment "DEVFREQ Drivers"
 
