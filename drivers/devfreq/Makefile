@@ -16,5 +16,5 @@ obj-$(CONFIG_LGE_DEVFREQ_DFPS)  += g3_display.o
 ccflags-$(CONFIG_LGE_DEVFREQ_DFPS) += -I$(srctree)/drivers/video/msm/mdss
 
 obj-$(CONFIG_ARM_EXYNOS4_BUS_DEVFREQ)	+= exynos4_bus.o
-obj-$(CONFIG_MSM_DEVFREQ_CPUBW)		+= devfreq_cpubw.o
+obj-$(CONFIG_MSM_DEVFREQ_DEVBW)		+= devfreq_devbw.o
 obj-$(CONFIG_DEVFREQ_SIMPLE_DEV)	+= devfreq_simple_dev.o
