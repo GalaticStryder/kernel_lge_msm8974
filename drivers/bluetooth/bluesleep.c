@@ -297,9 +297,9 @@ static void bluesleep_sleep_work(struct work_struct *work)
 
 			/*Deactivating UART */
 			/* UART clk is not turned off immediately. Release
-			 * wakelock after 500 ms.
+			 * wakelock after 125 ms.
 			 */
-			wake_lock_timeout(&bsi->wake_lock, HZ / 2);
+			wake_lock_timeout(&bsi->wake_lock, HZ / 8);
 		} else {
 			mod_timer(&tx_timer, jiffies + TX_TIMER_INTERVAL * HZ);
 			return;
@@ -590,7 +590,7 @@ static void bluesleep_stop_wq(struct work_struct *work)
 	}
 #endif /* BT_DMA_QOS_REQUEST */
 
-	wake_lock_timeout(&bsi->wake_lock, HZ / 2);
+	wake_lock_timeout(&bsi->wake_lock, HZ / 8);
 
 	bsi->uport = NULL;
 }
