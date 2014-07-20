@@ -257,10 +257,7 @@
 #include <linux/kmemcheck.h>
 #include <linux/kthread.h>
 #include <linux/workqueue.h>
-
-#ifdef CONFIG_GENERIC_HARDIRQS
-# include <linux/irq.h>
-#endif
+#include <linux/irq.h>
 
 #include <asm/processor.h>
 #include <asm/uaccess.h>
@@ -612,7 +609,6 @@ static void credit_entropy_bits(struct entropy_store *r, int nbits)
 	if (!nbits)
 		return;
 
-	DEBUG_ENT("added %d entropy credits to %s\n", nbits, r->name);
 retry:
 	entropy_count = orig = ACCESS_ONCE(r->entropy_count);
 	if (nfrac < 0) {
@@ -665,13 +661,12 @@ retry:
 		goto retry;
 
 	r->entropy_total += nbits;
-	if (!r->initialized && nbits > 0) {
-		if (r->entropy_total > 128) {
-			if (r == &nonblocking_pool)
-				pr_notice("random: %s pool is initialized\n",
-					  r->name);
-			r->initialized = 1;
-			r->entropy_total = 0;
+	if (!r->initialized && r->entropy_total > 128) {
+		r->initialized = 1;
+		r->entropy_total = 0;
+		if (r == &nonblocking_pool) {
+			prandom_reseed_late();
+			pr_notice("random: %s pool is initialized\n", r->name);
 		}
 	}
 
@@ -834,8 +829,6 @@ static void add_timer_randomness(struct timer_rand_state *state, unsigned num)
 void add_input_randomness(unsigned int type, unsigned int code,
 				 unsigned int value)
 {
-/* random: prevent add_input from doing anything */
-#if 0
 	static unsigned char last_value;
 
 	/* ignore autorepeat and the like */
@@ -846,8 +839,6 @@ void add_input_randomness(unsigned int type, unsigned int code,
 	add_timer_randomness(&input_timer_state,
 			     (type << 4) ^ code ^ (code >> 4) ^ value);
 	trace_add_input_randomness(ENTROPY_BITS(&input_pool));
-#endif
-	return;
 }
 EXPORT_SYMBOL_GPL(add_input_randomness);
 
@@ -1400,12 +1391,11 @@ urandom_read(struct file *file, char __user *buf, size_t nbytes, loff_t *ppos)
 	int ret;
 
 #ifdef CONFIG_CRYPTO_FIPS
-	if (get_cc_mode_state())
+	if (get_cc_mode_state()) {
 		return random_read(file, buf, nbytes, ppos);
-	else {
+	} else
 #endif
-	int ret;
-
+	{
 	if (unlikely(nonblocking_pool.initialized == 0))
 		printk_once(KERN_NOTICE "random: %s urandom read "
 			    "with %d bits of entropy available\n",
@@ -1760,7 +1750,7 @@ void add_hwgenerator_randomness(const char *buffer, size_t count,
      * or when the calling thread is about to terminate.
      */
     wait_event_interruptible(random_write_wait, kthread_should_stop() ||
-            ENTROPY_BITS(poolp) <= random_write_wakeup_thresh);
+            ENTROPY_BITS(poolp) <= random_write_wakeup_bits);
     mix_pool_bytes(poolp, buffer, count, NULL);
     credit_entropy_bits(poolp, entropy);
 }
