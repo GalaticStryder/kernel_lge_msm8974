@@ -157,3 +157,6 @@ obj-$(CONFIG_MFD_ANATOP)	+= anatop-mfd.o
 obj-$(CONFIG_MFD_MAX77819) += max77819.o
 obj-$(CONFIG_MFD_TPS65132)	+= tps65132.o
 obj-$(CONFIG_LGE_LION_DSV)	+= lion_dsv.o
+
+# Fix build for GCC 4.7
+EXTRA_CFLAGS += -Wno-array-bounds
