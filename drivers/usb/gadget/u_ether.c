@@ -1194,7 +1194,7 @@ void gether_cleanup(void)
 #endif
 
 	unregister_netdev(the_dev->net);
-	flush_work_sync(&the_dev->work);
+	flush_work(&the_dev->work);
 	free_netdev(the_dev->net);
 
 	the_dev = NULL;
