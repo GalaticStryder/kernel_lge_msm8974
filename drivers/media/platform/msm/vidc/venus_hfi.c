@@ -1086,7 +1086,7 @@ static int __unset_free_ocmem(struct venus_hfi_device *device)
 
 	if (!rc) {
 		dprintk(VIDC_WARN,
-				"Core is in bad state, Skipping unset OCMEM\n");
+			"Core is in bad state, Skipping unset OCMEM\n");
 		goto core_in_bad_state;
 	}
 
@@ -2922,7 +2922,7 @@ static void venus_hfi_pm_hndlr(struct work_struct *work)
 
 	if (!rc) {
 		dprintk(VIDC_WARN,
-				"Core is in bad state, Skipping power collapse\n");
+			"Core is in bad state, Skipping power collapse\n");
 		return;
 	}
 
@@ -4046,4 +4046,3 @@ int venus_hfi_initialize(struct hfi_device *hdev, u32 device_id,
 err_venus_hfi_init:
 	return rc;
 }
-
