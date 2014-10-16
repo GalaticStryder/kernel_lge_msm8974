@@ -8,10 +8,6 @@ config ANDROID
 
 if ANDROID
 
-config ANDROID_BINDER_IPC
-	bool "Android Binder IPC Driver"
-	default n
-
 config ASHMEM
 	bool "Enable the Anonymous Shared Memory Subsystem"
 	default n
