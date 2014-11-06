@@ -305,6 +305,7 @@ int io_gpio; /* for china model */
 	int dsv_manufacturer;
 	struct notifier_block notif;
 #endif
+	bool dmap_iommu_map;
 	struct pwm_device *pwm_bl;
 	struct dsi_drv_cm_data shared_pdata;
 	u32 pclk_rate;
