@@ -131,7 +131,7 @@ static int __init init_cpufreq_transition_notifier_list(void)
 pure_initcall(init_cpufreq_transition_notifier_list);
 
 static int off __read_mostly;
-int cpufreq_disabled(void)
+static int cpufreq_disabled(void)
 {
 	return off;
 }
@@ -320,10 +320,6 @@ void cpufreq_notify_utilization(struct cpufreq_policy *policy,
 {
 	if (policy)
 		policy->util = util;
-
-	if (policy->util >= MIN_CPU_UTIL_NOTIFY)
-		sysfs_notify(&policy->kobj, NULL, "cpu_utilization");
-
 }
 
 /*********************************************************************
@@ -1010,8 +1006,17 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		pr_debug("initialization failed\n");
 		goto err_unlock_policy;
 	}
+
+	/*
+	 * affected cpus must always be the one, which are online. We aren't
+	 * managing offline cpus here.
+	 */
+	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
+
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
+
+	policy->util = 0;
 
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 				     CPUFREQ_START, policy);
@@ -1509,169 +1514,27 @@ int cpufreq_unregister_notifier(struct notifier_block *nb, unsigned int list)
 }
 EXPORT_SYMBOL(cpufreq_unregister_notifier);
 
-#if defined(CONFIG_LGE_LOW_BATT_LIMIT)
-#define BOOT_ARGS "chosen"
-static long	soc = 0;
-#include <linux/of.h>
 
-static int parse_batt_soc_bootarg(void)
-{
-	struct device_node *chosen_node;
-	static const char *cmd_line;
-	int rc = 0, len = 0, name_len = 0, cmd_len = 0;
-	char batt_soc[3] = {0,};
-	char *sidx, *eidx;
-	chosen_node = of_find_node_by_name(NULL, BOOT_ARGS);
-	if (!chosen_node) {
-		pr_err("%s: get chosen node failed\n", __func__);
-		return -ENODEV;
-	}
-
-	cmd_line = of_get_property(chosen_node, "bootargs", &len);
-	if (!cmd_line || len <= 0) {
-		pr_err("%s: get bootargs failed\n", __func__);
-		return -ENODEV;
-	}
-
-	name_len = strlen("batt.soc=");
-	cmd_len = strlen(cmd_line);
-	sidx = strnstr(cmd_line, "batt.soc=", cmd_len);
-	if (!sidx) {
-		pr_err("failed batt soc from boot command\n");
-		return -ENODEV;
-	}
-	sidx += name_len;
-
-	eidx = strnstr(sidx, " ", 10);
-
-	if (!eidx) {
-		eidx = sidx + strlen(sidx) + 1;
-	}
-
-	if (eidx <= sidx) {
-		return -ENODEV;
-	}
-
-	*eidx = 0;
-	len = eidx - sidx + 1;
-	if (len <= 0) {
-		return -ENODEV;
-	}
-
-	strncpy(batt_soc, sidx, strlen(sidx));
-	of_node_put(chosen_node);
-	if (strict_strtol(batt_soc, 10, &soc) != 0) {
-		return -ENODEV;
-	}
-
-	return rc;
-}
-
-#define MAX_CPUS (4)
-#define LOW_BATT_LIMIT_THRESHOLD (5)
-#define PREV_FREQ_INDEX			(2)
-typedef struct low_battery_llimit {
-	struct cpufreq_frequency_table *table;
-	int	last_cpufreq_index;
-}low_batt_limitation;
-static  low_batt_limitation low_battery_limit[MAX_CPUS];
-static int out_low_battery_limit = 0;
-static int set_clear_limit(const char *val, struct kernel_param *kp)
-{
-	int ret = 0;
-	ret = param_set_int(val, kp);
-	if (ret) {
-		pr_err("error setting value %d\n", ret);
-		return ret;
-	}
-	out_low_battery_limit = 1;
-	pr_info(" low batt limitation is clear by thermal\n");
-	return ret;
-}
-
-module_param_call(out_low_battery_limit, set_clear_limit,
-	param_get_int, &out_low_battery_limit, 0644);
-
-static void init_freq_table(void)
-{
-	int cpu_i , freq_i;
-	for( cpu_i = 0 ; cpu_i < MAX_CPUS; cpu_i++) {
-		low_battery_limit[cpu_i].table = 0;
-		low_battery_limit[cpu_i].last_cpufreq_index = 0;
-
-		low_battery_limit[cpu_i].table = cpufreq_frequency_get_table(cpu_i);
-		if(low_battery_limit[cpu_i].table > 0) {
-			for (freq_i = 0; (low_battery_limit[cpu_i].table[freq_i].frequency != CPUFREQ_TABLE_END); freq_i++) {
-				low_battery_limit[cpu_i].last_cpufreq_index = freq_i;
-				if (low_battery_limit[cpu_i].table[freq_i].frequency == CPUFREQ_ENTRY_INVALID) {
-					continue;
-				}
-			}
-		}
-	}
-}
-#endif
 /*********************************************************************
  *                              GOVERNORS                            *
  *********************************************************************/
 
-#if defined(CONFIG_LGE_LOW_BATT_LIMIT)
-#if defined(CONFIG_MACH_MSM8974_G3_GLOBAL_COM) || defined(CONFIG_MACH_MSM8974_G3_TMO_US)
-static unsigned int old_max_freq = 0;
-static unsigned int restore_flag = 1;
-#endif
-#endif
+
 int __cpufreq_driver_target(struct cpufreq_policy *policy,
 			    unsigned int target_freq,
 			    unsigned int relation)
 {
 	int retval = -EINVAL;
-#if defined(CONFIG_LGE_LOW_BATT_LIMIT)
-	int update_index = 0;
-#endif
+
 	if (cpufreq_disabled())
 		return -ENODEV;
-#if defined(CONFIG_LGE_LOW_BATT_LIMIT)
-	if(!low_battery_limit[policy->cpu].table) {
-		init_freq_table();
-	}
-#endif
-	pr_debug("target for CPU %u: %u kHz, relation %u \n", policy->cpu,
-		target_freq, relation );
-#if defined(CONFIG_LGE_LOW_BATT_LIMIT)
-#if defined(CONFIG_MACH_MSM8974_G3_GLOBAL_COM) || defined(CONFIG_MACH_MSM8974_G3_TMO_US)
-	if (old_max_freq == 0)
-		old_max_freq = policy->max;
-	if (!out_low_battery_limit) {
-		/* limit to previous freq. */
-		update_index = (low_battery_limit[policy->cpu].last_cpufreq_index) - PREV_FREQ_INDEX;
-		if (low_battery_limit[policy->cpu].table > 0 && update_index >= 0) {
-			/* adjust max freq to target freq */
-			policy->max = low_battery_limit[policy->cpu].table[--update_index].frequency;
-			if(target_freq > policy->max)
-				target_freq = policy->max;
-		} else {
-			pr_info("low_limit_table is still NULL== %u\n",target_freq);
-		}
-	} else if (restore_flag == 1 && out_low_battery_limit == 1) {
-		policy->max = old_max_freq;
-		restore_flag = 0;
-	}
-#else
-	if (policy->max == target_freq && soc <= LOW_BATT_LIMIT_THRESHOLD
-		&& !out_low_battery_limit) {
-		// limit to previous freq.
-		update_index = (low_battery_limit[policy->cpu].last_cpufreq_index) - PREV_FREQ_INDEX;
-		if (low_battery_limit[policy->cpu].table > 0 &&
-			update_index >= 0) {
-			target_freq = low_battery_limit[policy->cpu].table[--update_index].frequency;
-		} else {
-			pr_info("low_limit_table is still NULL== %u\n",target_freq);
-		}
-		pr_info("target for CPU %u: %u kHz, soc %ld\n", policy->cpu, target_freq, soc);
-	}
-#endif
-#endif
+
+	pr_debug("target for CPU %u: %u kHz, relation %u\n", policy->cpu,
+		target_freq, relation);
+
+	if (target_freq == policy->cur)
+		return 0;
+
 	if (cpu_online(policy->cpu) && cpufreq_driver->target)
 		retval = cpufreq_driver->target(policy, target_freq, relation);
 
@@ -1707,12 +1570,14 @@ int __cpufreq_driver_getavg(struct cpufreq_policy *policy, unsigned int cpu)
 {
 	int ret = 0;
 
+	if (!(cpu_online(cpu) && cpufreq_driver->getavg))
+		return 0;
+
 	policy = cpufreq_cpu_get(policy->cpu);
 	if (!policy)
 		return -EINVAL;
 
-	if (cpu_online(cpu) && cpufreq_driver->getavg)
-		ret = cpufreq_driver->getavg(policy, cpu);
+	ret = cpufreq_driver->getavg(policy, cpu);
 
 	cpufreq_cpu_put(policy);
 	return ret;
@@ -2153,9 +2018,6 @@ static int __init cpufreq_core_init(void)
 
 	cpufreq_global_kobject = kobject_create_and_add("cpufreq", &cpu_subsys.dev_root->kobj);
 	BUG_ON(!cpufreq_global_kobject);
-#if defined(CONFIG_LGE_LOW_BATT_LIMIT)
-	parse_batt_soc_bootarg();
-#endif
 	register_syscore_ops(&cpufreq_syscore_ops);
 
 	return 0;
