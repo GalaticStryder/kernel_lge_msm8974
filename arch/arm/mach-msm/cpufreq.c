@@ -46,6 +46,9 @@ static DEFINE_MUTEX(l2bw_lock);
 static struct clk *cpu_clk[NR_CPUS];
 static struct clk *l2_clk;
 static struct cpufreq_frequency_table *freq_table;
+#ifdef CONFIG_MSM_CPU_VOLTAGE_CONTROL
+static struct cpufreq_frequency_table *krait_freq_table;
+#endif
 static bool hotplug_ready;
 
 struct cpufreq_work_struct {
@@ -474,6 +477,14 @@ static int cpufreq_parse_dt(struct device *dev)
 	if (!freq_table)
 		return -ENOMEM;
 
+#ifdef CONFIG_MSM_CPU_VOLTAGE_CONTROL
+	/* Create frequence table with unrounded values */
+	krait_freq_table = devm_kzalloc(dev, (nf + 1) * sizeof(*krait_freq_table),
+					GFP_KERNEL);
+	if (!krait_freq_table)
+		return -ENOMEM;
+#endif
+
 	for (i = 0; i < nf; i++) {
 		unsigned long f;
 
@@ -502,15 +513,37 @@ static int cpufreq_parse_dt(struct device *dev)
 
 		freq_table[i].driver_data = i;
 		freq_table[i].frequency = f;
+#ifdef CONFIG_MSM_CPU_VOLTAGE_CONTROL
+		krait_freq_table[i].frequency = data[i];
+#endif
 	}
 
 	freq_table[i].driver_data = i;
 	freq_table[i].frequency = CPUFREQ_TABLE_END;
+#ifdef CONFIG_MSM_CPU_VOLTAGE_CONTROL
+	krait_freq_table[i].frequency = CPUFREQ_TABLE_END;
+#endif
 
 	devm_kfree(dev, data);
 
 	return 0;
 }
+
+#ifdef CONFIG_MSM_CPU_VOLTAGE_CONTROL
+int use_for_scaling(unsigned int freq)
+{
+	unsigned int i;
+
+	if (!krait_freq_table)
+		return -EINVAL;
+
+	for (i = 0; krait_freq_table[i].frequency < CPUFREQ_TABLE_END; i++)
+		if (freq == krait_freq_table[i].frequency)
+			return freq;
+
+	return -EINVAL;
+}
+#endif
 
 static int __init msm_cpufreq_probe(struct platform_device *pdev)
 {
