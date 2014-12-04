@@ -1646,7 +1646,8 @@ static int msm_compr_pointer(struct snd_compr_stream *cstream,
 	*/
 	if (!first_buffer || gapless_transition) {
 		if (gapless_transition)
-			pr_info("session time in gapless transition");
+			pr_debug("%s session time in gapless transition",
+				 __func__);
 
 		rc = q6asm_get_session_time(prtd->audio_client, &timestamp);
 		if (rc < 0) {
