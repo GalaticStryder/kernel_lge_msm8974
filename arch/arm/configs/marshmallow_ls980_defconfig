@@ -99,6 +99,7 @@ CONFIG_TOUCHSCREEN_SWEEP2SLEEP=y
 # Lambda ~ Hotplugging
 #
 CONFIG_BRICKED_HOTPLUG=y
+# CONFIG_BLU_PLUG is not set
 
 #
 # Lambda ~ CPU Governors
