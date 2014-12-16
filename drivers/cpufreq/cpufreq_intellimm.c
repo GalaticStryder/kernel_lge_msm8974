@@ -720,7 +720,7 @@ static ssize_t show_multi_phase_freq_tbl(struct kobject *kobj,
 static ssize_t store_multi_phase_freq_tbl(struct kobject *a,
 		struct attribute *b, const char *buf, size_t count)
 {
-	return 0;
+	return count;
 }
 
 show_one(two_phase_freq, two_phase_freq);
