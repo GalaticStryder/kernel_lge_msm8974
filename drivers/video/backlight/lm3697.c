@@ -232,7 +232,8 @@ void lm3697_lcd_backlight_set_level(int level)
 	if (cal_level == cur_main_lcd_level)
 		return;
 
-	pr_info("%s: backlight level from table %d -> %d\n", __func__, level, cal_level);
+	pr_debug("%s: backlight level from table %d -> %d\n",__func__, level, cal_level);
+
 	ret = lm3697_bl_set_brightness(lm3697_bl, cal_level);
 #else
 	ret = lm3697_bl_set_brightness(lm3697_bl, level);
