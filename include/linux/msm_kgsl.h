@@ -147,6 +147,10 @@
 /* Server Side Sync Timeout in milliseconds */
 #define KGSL_SYNCOBJ_SERVER_TIMEOUT 2000
 
+#ifdef CONFIG_CPU_FREQ_GOV_ELEMENTALX
+extern int graphics_boost;
+#endif
+
 /*
  * Reset status values for context
  */
