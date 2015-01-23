@@ -59,6 +59,7 @@ int quick_cover_status = 0;
 extern int boot_mode;
 extern int mfts_mode;
 static int factory_mode = 0;
+static int lpwg_status = 0;
 
 struct timeval t_ex_debug[EX_PROFILE_MAX];
 bool ghost_detection = 0;
@@ -2143,6 +2144,7 @@ static ssize_t store_lpwg_notify(struct i2c_client *client,
 			TOUCH_DEBUG(DEBUG_BASE_INFO, "LPWG_ENABLE : %s", (value[0]) ? "Enable\n" : "Disable\n");
 			touch_device_func->lpwg(client,
 				LPWG_ENABLE, value[0], NULL);
+			lpwg_status = (value[0]) ? 1 : 0;
 			break;
 		case 2 :
 			touch_device_func->lpwg(client,
@@ -2193,6 +2195,12 @@ static ssize_t store_lpwg_notify(struct i2c_client *client,
 	}
 	return count;
 }
+
+static ssize_t show_lpwg_notify(struct i2c_client *client, char *buf)
+{
+	return sprintf(buf, "%d\n", lpwg_status);
+}
+
 /* store_keyguard_info
  *
  * This function is related with Keyguard in framework.
@@ -2393,7 +2401,7 @@ static LGE_TOUCH_ATTR(notify, S_IRUGO | S_IWUSR, show_notify, store_notify);
 static LGE_TOUCH_ATTR(fw_upgrade, S_IRUGO | S_IWUSR, show_upgrade, store_upgrade);
 static LGE_TOUCH_ATTR(lpwg_data,
 		S_IRUGO | S_IWUSR, show_lpwg_data, store_lpwg_data);
-static LGE_TOUCH_ATTR(lpwg_notify, S_IRUGO | S_IWUSR, NULL, store_lpwg_notify);
+static LGE_TOUCH_ATTR(lpwg_notify, S_IRUGO | S_IWUSR, show_lpwg_notify, store_lpwg_notify);
 static LGE_TOUCH_ATTR(keyguard, S_IRUGO | S_IWUSR, NULL, store_keyguard_info);
 static LGE_TOUCH_ATTR(ime_status, S_IRUGO | S_IWUSR, show_ime_drumming_status, store_ime_drumming_status);
 static LGE_TOUCH_ATTR(quick_cover_status, S_IRUGO | S_IWUSR, NULL, store_quick_cover_status);
