@@ -1857,6 +1857,14 @@ config MSM_DALRPC_TEST
 	help
 	  Exercises DAL RPC calls to QDSP6.
 
+config MSM_HOTPLUG
+	bool "MSM hotplug driver"
+	depends on HOTPLUG_CPU
+	default y
+	help
+	  The MSM hotplug driver controls the plugging of additional cores
+	  based on the current CPU load.
+
 config BRICKED_HOTPLUG
 	bool "Kernel based MPDecision"
 	depends on MSM_RUN_QUEUE_STATS
