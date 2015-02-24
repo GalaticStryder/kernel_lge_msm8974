@@ -468,6 +468,9 @@ static void cpufreq_impulse_timer(unsigned long data)
 	cpu_load = loadadjfreq / ppol->policy->cur;
 	cpufreq_notify_utilization(ppol->policy, cpu_load);
 	tunables->boosted = cpu_load >= tunables->go_hispeed_load;
+#ifdef CONFIG_MSM_HOTPLUG
+	tunables->boosted = fast_lane_mode || tunables->boosted;
+#endif
 #ifdef CONFIG_STATE_NOTIFIER
 	tunables->boosted = tunables->boosted && !state_suspended;
 #endif
