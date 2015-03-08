@@ -119,13 +119,6 @@ void __init msm8974_add_drivers(void)
 #ifdef CONFIG_LGE_QFPROM_INTERFACE
 	lge_add_qfprom_devices();
 #endif
-#if defined(CONFIG_LCD_KCAL)
-/* LGE_CHANGE_S
-* change code for LCD KCAL
-* 2013-05-08, seojin.lee@lge.com
-*/
-	lge_add_lcd_kcal_devices();
-#endif /* CONFIG_LCD_KCAL */
 #if defined(CONFIG_LGE_PM_BATTERY_ID_CHECKER)
 	lge_battery_id_devices();
 #endif
