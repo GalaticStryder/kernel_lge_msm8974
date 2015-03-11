@@ -1,12 +1,21 @@
-/* This file from /android/kernel/drivers/broadcast/oneseg/broadcast_dmb_drv_ifdef.h */
+/*****************************************************************************
 
+    Copyright(c) 2008 LG Electronics Inc. All Rights Reserved
+
+    File name : broadcat_dmb_drv_ifdef.h
+
+    Description :
+
+    Hoistory
+    ----------------------------------------------------------------------
+    Nov. 05, 2009:        inb612        create
+    Aug. 24, 2012:        hyewon.eum    modified
+*******************************************************************************/
 #ifndef __LINUX_LGE_BORADCAST_H
 #define __LINUX_LGE_BORADCAST_H
 
 #include <linux/types.h>
-#include <asm/sizes.h>
 #include <linux/ioctl.h>
-
 
 #define LGE_BROADCAST_DMB_IOCTL_MAGIC 'I'
 
@@ -93,7 +102,7 @@ typedef struct
     int Num;
     int Exp;
     int mode;
-} oneseg_sig_info;
+}oneseg_sig_info;
 
 typedef struct
 {
@@ -117,7 +126,19 @@ typedef struct
     int per_c;
     int layerinfo_c;
     int total_tsp_c;
-} mmb_sig_info;
+
+    int antenna_level_fullseg;
+    int antenna_level_oneseg;
+    int agc;
+    int ber_1seg;
+    int per_1seg;
+    int total_tsp_1seg;
+    int err_tsp_1seg;
+    int ber_fullseg;
+    int per_fullseg;
+    int total_tsp_fullseg;
+    int err_tsp_fullseg;
+}mmb_sig_info;
 
 struct broadcast_dmb_sig_info
 {
@@ -125,7 +146,7 @@ struct broadcast_dmb_sig_info
     {
         oneseg_sig_info oneseg_info;
         mmb_sig_info mmb_info;
-    } info;
+    }info;
 };
 
 struct broadcast_dmb_cmd_info
@@ -135,6 +156,7 @@ struct broadcast_dmb_cmd_info
     unsigned int layer;
     unsigned int mode;
     unsigned int fullseg_oneseg_flag;
+    unsigned int over;
 };
 
 struct broadcast_dmb_control_info
@@ -145,14 +167,14 @@ struct broadcast_dmb_control_info
 
 struct broadcast_dmb_ch_info
 {
-    unsigned int  ch_buf_addr;
+    unsigned int    ch_buf_addr;
     unsigned int    buf_len;
 };
 
 struct broadcast_dmb_data_info
 {
-    unsigned int	data_buf_addr;
-    unsigned int     data_buf_size;
+    unsigned int    data_buf_addr;
+    unsigned int    data_buf_size;
     unsigned int    copied_size;
     unsigned int    packet_cnt;
 };
@@ -175,9 +197,9 @@ enum
 
 enum
 {
-	LGE_BROADCAST_DMB_ANT_TYPE_INTENNA,
-	LGE_BROADCAST_DMB_ANT_TYPE_EARANT,
-	LGE_BROADCAST_DMB_ANT_TYPE_EXTERNAL
+    LGE_BROADCAST_DMB_ANT_TYPE_INTENNA,
+    LGE_BROADCAST_DMB_ANT_TYPE_EARANT,
+    LGE_BROADCAST_DMB_ANT_TYPE_EXTERNAL
 };
 
 enum
@@ -187,35 +209,40 @@ enum
     DMB_OP_CMD_CHANGE_MODE
 };
 
-
 enum
 {
-	DMB_RF_BAND_UHF = 0x00,
-	DMB_RF_BAND_VHF = 0x01
+    DMB_RF_BAND_UHF = 0x00,
+    DMB_RF_BAND_VHF = 0x01
 };
 
 enum
 {
-	DMB_SEG_13SEG = 0x00,
-	DMB_SEG_1SEG = 0x01,
+    DMB_SEG_13SEG = 0x00,
+    DMB_SEG_1SEG = 0x01,
 };
 
-extern int	broadcast_drv_start(void);
-extern int	broadcast_get_stop_mode(void);
-extern int	broadcast_drv_if_power_on(void);
-extern int	broadcast_drv_if_power_off(void);
-extern int	broadcast_drv_if_open(void);
-extern int	broadcast_drv_if_close(void);
-extern int	broadcast_drv_if_set_channel(struct broadcast_dmb_set_ch_info *udata);
-extern int	broadcast_drv_if_resync(void);
-extern int	broadcast_drv_if_detect_sync(struct broadcast_dmb_sync_info *udata);
-extern int	broadcast_drv_if_get_sig_info(struct broadcast_dmb_control_info *bb_info);
-extern int	broadcast_drv_if_get_ch_info(struct broadcast_dmb_ch_info *ch_info);
-extern int	broadcast_drv_if_get_dmb_data(struct broadcast_dmb_data_info *pdmb_data);
-extern int	broadcast_drv_if_reset_ch(void);
-extern int	broadcast_drv_if_user_stop(int mode);
-extern int	broadcast_drv_if_select_antenna(unsigned int sel);
-extern int	broadcast_drv_if_isr(void);
-extern int	broadcast_drv_if_read_control(char *buf, unsigned int size);
-extern int	broadcast_drv_if_get_mode (unsigned short *mode);
+struct broadcast_drv_if {
+    int (*broadcast_drv_if_power_on)(void);
+    int (*broadcast_drv_if_power_off)(void);
+    int (*broadcast_drv_if_open)(void);
+    int (*broadcast_drv_if_close)(void);
+    int (*broadcast_drv_if_set_channel)(struct broadcast_dmb_set_ch_info *udata);
+    int (*broadcast_drv_if_resync)(void);
+    int (*broadcast_drv_if_detect_sync)(struct broadcast_dmb_sync_info *udata);
+    int (*broadcast_drv_if_get_sig_info)(struct broadcast_dmb_control_info *bb_info);
+    int (*broadcast_drv_if_get_ch_info)(struct broadcast_dmb_ch_info *ch_info);
+    int (*broadcast_drv_if_get_dmb_data)(struct broadcast_dmb_data_info *pdmb_data);
+    int (*broadcast_drv_if_reset_ch)(void);
+    int (*broadcast_drv_if_user_stop)(int mode);
+    int (*broadcast_drv_if_select_antenna)(unsigned int sel);
+    int (*broadcast_drv_if_read_control)(char *buf, unsigned int size);
+    int (*broadcast_drv_if_get_mode)(unsigned short *mode);
+};
+
+typedef struct broadcast_drv_if Device_drv ;
+
+extern int broadcast_dmb_drv_check_module_init(void);
+extern int    broadcast_dmb_drv_start(Device_drv*);
+extern int    broadcast_get_stop_mode(void);
+
 #endif

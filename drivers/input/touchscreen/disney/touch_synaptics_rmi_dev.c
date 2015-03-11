@@ -249,9 +249,9 @@ static int rmidev_reset_device(struct synaptics_ts_data *ts)
 	int retval;
 	unsigned char command = 0x01;
 	int reg_read_cnt;
-	unsigned char manufacturer_ID;
+	unsigned char manufacturer_ID = 0 ;
 	unsigned char interrupt_enable_0 = 0x3f;
-	unsigned char device_ctrl;
+	unsigned char device_ctrl = 0;
 
 	TOUCH_RMIDEV_MSG("\n");
 

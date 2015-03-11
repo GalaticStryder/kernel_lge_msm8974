@@ -51,23 +51,12 @@ s32 fci_hpi_read(HANDLE handle, DEVICEID devid,
 s32 fci_hpi_write(HANDLE handle, DEVICEID devid,
 		u8 chip, u8 addr, u8 alen, u8 *data, u8 len)
 {
-#if !defined(BBM_I2C_SPI) && !defined(BBM_I2C_TSIF) /* ONLY ES SPI */
-	s32 i;
+	s32 res;
 
 	mutex_lock(&fci_hpi_lock);
-	for (i = 0; i < len; i++, data++)
-		bbm_word_write(handle, devid, 0x0f00 | addr,
-				(*data << 8) | *data);
+	res = bbm_bulk_write(handle, devid, 0x0f00 | addr, data, len);
 	mutex_unlock(&fci_hpi_lock);
 
-#else
-	s32 i;
-
-	mutex_lock(&fci_hpi_lock);
-	for (i = 0; i < len; i++, data++)
-		bbm_write(handle, devid, 0x0f00 | addr, *data);
-	mutex_unlock(&fci_hpi_lock);
-#endif
 	return BBM_OK;
 }
 

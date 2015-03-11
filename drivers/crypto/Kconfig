@@ -354,6 +354,17 @@ config CRYPTO_DEV_TEGRA_AES
 	  will be called tegra-aes.
 
 #ifdef CONFIG_CRYPTO_DEV_KFIPS
+#ifdef CONFIG_CRYPTO_DEV_KFIPS_PERF
+config CRYPTO_DEV_KFIPS_PERF
+	tristate "KFIPS user space crypto proxy"
+	depends on CRYPTO_DEV_KFIPS
+	help
+	  This option enables the 'kfips' crypto driver that performs
+	  crypto operations with the help of the 'ufips' user space
+	  program that uses a FIPS-certified cryptography library.
+	  'kfips' version 1.2 : It is that increase performance
+	  through kworker scheduling.
+#endif
 config CRYPTO_DEV_KFIPS
 	tristate "KFIPS user space crypto proxy"
 	select CRYPTO_ALGAPI

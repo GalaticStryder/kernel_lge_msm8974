@@ -855,9 +855,17 @@ int max17048_set_rcomp_by_temperature(struct i2c_client *client)
 
 	/* Calculate RCOMP by temperature*/
 	if (temp > 20)
+#ifdef CONFIG_MACH_MSM8974_DZNY_DCM
+		new_rcomp = init_rcomp + (int)((temp - 20)*temp_hot/(-10000));
+#else
 		new_rcomp = init_rcomp + (int)((temp - 20)*temp_hot/(-1000));
+#endif
 	else if (temp < 20)
+#ifdef CONFIG_MACH_MSM8974_DZNY_DCM
+		new_rcomp = init_rcomp + (int)((temp - 20)*temp_hot/(-10000));
+#else
 		new_rcomp = init_rcomp + (int)((temp - 20)*temp_cold/(-1000));
+#endif
 	else
 		new_rcomp = init_rcomp;
 

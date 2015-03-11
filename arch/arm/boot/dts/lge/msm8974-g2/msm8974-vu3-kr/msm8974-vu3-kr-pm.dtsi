@@ -113,7 +113,7 @@
 	    };
 
 		qcom,leds@d300 {
-			flash_boost-supply = <&pm8941_chg_boost>;
+			flash-boost-supply = <&pm8941_chg_boost>;
 		};
 
 		qcom,leds@e200 {

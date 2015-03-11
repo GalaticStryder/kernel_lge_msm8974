@@ -10,12 +10,12 @@ menu "LGE Broadcast Device Support"
 #    help
 #      Select this if you want to use Japanese 1Seg mobile broadcast service
 
-config LGE_BROADCAST_JFULLSEG
-    bool "Japan full-seg Broadcast service"
-    depends on (MACH_MSM8974_Z_KDDI) || (MACH_MSM8974_G3_KDDI_EVB) || (MACH_MSM8974_G3_KDDI)
-    default y
-    help
-      Select this if you want to use Japanese FullSeg mobile broadcast service
+#config LGE_BROADCAST_JFULLSEG
+#    bool "Japan full-seg Broadcast service"
+#    depends on (MACH_MSM8974_Z_KDDI) || (MACH_MSM8974_G3_KDDI_EVB) || (MACH_MSM8974_G3_KDDI)
+#    default y
+#    help
+#      Select this if you want to use Japanese FullSeg mobile broadcast service
 
 config LGE_BROADCAST_ISDBT_JAPAN
 	bool "Japan full-seg Broadcast service"

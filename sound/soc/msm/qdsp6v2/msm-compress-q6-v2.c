@@ -999,8 +999,8 @@ static int msm_compr_set_params(struct snd_compr_stream *cstream,
 		prtd->sample_rate = 96000;
 		break;
 	case SNDRV_PCM_RATE_176400:
-		prtd->sample_rate = 176400;
-		break;
+//		prtd->sample_rate = 176400;
+//		break;
 	case SNDRV_PCM_RATE_192000:
 		prtd->sample_rate = 192000;
 		break;
@@ -1091,13 +1091,18 @@ static int msm_compr_drain_buffer(struct msm_compr_audio *prtd,
 	rc = wait_event_interruptible(prtd->drain_wait,
 					prtd->drain_ready ||
 					prtd->cmd_interrupt ||
-					atomic_read(&prtd->xrun));
-	pr_debug("%s: out of buffer drain wait\n", __func__);
+					atomic_read(&prtd->xrun) ||
+					atomic_read(&prtd->error));
+	pr_debug("%s: out of buffer drain wait with ret %d\n", __func__, rc);
 	spin_lock_irqsave(&prtd->lock, *flags);
 	if (prtd->cmd_interrupt) {
 		pr_debug("%s: buffer drain interrupted by flush)\n", __func__);
 		rc = -EINTR;
 		prtd->cmd_interrupt = 0;
+	}
+	if (atomic_read(&prtd->error)) {
+		pr_err("%s: Got RESET EVENTS notification, return\n", __func__);
+		rc = -ENETRESET;
 	}
 	return rc;
 }

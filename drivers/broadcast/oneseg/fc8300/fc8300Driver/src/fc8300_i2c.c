@@ -44,9 +44,6 @@ static s32 i2c_bulkread(HANDLE handle, u8 chip, u16 addr, u8 *data, u16 length)
 	struct i2c_msg rmsg[2];
 	unsigned char i2c_data[2];
 
-    if (fc8300_i2c == NULL)
-        print_log(NULL, "i2c_bulkread handle fail \n");
-        
 	rmsg[0].addr = chip;
 	rmsg[0].flags = I2C_M_FCIWR;
 	rmsg[0].len = 2;
@@ -69,9 +66,6 @@ static s32 i2c_bulkwrite(HANDLE handle, u8 chip, u16 addr, u8 *data, u16 length)
 	int res;
 	struct i2c_msg wmsg;
 	unsigned char i2c_data[I2C_MAX_SEND_LENGTH];
-   
-    if (fc8300_i2c == NULL)
-        print_log(NULL, "i2c_bulkwrite handle fail \n");
 
 	if ((length + 1) > I2C_MAX_SEND_LENGTH)
 		return -ENODEV;
@@ -94,15 +88,16 @@ static s32 i2c_bulkwrite(HANDLE handle, u8 chip, u16 addr, u8 *data, u16 length)
 s32 fc8300_i2c_init(HANDLE handle, u16 param1, u16 param2)
 {
 	s32 res = BBM_OK;
-	//OAL_CREATE_SEMAPHORE();
+	/*OAL_CREATE_SEMAPHORE();*/
 
-	//fc8300_i2c = kzalloc(sizeof(struct i2c_ts_driver), GFP_KERNEL);
+	/*fc8300_i2c = kzalloc(sizeof(struct i2c_ts_driver), GFP_KERNEL);*/
+
 	fc8300_i2c = FCI_GET_I2C_DRIVER();
 
 	if (fc8300_i2c == NULL)
 		return -ENOMEM;
 
-	//res = i2c_add_driver(&fc8300_i2c_driver);
+	/*res = i2c_add_driver(&fc8300_i2c_driver);*/
 
 #ifdef BBM_I2C_SPI
 	fc8300_spi_init(handle, 0, 0);
@@ -230,14 +225,14 @@ s32 fc8300_i2c_dataread(HANDLE handle, DEVICEID devid,
 
 s32 fc8300_i2c_deinit(HANDLE handle)
 {
-	//i2c_del_driver(&fc8300_i2c_driver);
+	/*i2c_del_driver(&fc8300_i2c_driver);*/
 #ifdef BBM_I2C_SPI
 	fc8300_spi_deinit(handle);
 #else
 	/* ts_receiver_disable(); */
 #endif
 
-	//OAL_DELETE_SEMAPHORE();
+	/*OAL_DELETE_SEMAPHORE();*/
 
 	return BBM_OK;
 }

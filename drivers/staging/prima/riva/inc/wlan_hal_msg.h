@@ -516,6 +516,9 @@ typedef enum
    WLAN_HAL_MAC_SPOOFED_SCAN_REQ            = 292,
    WLAN_HAL_MAC_SPOOFED_SCAN_RSP            = 293,
 
+   WLAN_HAL_FW_STATS_REQ                    = 296,
+   WLAN_HAL_FW_STATS_RSP                    = 297,
+
    WLAN_HAL_MSG_MAX = WLAN_HAL_MSG_TYPE_MAX_ENUM_SIZE
 }tHalHostMsgType;
 
@@ -3071,6 +3074,43 @@ typedef PACKED_PRE struct PACKED_POST
 } tHalStatsRspMsg, *tpHalStatsRspMsg;
 
 /*---------------------------------------------------------------------------
+ * WLAN_HAL_FW_STATS_REQ
+ *---------------------------------------------------------------------------*/
+ typedef PACKED_PRE struct PACKED_POST
+{
+   tANI_U32 type;
+}tHalfwStatsReqParams, *tpHalfwStatsReqParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader        header;
+   tHalfwStatsReqParams   fwstatsReqParams;
+} tHalfwStatsReqMsg, *tpHalfwStatsReqMsg;
+
+/*---------------------------------------------------------------------------
+ * WLAN_HAL_FW_STATS_RSP
+ *---------------------------------------------------------------------------*/
+ typedef PACKED_PRE struct PACKED_POST
+{
+   tANI_U32 type;
+   tANI_U32 length;
+   tANI_U8  data[1];
+
+}tHalfwStatsRspParams, *tpHalfwStatsRspParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader        header;
+   tHalfwStatsRspParams   fwstatsRspParams;
+} tHalfwStatsRspMsg, *tpHalfwStatsRspMsg;
+
+typedef enum
+{
+   FW_UBSP_STATS = 1,
+} fwstatstype;
+
+
+/*---------------------------------------------------------------------------
  * WLAN_HAL_SET_LINK_ST_REQ
  *--------------------------------------------------------------------------*/
 typedef PACKED_PRE struct PACKED_POST
@@ -5584,6 +5624,9 @@ typedef PACKED_PRE struct PACKED_POST
 #define WLAN_COEX_IND_TYPE_SCANS_ARE_NOT_COMPROMISED_BY_COEX (3)
 #define WLAN_COEX_IND_TYPE_DISABLE_AGGREGATION_IN_2p4 (4)
 #define WLAN_COEX_IND_TYPE_ENABLE_AGGREGATION_IN_2p4 (5)
+#define WLAN_COEX_IND_TYPE_ENABLE_UAPSD (6)
+#define WLAN_COEX_IND_TYPE_DISABLE_UAPSD (7)
+#define WLAN_COEX_IND_TYPE_CXM_FEATURES_NOTIFICATION (8)
 
 typedef PACKED_PRE struct PACKED_POST
 {
@@ -6546,6 +6589,11 @@ typedef enum {
     EXTENDED_SCAN          = 42,
     DYNAMIC_WMM_PS         = 43,
     MAC_SPOOFED_SCAN       = 44,
+    BMU_ERROR_GENERIC_RECOVERY = 45,
+    DISA                   = 46,
+    FW_STATS               = 47,
+    WPS_PRBRSP_TMPL        = 48,
+    BCN_IE_FLT_DELTA       = 49,
     MAX_FEATURE_SUPPORTED  = 128,
 } placeHolderInCapBitmap;
 
@@ -6572,6 +6620,7 @@ typedef PACKED_PRE struct PACKED_POST{
 #define IS_TDLS_SCAN_COEXISTENCE_SUPPORTED_BY_HOST ((!!(halMsg_GetHostWlanFeatCaps(TDLS_SCAN_COEXISTENCE))))
 #define IS_DYNAMIC_WMM_PS_SUPPORTED_BY_HOST ((!!(halMsg_GetHostWlanFeatCaps(DYNAMIC_WMM_PS))))
 #define IS_MAC_SPOOF_SCAN_SUPPORTED_BY_HOST ((!!(halMsg_GetHostWlanFeatCaps(MAC_SPOOFED_SCAN))))
+#define IS_NEW_BMU_ERROR_RECOVERY_SUPPORTED_BY_HOST ((!!(halMsg_GetHostWlanFeatCaps(BMU_ERROR_GENERIC_RECOVERY))))
 
 tANI_U8 halMsg_GetHostWlanFeatCaps(tANI_U8 feat_enum_value);
 

@@ -381,7 +381,19 @@ EXPORT_SYMBOL_GPL(device_set_wakeup_enable);
 static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
+#if defined(CONFIG_MACH_MSM8974_B1_KR) || defined(CONFIG_MACH_MSM8974_B1W)
+	extern int boost_freq;
+	extern bool suspend_marker_entry;
+	unsigned int cnt, inpr;
+	bool wakeup_pending = true;
 
+	if (suspend_marker_entry) {
+		split_counters(&cnt, &inpr);
+		if (cnt == saved_count && inpr == 0) {
+			wakeup_pending = false;
+		}
+	}
+#endif
 	ws->active = true;
 	ws->active_count++;
 	ws->last_time = ktime_get();
@@ -390,8 +402,20 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 
 	/* Increment the counter of events in progress. */
 	cec = atomic_inc_return(&combined_event_count);
-
 	trace_wakeup_source_activate(ws->name, cec);
+#if defined(CONFIG_MACH_MSM8974_B1_KR) || defined(CONFIG_MACH_MSM8974_B1W)
+	if (suspend_marker_entry) {
+		if (!wakeup_pending) {
+			if (boost_freq == 1) {
+				if (!strcmp(ws->name, "touch_irq") || !strcmp(ws->name, "hall_ic_wakeups")){
+					printk(KERN_ERR "ws->name=%s, boost_Freq=%d\n", ws->name, boost_freq);
+					boost_freq++;
+					printk(KERN_ERR "ws->name=%s, boost_Freq=%d\n", ws->name, boost_freq);
+				}
+			}
+		}
+	}
+#endif
 }
 
 /**

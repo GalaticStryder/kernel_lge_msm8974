@@ -13,9 +13,6 @@
 &soc {
 
 	sound {
-		/* [AUDIO_BSP][tahiti] gooyeon.jung@lge.com 2014-02-04 disable HDMI by default */
-		qcom,hdmi-audio-rx,no-use;
-
 		/* [AUDIO_BSP][tahiti] gooyeon.jung@lge.com 2013-12-16 reset audio routing only for tahiti */
 		qcom,audio-routing =
 			"RX_BIAS", "MCLK",
@@ -33,6 +30,7 @@
 	};
 
     lge_sw_irrc { /* [AUDIO_BSP][tahiti] gooyeon.jung@lge.com 2014-03-05 enable SW IrRC */
+        status = "disabled";
         compatible = "lge,sw_irrc";
         vreg_irrc-supply = <&pm8941_l19>;
         lge,gp-cmd-rcgr = <0xFD8C3450>;

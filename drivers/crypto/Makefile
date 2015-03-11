@@ -15,6 +15,10 @@ obj-$(CONFIG_CRYPTO_DEV_OMAP_AES) += omap-aes.o
 obj-$(CONFIG_CRYPTO_DEV_PICOXCELL) += picoxcell_crypto.o
 obj-$(CONFIG_CRYPTO_DEV_S5P) += s5p-sss.o
 obj-$(CONFIG_CRYPTO_DEV_TEGRA_AES) += tegra-aes.o
-#ifdef CONFIG_CRYPTO_DEV_KFIPS
+ifndef CONFIG_CRYPTO_DEV_KFIPS_PERF
+ifdef CONFIG_CRYPTO_DEV_KFIPS
 obj-$(CONFIG_CRYPTO_DEV_KFIPS) += kfips.o
-#endif
+endif
+else
+obj-$(CONFIG_CRYPTO_DEV_KFIPS_PERF) += kfips_perf.o
+endif

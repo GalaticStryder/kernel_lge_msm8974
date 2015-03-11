@@ -257,6 +257,11 @@
 #define CFG_ENABLE_AUTO_BMPS_TIMER_MAX         ( 1 )
 #define CFG_ENABLE_AUTO_BMPS_TIMER_DEFAULT     ( 1 )
 
+#define CFG_ENABLE_DYNAMIC_RA_START_RATE_NAME    "gEnableDynamicRAstartRate"
+#define CFG_ENABLE_DYNAMIC_RA_START_RATE_MIN     ( 0 )
+#define CFG_ENABLE_DYNAMIC_RA_START_RATE_MAX     ( 1 )
+#define CFG_ENABLE_DYNAMIC_RA_START_RATE_DEFAULT ( 0 )
+
 #define CFG_AUTO_BMPS_TIMER_VALUE_NAME         "gAutoBmpsTimerValue" 
 #define CFG_AUTO_BMPS_TIMER_VALUE_MIN          ( 1000 )
 #define CFG_AUTO_BMPS_TIMER_VALUE_MAX          ( 4294967295UL )
@@ -730,7 +735,7 @@ typedef enum
 #define CFG_QOS_WMM_UAPSD_MASK_MIN                         (0x00)
 #define CFG_QOS_WMM_UAPSD_MASK_MAX                         (0xFF) 
 #define CFG_QOS_WMM_UAPSD_MASK_DEFAULT                     (0xaa)
-#define CFG_QOS_WMM_UAPSD_MASK_DYMANIC_WMM_PS_DEFAULT      (0x3)
+#define CFG_QOS_WMM_UAPSD_MASK_DYMANIC_WMM_PS_DEFAULT      (0x0)
 #define CFG_QOS_WMM_UAPSD_MASK_LEGACY_WMM_PS_DEFAULT       (0x0)
 
 #define CFG_QOS_WMM_INFRA_UAPSD_VO_SRV_INTV_NAME           "InfraUapsdVoSrvIntv"
@@ -1389,6 +1394,11 @@ typedef enum
 #define CFG_ENABLE_DFS_CHNL_SCAN_MAX               ( 1 )
 #define CFG_ENABLE_DFS_CHNL_SCAN_DEFAULT           ( 1 )
 
+#define CFG_ENABLE_DFS_PNO_CHNL_SCAN_NAME              "gEnableDFSPnoChnlScan"
+#define CFG_ENABLE_DFS_PNO_CHNL_SCAN_MIN               ( 0 )
+#define CFG_ENABLE_DFS_PNO_CHNL_SCAN_MAX               ( 1 )
+#define CFG_ENABLE_DFS_PNO_CHNL_SCAN_DEFAULT           ( 1 )
+
 typedef enum
 {
     eHDD_LINK_SPEED_REPORT_ACTUAL = 0,
@@ -1931,13 +1941,18 @@ static __inline tANI_U32 defHddRateToDefCfgRate( tANI_U32 defRateIndex )
 
 #define CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED         "gTxBFCsnValue"
 #define CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_MIN     ( WNI_CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_STAMIN )
-#define CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_MAX     ( WNI_CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_STAMAX )
-#define CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_DEFAULT ( WNI_CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_STAMAX - 1)
+#define CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_MAX     ( WNI_CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_STAMAX - 1 )
+#define CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_DEFAULT ( WNI_CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_STAMAX - 1 )
 
 #define CFG_VHT_ENABLE_MU_BFORMEE_CAP_FEATURE         "gEnableMuBformee"
 #define CFG_VHT_ENABLE_MU_BFORMEE_CAP_FEATURE_MIN     ( 0 )
 #define CFG_VHT_ENABLE_MU_BFORMEE_CAP_FEATURE_MAX     ( 1 )
 #define CFG_VHT_ENABLE_MU_BFORMEE_CAP_FEATURE_DEFAULT ( 1 )
+
+#define CFG_VHT_AMPDU_LEN_EXP_NAME          "gVhtMaxAmpduLenExp"
+#define CFG_VHT_AMPDU_LEN_EXP_MIN           ( 0 )
+#define CFG_VHT_AMPDU_LEN_EXP_MAX           ( 7 )
+#define CFG_VHT_AMPDU_LEN_EXP_DEFAULT       ( 3 )
 
 #endif
 
@@ -2076,9 +2091,10 @@ static __inline tANI_U32 defHddRateToDefCfgRate( tANI_U32 defRateIndex )
 #define CFG_PNO_SCAN_TIMER_REPEAT_VALUE_MAX          ( 0xffffffff )
 #endif
 
+/* Not supporting this feature in pronto */
 #define CFG_AMSDU_SUPPORT_IN_AMPDU_NAME                "gAmsduSupportInAMPDU"
 #define CFG_AMSDU_SUPPORT_IN_AMPDU_MIN                 (0)
-#define CFG_AMSDU_SUPPORT_IN_AMPDU_MAX                 (1)
+#define CFG_AMSDU_SUPPORT_IN_AMPDU_MAX                 (0)
 #define CFG_AMSDU_SUPPORT_IN_AMPDU_DEFAULT             (0) //disabled
 
 /* Prefer connecting to 5G AP even if its RSSI is lower by
@@ -2673,6 +2689,7 @@ typedef struct
    v_U32_t                     enableCloseLoop;
    v_U8_t                      enableBypass11d;
    v_U8_t                      enableDFSChnlScan;
+   v_U8_t                      enableDFSPnoChnlScan;
    v_U8_t                      enableDynamicDTIM;
    v_U8_t                      enableAutomaticTxPowerControl;
    v_U8_t                      ShortGI40MhzEnable;
@@ -2697,6 +2714,7 @@ typedef struct
    v_BOOL_t                    enableTxBF;
    v_U8_t                      txBFCsnValue;
    v_BOOL_t                    enableMuBformee;
+   v_U8_t                      gVhtMaxAmpduLenExp;
 #endif
    v_U8_t                      enableModulatedDTIM;
    v_U32_t                     fEnableMCAddrList;
@@ -2842,6 +2860,7 @@ typedef struct
    v_U32_t                     burstModeTXOPValue;
    v_U8_t                      acsScanBandPreference;
    v_U16_t                     acsBandSwitchThreshold;
+   v_U32_t                     enableDynamicRAStartRate;
 } hdd_config_t;
 /*--------------------------------------------------------------------------- 
   Function declarations and documenation

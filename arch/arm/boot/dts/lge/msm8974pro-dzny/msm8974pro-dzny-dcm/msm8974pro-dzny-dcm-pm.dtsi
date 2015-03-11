@@ -19,11 +19,11 @@
 
 		max17048@36 {
 			status =  "ok";
-			max17048,rcomp = <64>;
-			max17048,temp_co_hot = <338>;
-			max17048,temp_co_cold = <4338>;
+			max17048,rcomp_tcd = <59>;
+			max17048,temp_co_hot_tcd = <5875>;
+			max17048,temp_co_cold_tcd = <54875>;
 			max17048,full_design = <3000>;
-			max17048,empty = <0>;
+			max17048,empty_tcd = <0>;
 		};
 		bq24192@6b {
 			status = "disable";
@@ -50,10 +50,12 @@
 		qcom,power-on@800 {
 			qcom,pon_1 {
 				status = "ok";
+				qcom,support-reset = <0>;
 			};
 
 			qcom,pon_3 {
 				status = "ok";
+				qcom,support-reset = <0>;
 			};
 		};
 
@@ -207,11 +209,13 @@
 
 		pm8941_bms: qcom,bms  {
 			status = "ok";
-			qcom,use-external-rsense;
 		};
 
 		qcom,currentnow@3800 {
 			status = "ok";
+		};
+		pm8941_coincell: qcom,coincell@2800 {
+			qcom,vset-millivolts = <3200>;
 		};
 	};
 
@@ -378,7 +382,7 @@
 		
 
 		qcom,leds@d300 {
-			flash_boost-supply = <&pm8941_chg_boost>;
+			flash-boost-supply = <&pm8941_chg_boost>;
 		};
 
 		pm8941_mvs1: regulator@8300 {
@@ -588,6 +592,15 @@
 };
 
 &rpm_bus {
+	rpm-regulator-ldoa12 {
+			pm8941_l12: regulator-l12 {
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				qcom,init-voltage = <1800000>;
+				regulator-always-on;
+		};
+	};
+
 	rpm-regulator-ldoa22 {
 			pm8941_l22: regulator-l22 {
 				regulator-min-microvolt = <3100000>;
@@ -605,7 +618,6 @@
 	};
 	rpm-regulator-ldoa23 {
 		pm8941_l23: regulator-l23 {
-		        regulator-always-on;
 			regulator-min-microvolt = <2800000>;
 			regulator-max-microvolt = <2800000>;
 			qcom,init-voltage = <2800000>;

@@ -1664,6 +1664,7 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	ttwu_queue(p, cpu);
 stat:
 	ttwu_stat(p, cpu, wake_flags);
+
 out:
 
 	notify = task_notify_on_migrate(p);

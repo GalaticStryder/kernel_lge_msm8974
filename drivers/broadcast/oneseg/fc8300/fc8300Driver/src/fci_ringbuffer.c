@@ -1,13 +1,27 @@
 /*****************************************************************************
- Copyright(c) 2010 FCI Inc. All Rights Reserved
+	 Copyright(c) 2013 FCI Inc. All Rights Reserved
 
- File name : fci_ringbuffer.c
+	 File name : fci_ringbuffer.c
 
- Description : fci ringbuffer
+	 Description : source of data buffer control
 
- History :
- ----------------------------------------------------------------------
- 2010/11/25 	aslan.cho	initial
+	 This program is free software; you can redistribute it and/or modify
+	 it under the terms of the GNU General Public License as published by
+	 the Free Software Foundation; either version 2 of the License, or
+	 (at your option) any later version.
+
+	 This program is distributed in the hope that it will be useful,
+	 but WITHOUT ANY WARRANTY; without even the implied warranty of
+	 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	 GNU General Public License for more details.
+
+	 You should have received a copy of the GNU General Public License
+	 along with this program; if not, write to the Free Software
+	 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+	 History :
+	 ----------------------------------------------------------------------
+	 2010/11/25 	aslan.cho	initial
 *******************************************************************************/
 
 #include <linux/errno.h>
@@ -22,16 +36,17 @@
 #define PKT_READY 0
 #define PKT_DISPOSED 1
 
-void fci_ringbuffer_init(struct fci_ringbuffer *rbuf, void *data, Dynamic_32_64 len)
+void fci_ringbuffer_init(struct fci_ringbuffer *rbuf, void *data, size_t len)
 {
 	rbuf->pread = rbuf->pwrite = 0;
 	rbuf->data = data;
 	rbuf->size = len;
 	rbuf->error = 0;
-
+#ifdef BBM_I2C_TSIF
 	init_waitqueue_head(&rbuf->queue);
 
 	spin_lock_init(&(rbuf->lock));
+#endif
 }
 
 int fci_ringbuffer_empty(struct fci_ringbuffer *rbuf)
@@ -39,9 +54,9 @@ int fci_ringbuffer_empty(struct fci_ringbuffer *rbuf)
 	return (rbuf->pread == rbuf->pwrite);
 }
 
-Dynamic_32_64 fci_ringbuffer_free(struct fci_ringbuffer *rbuf)
+ssize_t fci_ringbuffer_free(struct fci_ringbuffer *rbuf)
 {
-	Dynamic_32_64 free;
+	ssize_t free;
 
 	free = rbuf->pread - rbuf->pwrite;
 	if (free <= 0)
@@ -49,9 +64,9 @@ Dynamic_32_64 fci_ringbuffer_free(struct fci_ringbuffer *rbuf)
 	return free-1;
 }
 
-Dynamic_32_64 fci_ringbuffer_avail(struct fci_ringbuffer *rbuf)
+ssize_t fci_ringbuffer_avail(struct fci_ringbuffer *rbuf)
 {
-	Dynamic_32_64 avail;
+	ssize_t avail;
 
 	avail = rbuf->pwrite - rbuf->pread;
 	if (avail < 0)
@@ -73,6 +88,7 @@ void fci_ringbuffer_reset(struct fci_ringbuffer *rbuf)
 
 void fci_ringbuffer_flush_spinlock_wakeup(struct fci_ringbuffer *rbuf)
 {
+#ifdef BBM_I2C_TSIF
 	unsigned long flags;
 
 	spin_lock_irqsave(&rbuf->lock, flags);
@@ -80,13 +96,14 @@ void fci_ringbuffer_flush_spinlock_wakeup(struct fci_ringbuffer *rbuf)
 	spin_unlock_irqrestore(&rbuf->lock, flags);
 
 	wake_up(&rbuf->queue);
+#endif
 }
 
-Dynamic_32_64 fci_ringbuffer_read_user(struct fci_ringbuffer *rbuf
-	, u8 __user *buf, Dynamic_32_64 len)
+ssize_t fci_ringbuffer_read_user(struct fci_ringbuffer *rbuf
+	, u8 __user *buf, size_t len)
 {
-	Dynamic_32_64 todo = len;
-	Dynamic_32_64 split;
+	size_t todo = len;
+	size_t split;
 
 	split = (rbuf->pread + len > rbuf->size) ? rbuf->size - rbuf->pread : 0;
 	if (split > 0) {
@@ -104,10 +121,10 @@ Dynamic_32_64 fci_ringbuffer_read_user(struct fci_ringbuffer *rbuf
 	return len;
 }
 
-void fci_ringbuffer_read(struct fci_ringbuffer *rbuf, u8 *buf, Dynamic_32_64 len)
+void fci_ringbuffer_read(struct fci_ringbuffer *rbuf, u8 *buf, size_t len)
 {
-	Dynamic_32_64 todo = len;
-	Dynamic_32_64 split;
+	size_t todo = len;
+	size_t split;
 
 	split = (rbuf->pread + len > rbuf->size) ? rbuf->size - rbuf->pread : 0;
 	if (split > 0) {
@@ -121,11 +138,11 @@ void fci_ringbuffer_read(struct fci_ringbuffer *rbuf, u8 *buf, Dynamic_32_64 len
 	rbuf->pread = (rbuf->pread + todo) % rbuf->size;
 }
 
-Dynamic_32_64 fci_ringbuffer_write(struct fci_ringbuffer *rbuf
-	, const u8 *buf, Dynamic_32_64 len)
+ssize_t fci_ringbuffer_write(struct fci_ringbuffer *rbuf
+	, const u8 *buf, size_t len)
 {
-	Dynamic_32_64 todo = len;
-	Dynamic_32_64 split;
+	size_t todo = len;
+	size_t split;
 
 	split = (rbuf->pwrite + len > rbuf->size)
 		? rbuf->size - rbuf->pwrite : 0;
@@ -142,11 +159,11 @@ Dynamic_32_64 fci_ringbuffer_write(struct fci_ringbuffer *rbuf
 	return len;
 }
 
-Dynamic_32_64 fci_ringbuffer_pkt_write(struct fci_ringbuffer *rbuf
-	, u8 *buf, Dynamic_32_64 len)
+ssize_t fci_ringbuffer_pkt_write(struct fci_ringbuffer *rbuf
+	, u8 *buf, size_t len)
 {
 	int status;
-	Dynamic_32_64 oldpwrite = rbuf->pwrite;
+	ssize_t oldpwrite = rbuf->pwrite;
 
 	FCI_RINGBUFFER_WRITE_BYTE(rbuf, len >> 8);
 	FCI_RINGBUFFER_WRITE_BYTE(rbuf, len & 0xff);
@@ -158,12 +175,12 @@ Dynamic_32_64 fci_ringbuffer_pkt_write(struct fci_ringbuffer *rbuf
 	return status;
 }
 
-Dynamic_32_64 fci_ringbuffer_pkt_read_user(struct fci_ringbuffer *rbuf, Dynamic_32_64 idx,
-				int offset, u8 __user *buf, Dynamic_32_64 len)
+ssize_t fci_ringbuffer_pkt_read_user(struct fci_ringbuffer *rbuf, size_t idx,
+				int offset, u8 __user *buf, size_t len)
 {
-	Dynamic_32_64 todo;
-	Dynamic_32_64 split;
-	Dynamic_32_64 pktlen;
+	size_t todo;
+	size_t split;
+	size_t pktlen;
 
 	pktlen = rbuf->data[idx] << 8;
 	pktlen |= rbuf->data[(idx + 1) % rbuf->size];
@@ -188,12 +205,12 @@ Dynamic_32_64 fci_ringbuffer_pkt_read_user(struct fci_ringbuffer *rbuf, Dynamic_
 	return len;
 }
 
-Dynamic_32_64 fci_ringbuffer_pkt_read(struct fci_ringbuffer *rbuf, Dynamic_32_64 idx,
-				int offset, u8 *buf, Dynamic_32_64 len)
+ssize_t fci_ringbuffer_pkt_read(struct fci_ringbuffer *rbuf, size_t idx,
+				int offset, u8 *buf, size_t len)
 {
-	Dynamic_32_64 todo;
-	Dynamic_32_64 split;
-	Dynamic_32_64 pktlen;
+	size_t todo;
+	size_t split;
+	size_t pktlen;
 
 	pktlen = rbuf->data[idx] << 8;
 	pktlen |= rbuf->data[(idx + 1) % rbuf->size];
@@ -215,9 +232,9 @@ Dynamic_32_64 fci_ringbuffer_pkt_read(struct fci_ringbuffer *rbuf, Dynamic_32_64
 	return len;
 }
 
-void fci_ringbuffer_pkt_dispose(struct fci_ringbuffer *rbuf, Dynamic_32_64 idx)
+void fci_ringbuffer_pkt_dispose(struct fci_ringbuffer *rbuf, size_t idx)
 {
-	Dynamic_32_64 pktlen;
+	size_t pktlen;
 
 	rbuf->data[(idx + 2) % rbuf->size] = PKT_DISPOSED;
 
@@ -232,8 +249,8 @@ void fci_ringbuffer_pkt_dispose(struct fci_ringbuffer *rbuf, Dynamic_32_64 idx)
 	}
 }
 
-Dynamic_32_64 fci_ringbuffer_pkt_next(struct fci_ringbuffer *rbuf
-	, Dynamic_32_64 idx, Dynamic_32_64 *pktlen)
+ssize_t fci_ringbuffer_pkt_next(struct fci_ringbuffer *rbuf
+	, size_t idx, size_t *pktlen)
 {
 	int consumed;
 	int curpktlen;

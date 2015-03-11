@@ -417,7 +417,7 @@ static void vzw_drv_check_state_work(struct work_struct *w)
 	queue_delayed_work(system_nrt_wq, &mdwc->drv_check_work, 0);
 }
 #endif
-#if defined(CONFIG_LGE_PM) && defined(BQ24296_CHARGER)
+#if defined(CONFIG_LGE_PM) && (defined(BQ24296_CHARGER) || defined(CONFIG_BQ24192_CHARGER))
 static int dwc3_pmic_write(struct spmi_controller *ctrl, u16 addr, u8 val)
 {
 	int rc;
@@ -2762,7 +2762,7 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 		}
 		mdwc->vbus_active = val->intval;
 
-#if defined(CONFIG_LGE_PM) && defined(BQ24296_CHARGER)
+#if defined(CONFIG_LGE_PM) && (defined(BQ24296_CHARGER) || defined(CONFIG_BQ24192_CHARGER))
 		if (mdwc->vbus_active)
 			dwc3_pmic_usb_override(true);
 		else
@@ -3376,7 +3376,7 @@ static int __devinit dwc3_msm_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&mdwc->init_adc_work, dwc3_init_adc_work);
 	init_completion(&mdwc->ext_chg_wait);
 
-#if defined(CONFIG_LGE_PM) && defined(BQ24296_CHARGER)
+#if defined(CONFIG_LGE_PM) && (defined(BQ24296_CHARGER) || defined(CONFIG_BQ24192_CHARGER))
 	dwc3_pmic_usb_override(false);
 #endif
 	ret = dwc3_msm_config_gdsc(mdwc, 1);
@@ -3735,10 +3735,10 @@ static int __devinit dwc3_msm_probe(struct platform_device *pdev)
 			!mdwc->charger.charging_disabled) {
 		mdwc->usb_psy.name = "usb";
 #ifdef CONFIG_LGE_PM
-		/*                   
-                                                
-                                          
-   */
+		/* B2-BSP-USB@lge.com
+		 * Set psy supply type when usb plug & unplug,
+		 * So, set as unknown type when probing.
+		 */
 		mdwc->usb_psy.type = POWER_SUPPLY_TYPE_UNKNOWN;
 #else
 		mdwc->usb_psy.type = POWER_SUPPLY_TYPE_USB;

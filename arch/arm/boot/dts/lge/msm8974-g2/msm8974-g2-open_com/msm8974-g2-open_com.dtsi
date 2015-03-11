@@ -39,7 +39,7 @@
 
 	qcom,msm-dai-mi2s {
 		compatible = "qcom,msm-dai-mi2s";
-		qcom,msm-dai-q6-mi2s-quat {
+		qcom,msm-dai-q6-mi2s-tert {
 			compatible = "qcom,msm-dai-q6-mi2s";
 			qcom,msm-dai-q6-mi2s-dev-id = <2>;
 			qcom,msm-mi2s-rx-lines = <0>;

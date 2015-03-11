@@ -20,7 +20,7 @@ config LGE_BROADCAST_ONESEG_TCC3535
 	  
 config LGE_BROADCAST_ISDBT_JAPAN_FC8300
 	bool "Japan FULL-SEG broacast tuner chipset FC8300 device driver"
-	depends on LGE_BROADCAST_ISDBT_JAPAN && MACH_MSM8974_DZNY_DCM
+	depends on (LGE_BROADCAST_ISDBT_JAPAN && MACH_MSM8974_DZNY_DCM) || (LGE_BROADCAST_ISDBT_JAPAN && MACH_MSM8994_G4_KDDI_JP)
 	default y
 	help
 	  Select this if you want to use Japanese FULL-SEG service

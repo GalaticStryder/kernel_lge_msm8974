@@ -28,6 +28,7 @@
 #include <linux/regulator/consumer.h>
 #include "nfc-nci.h"
 #include <mach/gpiomux.h>
+#include <linux/pm_runtime.h>
 
 struct qca199x_platform_data {
 	unsigned int irq_gpio;
@@ -62,6 +63,8 @@ MODULE_DEVICE_TABLE(of, msm_match_table);
 #define CORE_RST_NTF_LENGTH		(0x02)
 #define WAKE_TIMEOUT			(1000)
 #define WAKE_REG			(0x10)
+#define EFUSE_REG			(0xA0)
+#define WAKEUP_SRC_TIMEOUT		(2000)
 
 static void clk_req_update(struct work_struct *work);
 
@@ -727,12 +730,12 @@ int nfc_ioctl_power_states(struct file *filp, unsigned int cmd,
 		msleep(20);
 	} else if (arg == 4) {
 		mutex_lock(&qca199x_dev->read_mutex);
-		nfcc_wake(NFCC_WAKE, filp);
+		r = nfcc_wake(NFCC_WAKE, filp);
 		dev_dbg(&qca199x_dev->client->dev, "nfcc wake: %s: info: %p\n",
 			__func__, qca199x_dev);
 		mutex_unlock(&qca199x_dev->read_mutex);
 	} else if (arg == 5) {
-		nfcc_wake(NFCC_SLEEP, filp);
+		r = nfcc_wake(NFCC_SLEEP, filp);
 	} else {
 		r = -ENOIOCTLCMD;
 	}
@@ -995,7 +998,7 @@ static long nfc_ioctl(struct file *pfile, unsigned int cmd,
 	struct qca199x_dev *qca199x_dev = pfile->private_data;
 	switch (cmd) {
 	case NFC_SET_PWR:
-		nfc_ioctl_power_states(pfile, cmd, arg);
+		r = nfc_ioctl_power_states(pfile, cmd, arg);
 		break;
 	case NFCC_MODE:
 		r = nfc_ioctl_nfcc_mode(pfile, cmd, arg);
@@ -1677,6 +1680,8 @@ static int qca199x_probe(struct i2c_client *client,
 		INIT_WORK(&qca199x_dev->msm_clock_controll_work,
 			clk_req_update);
 	}
+	device_init_wakeup(&client->dev, true);
+	device_set_wakeup_capable(&client->dev, true);
 	i2c_set_clientdata(client, qca199x_dev);
 	gpio_set_value(platform_data->dis_gpio, 1);
 
@@ -1742,9 +1747,31 @@ static int qca199x_remove(struct i2c_client *client)
 	return 0;
 }
 
+static int qca199x_suspend(struct device *device)
+{
+	struct i2c_client *client = to_i2c_client(device);
+
+	if (device_may_wakeup(&client->dev))
+		enable_irq_wake(client->irq);
+	return 0;
+}
+
+static int qca199x_resume(struct device *device)
+{
+	struct i2c_client *client = to_i2c_client(device);
+
+	if (device_may_wakeup(&client->dev))
+		disable_irq_wake(client->irq);
+	return 0;
+}
+
 static const struct i2c_device_id qca199x_id[] = {
 	{"qca199x-i2c", 0},
 	{}
+};
+
+static const struct dev_pm_ops nfc_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(qca199x_suspend, qca199x_resume)
 };
 
 static struct i2c_driver qca199x = {
@@ -1755,6 +1782,7 @@ static struct i2c_driver qca199x = {
 		.owner = THIS_MODULE,
 		.name = "nfc-nci",
 		.of_match_table = msm_match_table,
+		.pm = &nfc_pm_ops,
 	},
 };
 

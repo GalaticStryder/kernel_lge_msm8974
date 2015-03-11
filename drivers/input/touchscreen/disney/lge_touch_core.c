@@ -60,7 +60,7 @@ int quick_cover_status = 0;
 int knock_mode = 0;
 extern int boot_mode;
 extern int mfts_enable;
-
+extern int previous_pm_suspend;
 struct timeval t_ex_debug[EX_PROFILE_MAX];
 bool ghost_detection = 0;
 bool long_press_check = 0;
@@ -1026,18 +1026,12 @@ static int interrupt_control(struct lge_touch_data *ts, int on_off)
 
 	if (atomic_read(&ts->state.interrupt_state) != on_off) {
 		atomic_set(&ts->state.interrupt_state, on_off);
-
-		if (on_off) {
-			enable_irq(ts->client->irq);
-		} else {
-			TOUCH_INFO_MSG("%s : disable irq nosync\n", __func__);
-			disable_irq_nosync(ts->client->irq);
-		}
-
-		if (ts->pdata->role->wake_up_by_touch) {
+		if (ts->pdata->role->wake_up_by_touch)
 			on_off ? enable_irq_wake(ts->client->irq)
 				: disable_irq_wake(ts->client->irq);
-		}
+		else
+			on_off ? enable_irq(ts->client->irq)
+				: disable_irq(ts->client->irq);
 	}
 
 	TOUCH_DEBUG(DEBUG_BASE_INFO, "interrupt_state[%d]\n", on_off);
@@ -1865,6 +1859,7 @@ irqreturn_t touch_irq_handler(int irq, void *dev_id)
 	if (atomic_read(&ts->state.pm_state) >= PM_SUSPEND) {
 		TOUCH_INFO_MSG("interrupt in suspend[%d]\n",
 				atomic_read(&ts->state.pm_state));
+		previous_pm_suspend = 1;
 		atomic_set(&ts->state.pm_state, PM_SUSPEND_IRQ);
 		wake_lock_timeout(&ts->lpwg_wake_lock, msecs_to_jiffies(1000));
 		return IRQ_HANDLED;
@@ -3246,6 +3241,8 @@ static int touch_resume(struct device *dev)
 	TOUCH_TRACE();
 	TOUCH_INFO_MSG("%s : touch_resume start\n", __func__);
 
+	previous_pm_suspend = 0;
+
 	if(!boot_mode) {
 		TOUCH_INFO_MSG("%s  : Ignore resume in Chargerlogo mode\n", __func__);
 		return 0;
@@ -3329,7 +3326,6 @@ static int lcd_notifier_callback(struct notifier_block *this,
 	TOUCH_DEBUG(DEBUG_BASE_INFO,"%s: event = %lu\n", __func__, event);
 	switch (event) {
 		case LCD_EVENT_TOUCH_LPWG_ON:
-			mdelay(100);
 			TOUCH_DEBUG(DEBUG_BASE_INFO, "LCD_EVENT_TOUCH_LPWG_ON\n");
 			touch_device_func->lpwg(ts_data->client, LPWG_INCELL_LPWG_ON, 0, NULL);
 			break;

@@ -175,6 +175,9 @@ static struct dbs_tuners {
 	.optimal_max_freq = DEF_OPTIMAL_FREQ,
 	.debug_mask=0,
 };
+#if defined(CONFIG_MACH_MSM8974_B1_KR) || defined(CONFIG_MACH_MSM8974_B1W)
+extern int boost_freq;
+#endif
 
 static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 {
@@ -990,6 +993,14 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	load_at_max_freq = (cur_load * policy->cur)/policy->cpuinfo.max_freq;
 
 	cpufreq_notify_utilization(policy, load_at_max_freq);
+#if defined(CONFIG_MACH_MSM8974_B1_KR) || defined(CONFIG_MACH_MSM8974_B1W)
+	if (boost_freq == 2) {
+		if(policy->cur < policy->max){
+			dbs_freq_increase(policy, policy->max);
+		}
+		return;
+	}
+#endif
 	/* Check for frequency increase */
 	if (max_load_freq > dbs_tuners_ins.up_threshold * policy->cur) {
 		int freq_target, freq_div;
@@ -1325,7 +1336,17 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 		/* nothing to do */
 		return;
 	}
-
+#if defined(CONFIG_MACH_MSM8974_B1_KR) || defined(CONFIG_MACH_MSM8974_B1W)
+	if (boost_freq == 1) {
+		if (!strcmp((char*)(handle->dev->name), "qpnp_pon")){
+			printk(KERN_ERR "ws->name=%s, boost_Freq=%d\n",
+				handle->dev->name, boost_freq);
+			boost_freq++;
+			printk(KERN_ERR "ws->name=%s, boost_Freq=%d\n",
+				handle->dev->name, boost_freq);
+		}
+	}
+#endif
 	for_each_online_cpu(i)
 		queue_work_on(i, dbs_wq, &per_cpu(dbs_refresh_work, i).work);
 }
@@ -1514,6 +1535,11 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
+#ifdef CONFIG_MACH_LGE
+		/* If device is being removed, skip set limits */
+		if (!this_dbs_info->cur_policy)
+			break;
+#endif
 		mutex_lock(&this_dbs_info->timer_mutex);
 		if (policy->max < this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,

@@ -20,7 +20,7 @@
 /include/ "msm8974pro-dzny-dcm.dtsi"
 
 / {
-	model = "Qualcomm MSM 8974 Disney DCM";
+	model = "Qualcomm MSM 8974 L4 DCM";
 	compatible = "qcom,msm8974";
 	qcom,msm-id = <218 120 0x10000>;
 };

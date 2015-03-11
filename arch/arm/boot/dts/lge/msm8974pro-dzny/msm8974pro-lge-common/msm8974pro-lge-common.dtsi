@@ -26,12 +26,6 @@
 	aliases {
 		serial0 = &blsp1_uart1;
 	};
-
-//CONFIG_LGE_BLUETOOTH (+) - Set UART5
-	aliases {
-		uart99 = &uart5;
-	};
-//CONFIG_LGE_BLUETOOTH (-) - Set UART5
 };
 
 &sdhc_1 {
@@ -120,69 +114,6 @@
 	blsp1_uart1: serial@f991e000 {
 		status = "disabled";
 	};
-	//CONFIG_LGE_BLUETOOTH (+)
-	// BLSP5 (BLSP 1 UART 4), UART5 For Bluetooth
-	uart5: uart@f9921000  {
-		compatible = "qcom,msm-hsuart-v14";
-		status = "ok";
-		reg = <0xf9921000  0x1000>,
-			<0xf9904000 0x19000>;
-		reg-names = "core_mem", "bam_mem";
-		interrupts = <0 111 0>, <0 238 0>;
-		interrupt-names = "core_irq", "bam_irq";
-
-		qcom,tx-gpio = <&msmgpio 23 0>;
-		qcom,rx-gpio = <&msmgpio 24 0>;
-		qcom,cts-gpio = <&msmgpio 25 0>;
-		qcom,rfr-gpio = <&msmgpio 26 0>;
-
-		qcom,bam-tx-ep-pipe-index = <8>;
-		qcom,bam-rx-ep-pipe-index = <9>;
-
-		qcom,msm-bus,name = "serial_uart5";
-		qcom,msm-bus,num-cases = <2>;
-		qcom,msm-bus,active-only = <0>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-				<86 512 0 0>,
-				<86 512 500 800>;
-		// Disable Auto RFR (Ready For Receive) Function of msm_serial_hs
-		// Because of BT Sleep control error
-		qcom,msm-obs;
-	};
-
-	// IRRC (BLSP 2 UART 6). UART6 For IRRC
-	//  LGE_CHANGE_S, [IRRC][daegeun.yoon@lge.com], 2014-01-09, IRRC Bring up for B2
-
-        serial@f9962000 {
-                compatible = "qcom,msm-lsuart-v14";
-                reg = <0xf9962000 0x100>;
-                interrupts = <0 118 0>;
-                status = "disable";
-
-                qcom,msm-bus,name = "serial_uart12";
-                qcom,msm-bus,num-cases = <2>;
-                qcom,msm-bus,active-only = <0>;
-                qcom,msm-bus,num-paths = <1>;
-                qcom,msm-bus,vectors-KBps =
-                         <84 512 0 0>,
-                         <84 512 500 800>;
-        };
-
-
-	/delete-node/uart@f995d000;
-
-	/* To register A1 BT wake-up devices for BT sleep */
-	bt_sleep {
-		compatible = "lge,bcm_bluesleep";
-		host-wake-gpio = <&msmgpio 42 0>;
-		ext-wake-gpio = <&msmgpio 62 0>;
-		interrupt-parent = <&msmgpio>;
-		interrupts = <42 0>;
-		interrupt-names = "host_wake";
-	};
-	//CONFIG_LGE_BLUETOOTH (-)
-
 };
 &cci {
 	qcom,camera@20 {

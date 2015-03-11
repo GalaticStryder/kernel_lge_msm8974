@@ -29,8 +29,10 @@
 #include "fci_hpi.h"
 #include "fc8300_bb.h"
 #include "fc8300_tun.h"
+#include "fc8300b_tun.h"
 
-#define FC8300_TUNER_ADDR	0x56
+#define FC8300_TUNER_ADDR	0x58
+#define FC8300B_TUNER_ADDR	0x58
 
 struct I2C_DRV {
 	int (*init)(HANDLE handle, DEVICEID devid,
@@ -62,6 +64,13 @@ static struct TUNER_DRV fc8300_tuner = {
 	&fc8300_set_freq,
 	&fc8300_get_rssi,
 	&fc8300_tuner_deinit
+};
+
+static struct TUNER_DRV fc8300b_tuner = {
+	&fc8300b_tuner_init,
+	&fc8300b_set_freq,
+	&fc8300b_get_rssi,
+	&fc8300b_tuner_deinit
 };
 
 static u8 tuner_addr = FC8300_TUNER_ADDR;
@@ -189,6 +198,13 @@ s32 tuner_select(HANDLE handle, DEVICEID devid,
 		tuner_addr = FC8300_TUNER_ADDR;
 		broadcast_type = broadcast;
 		break;
+	case FC8300B_TUNER:
+		tuner = &fc8300b_tuner;
+		tuner_addr = FC8300B_TUNER_ADDR;
+		broadcast_type = broadcast;
+		break;
+	default:
+		return BBM_NOK;
 	}
 
 	if (tuner == NULL)
@@ -198,60 +214,6 @@ s32 tuner_select(HANDLE handle, DEVICEID devid,
 		return BBM_E_TN_INIT;
 
 	fc8300_set_broadcast_mode(handle, devid, broadcast);
-
-#ifdef BBM_ES
-	if (product == FC8300_TUNER) {
-		u8 chip_ver = 0x00;
-		tuner_i2c_read(handle, devid, 0xff, 1, &chip_ver, 1);
-
-		if (chip_ver == 0xc0)
-			return BBM_OK;
-
-		bbm_byte_write(handle, DIV_MASTER, BBM_RESYNC_ENABLE, 0xcf);
-		bbm_long_write(handle, DIV_BROADCAST, BBM_MEMORY_RWM0,
-							0x05555555);
-		bbm_byte_write(handle, DIV_BROADCAST, BBM_SFS_FTS_ERR_MAX_1SEG,
-							0x08);
-		bbm_byte_write(handle, DIV_BROADCAST, BBM_SFS_FTS_ERR_MAX_3SEG,
-							0x08);
-		bbm_byte_write(handle, DIV_BROADCAST, BBM_PGA_GAIN_MAX, 0x0c);
-		bbm_byte_write(handle, DIV_BROADCAST, BBM_CSF_GAIN_MAX, 0x09);
-		bbm_byte_write(handle, DIV_MASTER, BBM_FD_OUT_MODE, 0x03);
-		bbm_byte_write(handle, DIV_MASTER, BBM_DIV_START_MODE, 0x17);
-		bbm_byte_write(handle, DIV_BROADCAST,
-					BBM_PSAT_ON_REF_1SEG_QPSK, 0x1a);
-		bbm_byte_write(handle, DIV_BROADCAST,
-					BBM_PSAT_ON_REF_1SEG_16QAM, 0x1b);
-
-		switch (broadcast) {
-		case ISDBT_1SEG:
-		case ISDBTMM_1SEG:
-		case ISDBTSB_1SEG:
-		case ISDBT_CATV_1SEG:
-		case ISDBTSB_3SEG:
-			bbm_byte_write(handle, DIV_BROADCAST, BBM_SFS_MTH,
-							0x32);
-			break;
-		case ISDBT_13SEG:
-		case ISDBTMM_13SEG:
-		case ISDBT_CATV_13SEG:
-			bbm_byte_write(handle, DIV_BROADCAST, BBM_SFS_MTH,
-							0x31);
-			break;
-		}
-
-#if defined(BBM_2_DIVERSITY) || defined(BBM_4_DIVERSITY)
-		bbm_byte_write(handle, DIV_MASTER, BBM_XTAL_OUTBUF_EN, 0x00);
-		bbm_byte_write(handle, DIV_MASTER, BBM_XTAL_OUTBUF_GAIN, 0x03);
-		bbm_word_write(handle, DIV_BROADCAST, BBM_FD_RD_LATENCY_1SEG,
-								0x1840);
-		bbm_byte_write(handle, DIV_BROADCAST, BBM_COMB_OFF, 0x80);
-#else /* SINGLE */
-		bbm_word_write(handle, DIV_BROADCAST, BBM_FD_RD_LATENCY_1SEG,
-								0x0002);
-#endif /* #if defined(BBM_2_DIVERSITY) || defined(BBM_4_DIVERSITY) */
-	}
-#endif /* #ifdef BBM_ES */
 
 	return BBM_OK;
 }

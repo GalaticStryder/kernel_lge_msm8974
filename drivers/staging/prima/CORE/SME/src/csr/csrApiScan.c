@@ -305,7 +305,7 @@ static void csrSetDefaultScanTiming( tpAniSirGlobal pMac, tSirScanType scanType,
     if(csrIsAnySessionConnected(pMac))
     {
         //Reset passive scan time as per ini parameter.
-        ccmCfgSetInt(pMac->hHdd,WNI_CFG_PASSIVE_MAXIMUM_CHANNEL_TIME,
+        ccmCfgSetInt(pMac, WNI_CFG_PASSIVE_MAXIMUM_CHANNEL_TIME,
                      pMac->roam.configParam.nPassiveMaxChnTimeConc,
                      NULL,eANI_BOOLEAN_FALSE);
         //If multi-session, use the appropriate default scan times 
@@ -332,7 +332,7 @@ static void csrSetDefaultScanTiming( tpAniSirGlobal pMac, tSirScanType scanType,
     //This portion of the code executed if multi-session not supported
     //(WLAN_AP_STA_CONCURRENCY not defined) or no multi-session.
     //Use the "regular" (non-concurrency) default scan timing.
-    ccmCfgSetInt(pMac->hHdd,WNI_CFG_PASSIVE_MAXIMUM_CHANNEL_TIME,
+    ccmCfgSetInt(pMac, WNI_CFG_PASSIVE_MAXIMUM_CHANNEL_TIME,
                      pMac->roam.configParam.nPassiveMaxChnTime,
                      NULL,eANI_BOOLEAN_FALSE);
     if(pScanRequest->scanType == eSIR_ACTIVE_SCAN)
@@ -8239,6 +8239,11 @@ eHalStatus csrScanSavePreferredNetworkFound(tpAniSirGlobal pMac,
    tAniSSID tmpSsid;
    v_TIME_t timer=0;
    tpSirMacMgmtHdr macHeader = (tpSirMacMgmtHdr)pPrefNetworkFoundInd->data;
+   boolean bFoundonAppliedChannel = FALSE;
+   v_U32_t indx;
+   u8 channelsAllowed[WNI_CFG_VALID_CHANNEL_LIST_LEN];
+   v_U32_t numChannelsAllowed = WNI_CFG_VALID_CHANNEL_LIST_LEN;
+
 
    pParsedFrame =
        (tpSirProbeRespBeacon)vos_mem_malloc(sizeof(tSirProbeRespBeacon));
@@ -8322,6 +8327,41 @@ eHalStatus csrScanSavePreferredNetworkFound(tpAniSirGlobal pMac,
       {
          pBssDescr->channelId = 36;
       }
+      /* Restrict the logic to ignore the pno indication for invalid channel
+       * only if valid channel info is present in beacon/probe resp.
+       * If no channel info is present in beacon/probe resp, always process
+       * the pno indication.
+       */
+      bFoundonAppliedChannel = TRUE;
+   }
+
+   if (0 != sme_GetCfgValidChannels(pMac, channelsAllowed, &numChannelsAllowed))
+   {
+      smsLog(pMac, LOGE, FL(" sme_GetCfgValidChannels failed "));
+      csrFreeScanResultEntry(pMac, pScanResult);
+      vos_mem_free(pParsedFrame);
+      return eHAL_STATUS_FAILURE;
+   }
+   /* Checking chhanelId with allowed channel list */
+   for (indx = 0; indx < numChannelsAllowed; indx++)
+   {
+      if (pBssDescr->channelId == channelsAllowed[indx])
+      {
+         bFoundonAppliedChannel = TRUE;
+         smsLog(pMac, LOG1, FL(" pno ind found on applied channel =%d\n "),
+                                                     pBssDescr->channelId);
+         break;
+      }
+   }
+   /* Ignore PNO indication if AP is on Invalid channel.
+    */
+   if(FALSE == bFoundonAppliedChannel)
+   {
+      smsLog(pMac, LOGW, FL(" prefered network found on invalid channel = %d"),
+                                                         pBssDescr->channelId);
+      csrFreeScanResultEntry(pMac, pScanResult);
+      vos_mem_free(pParsedFrame);
+      return eHAL_STATUS_FAILURE;
    }
 
    if ((pBssDescr->channelId > 0) && (pBssDescr->channelId < 15))

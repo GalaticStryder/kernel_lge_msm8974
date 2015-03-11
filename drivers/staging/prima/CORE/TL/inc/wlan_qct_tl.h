@@ -137,6 +137,16 @@ when        who    what, where, why
 // Choose the largest possible value that can be accomodates in 8 bit signed
 // variable.
 #define SNR_HACK_BMPS                         (127)
+#define IS_BROADCAST_ADD(_a)              \
+    ((_a)[0] == 0xff &&                         \
+     (_a)[1] == 0xff &&                         \
+     (_a)[2] == 0xff &&                         \
+     (_a)[3] == 0xff &&                         \
+     (_a)[4] == 0xff &&                         \
+     (_a)[5] == 0xff)
+
+#define IS_MULTICAST_ADD(_a)  (*(_a) & 0x01)
+
 /*--------------------------------------------------------------------------
   Access category enum used by TL
   - order must be kept as these values are used to setup the AC mask
@@ -574,6 +584,13 @@ typedef tSap_SoftapStats WLANTL_TRANSFER_STA_TYPE;
 #define WLANTL_MAX_AVAIL_THRESHOLD   5
 #define WLANTL_HS_NUM_CLIENT         2
 #define WLANTL_SINGLE_CLNT_THRESHOLD 4
+
+typedef enum
+{
+  WLANTL_DEBUG_TX_SNAPSHOT = 1<<0,
+
+  WLANTL_DEBUG_FW_CLEANUP = 1<<1,
+}WLANTL_DebugFlags;
 
 /*----------------------------------------------------------------------------
  *   TL callback types
@@ -1206,6 +1223,39 @@ WLANTL_CollectInterfaceStats
   v_PVOID_t       pvosGCtx,
   v_U8_t          ucSTAId,
   WLANTL_InterfaceStatsType  *vosDataBuff
+);
+
+/*==========================================================================
+
+  FUNCTION    WLANTL_ClearInterfaceStats
+
+  DESCRIPTION
+    Utility function used by TL to clear the statitics
+
+  DEPENDENCIES
+
+
+  PARAMETERS
+
+    IN
+
+    ucSTAId:    station for which the statistics need to collected
+
+  RETURN VALUE
+    The result code associated with performing the operation
+
+    VOS_STATUS_E_INVAL:   Input parameters are invalid
+    VOS_STATUS_SUCCESS:   Everything is good :)
+
+  SIDE EFFECTS
+
+============================================================================*/
+VOS_STATUS
+WLANTL_ClearInterfaceStats
+(
+  v_PVOID_t       pvosGCtx,
+  v_U8_t          ucSTAId,
+  v_U8_t          statsClearReqMask
 );
 #endif
 
@@ -3071,7 +3121,7 @@ WLANTL_TxThreadDebugHandler
 v_VOID_t
 WLANTL_TLDebugMessage
 (
-  v_BOOL_t displaySnapshot
+  v_U32_t debugFlags
 );
 
 /*==========================================================================

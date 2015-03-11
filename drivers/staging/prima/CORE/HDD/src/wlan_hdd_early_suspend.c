@@ -51,7 +51,6 @@
 #include "halTypes.h"
 #include "sme_Api.h"
 #include <vos_api.h>
-#include "vos_power.h"
 #include <vos_sched.h>
 #include <macInitApi.h>
 #include <wlan_qct_sys.h>
@@ -101,10 +100,6 @@ static eHalStatus g_full_pwr_status;
 static eHalStatus g_standby_status;
 
 extern VOS_STATUS hdd_post_voss_start_config(hdd_context_t* pHddCtx);
-extern VOS_STATUS vos_chipExitDeepSleepVREGHandler(
-   vos_call_status_type* status,
-   vos_power_cb_type callback,
-   v_PVOID_t user_data);
 extern void hdd_wlan_initial_scan(hdd_context_t *pHddCtx);
 
 extern struct notifier_block hdd_netdev_notifier;
@@ -313,7 +308,6 @@ VOS_STATUS hdd_enter_deep_sleep(hdd_context_t *pHddCtx, hdd_adapter_t *pAdapter)
 {
    eHalStatus halStatus;
    VOS_STATUS vosStatus = VOS_STATUS_SUCCESS;
-   vos_call_status_type callType;
    long ret;
 
    //Stop the Interface TX queue.
@@ -382,23 +376,6 @@ VOS_STATUS hdd_enter_deep_sleep(hdd_context_t *pHddCtx, hdd_adapter_t *pAdapter)
        VOS_ASSERT(0);
    }
 
-   vosStatus = vos_chipAssertDeepSleep( &callType, NULL, NULL );
-   if( VOS_IS_STATUS_SUCCESS( vosStatus ))
-   {
-       hddLog(VOS_TRACE_LEVEL_ERROR,
-                FL("vos_chipAssertDeepSleep return failed %d"), vosStatus);
-       VOS_ASSERT(0);
-   }
-
-   //Vote off any PMIC voltage supplies
-   vosStatus = vos_chipPowerDown(NULL, NULL, NULL);
-   if( !VOS_IS_STATUS_SUCCESS( vosStatus ))
-   {
-       hddLog(VOS_TRACE_LEVEL_ERROR, "%s: vos_chipPowerDown return failed %d",
-                __func__, vosStatus);
-       VOS_ASSERT(0);
-   }
-
    pHddCtx->hdd_ps_state = eHDD_SUSPEND_DEEP_SLEEP;
 
    //Restore IMPS config
@@ -416,15 +393,6 @@ VOS_STATUS hdd_exit_deep_sleep(hdd_context_t *pHddCtx, hdd_adapter_t *pAdapter)
 {
    VOS_STATUS vosStatus;
    eHalStatus halStatus;
-
-   //Power Up Libra WLAN card first if not already powered up
-   vosStatus = vos_chipPowerUp(NULL,NULL,NULL);
-   if (!VOS_IS_STATUS_SUCCESS(vosStatus))
-   {
-      hddLog(VOS_TRACE_LEVEL_FATAL, "%s: WLAN not Powered Up."
-          "exiting", __func__);
-      goto err_deep_sleep;
-   }
 
    VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
       "%s: calling hdd_set_sme_config",__func__);
@@ -519,26 +487,26 @@ void hdd_ipv6_notifier_work_queue(struct work_struct *work)
         // This invocation being part of the IPv6 registration callback,
         // set the newly generated ip address to f/w in suspend mode.
 #ifdef WLAN_NS_OFFLOAD
-            //Disable NSOFFLOAD
-            if (pHddCtx->cfg_ini->fhostNSOffload)
-            {
-                hdd_conf_ns_offload(pAdapter, 1);
-            }
+        if (pHddCtx->cfg_ini->fhostNSOffload)
+        {
+            hdd_conf_ns_offload(pAdapter, 1);
+        }
 #endif
     }
 #ifdef WLAN_FEATURE_PACKET_FILTERING
-    /* wlan_hdd_set_mc_addr_list() is called from the early susspend
+    /* wlan_hdd_set_mc_addr_list() is called from the early suspend
      * only so when new ipv6 address is generated the screen may not
      * on so we need to call it here to update the list in f/w.
      */
-     wlan_hdd_set_mc_addr_list(pAdapter, TRUE);
+    wlan_hdd_set_mc_addr_list(pAdapter, TRUE);
 #endif
+
 
 }
 
 
-static int wlan_hdd_ipv6_changed(struct notifier_block *nb,
-                                   unsigned long data, void *arg)
+int wlan_hdd_ipv6_changed(struct notifier_block *nb,
+                            unsigned long data, void *arg)
 {
     struct inet6_ifaddr *ifa = (struct inet6_ifaddr *)arg;
     struct net_device *ndev = ifa->idev->dev;
@@ -557,51 +525,19 @@ static int wlan_hdd_ipv6_changed(struct notifier_block *nb,
             return NOTIFY_DONE;
         }
 
-        schedule_work(&pAdapter->ipv6NotifierWorkQueue);
+       if (pHddCtx->cfg_ini->nEnableSuspend ==
+                  WLAN_MAP_SUSPEND_TO_MCAST_BCAST_FILTER)
+       {
+           schedule_work(&pAdapter->ipv6NotifierWorkQueue);
+       }
+       else
+       {
+           hddLog(LOG1, FL("Not scheduling ipv6 wq nEnableSuspend = %d"),
+                            pHddCtx->cfg_ini->nEnableSuspend);
+       }
     }
 
     return NOTIFY_DONE;
-}
-
-void hdd_ipv6_callback_register(hdd_adapter_t *pAdapter, int fenable)
-{
-
-    int ret = 0;
-
-    if (fenable)
-    {
-
-         if(!pAdapter->ipv6_notifier_registered)
-         {
-
-             // Register IPv6 notifier to notify if any change in IP
-             // So that we can reconfigure the offload parameters
-             pAdapter->ipv6_notifier.notifier_call =
-                             wlan_hdd_ipv6_changed;
-             ret = register_inet6addr_notifier(&pAdapter->ipv6_notifier);
-             if (ret)
-             {
-                 hddLog(LOGE, FL("Failed to register IPv6 notifier"));
-             }
-             else
-             {
-                 hddLog(LOG1, FL("Registered IPv6 notifier"));
-                 pAdapter->ipv6_notifier_registered = true;
-             }
-         }
-    }
-    else
-    {
-
-        if (pAdapter->ipv6_notifier_registered)
-        {
-            hddLog(LOG1, FL("Unregistered IPv6 notifier"));
-            unregister_inet6addr_notifier(&pAdapter->ipv6_notifier);
-            pAdapter->ipv6_notifier_registered = false;
-        }
-
-    }
-
 }
 
 /*
@@ -687,7 +623,6 @@ void hdd_conf_hostoffload(hdd_adapter_t *pAdapter, v_BOOL_t fenable)
 #endif
 
             }
-            hdd_ipv6_callback_register(pAdapter, fenable);
         }
         else
         {
@@ -713,7 +648,6 @@ void hdd_conf_hostoffload(hdd_adapter_t *pAdapter, v_BOOL_t fenable)
                 hdd_conf_ns_offload(pAdapter, fenable);
             }
 #endif
-            hdd_ipv6_callback_register(pAdapter, fenable);
         }
     }
     return;
@@ -962,7 +896,7 @@ void hdd_conf_ns_offload(hdd_adapter_t *pAdapter, int fenable)
 
         for (i = 0; i < slot_index; i++)
         {
-            hddLog(VOS_TRACE_LEVEL_ERROR, FL("Disable Slot= %d"), i);
+            hddLog(VOS_TRACE_LEVEL_INFO, FL("Disable Slot= %d"), i);
             offLoadRequest.nsOffloadInfo.slotIdx = i;
             if (eHAL_STATUS_SUCCESS !=
                  sme_SetHostOffload(WLAN_HDD_GET_HAL_CTX(pAdapter),
@@ -1026,8 +960,8 @@ void hdd_ipv4_notifier_work_queue(struct work_struct *work)
     }
 }
 
-static int wlan_hdd_ipv4_changed(struct notifier_block *nb,
-                                   unsigned long data, void *arg)
+int wlan_hdd_ipv4_changed(struct notifier_block *nb,
+                            unsigned long data, void *arg)
 {
     struct in_ifaddr *ifa = (struct in_ifaddr *)arg;
     struct in_ifaddr **ifap = NULL;
@@ -1047,6 +981,17 @@ static int wlan_hdd_ipv4_changed(struct notifier_block *nb,
            hddLog(LOGE, FL("HDD context is invalid"));
            return NOTIFY_DONE;
        }
+
+       if ((pHddCtx->cfg_ini->nEnableSuspend !=
+                  WLAN_MAP_SUSPEND_TO_MCAST_BCAST_FILTER)
+           || (!pHddCtx->cfg_ini->fhostArpOffload))
+       {
+           hddLog(LOG1, FL("Offload not enabled MCBC=%d, ARPOffload=%d"),
+                          pHddCtx->cfg_ini->nEnableSuspend,
+                          pHddCtx->cfg_ini->fhostArpOffload);
+           return NOTIFY_DONE;
+       }
+
        if ((in_dev = __in_dev_get_rtnl(pAdapter->dev)) != NULL)
        {
            for (ifap = &in_dev->ifa_list; (ifa = *ifap) != NULL;
@@ -1089,11 +1034,10 @@ VOS_STATUS hdd_conf_arp_offload(hdd_adapter_t *pAdapter, int fenable)
    struct in_ifaddr *ifa = NULL;
    struct in_device *in_dev;
    int i = 0;
-   int ret = 0;
    tSirHostOffloadReq  offLoadRequest;
    hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
 
-   hddLog(VOS_TRACE_LEVEL_ERROR, FL(" fenable = %d \n"), fenable);
+   hddLog(VOS_TRACE_LEVEL_INFO, FL(" fenable = %d \n"), fenable);
 
    if(fenable)
    {
@@ -1157,33 +1101,10 @@ VOS_STATUS hdd_conf_arp_offload(hdd_adapter_t *pAdapter, int fenable)
            return VOS_STATUS_E_AGAIN;
        }
 
-       if (fenable == 1 && !pAdapter->ipv4_notifier_registered)
-       {
-           // Register IPv4 notifier to notify if any change in IP
-           // So that we can reconfigure the offload parameters
-           pAdapter->ipv4_notifier.notifier_call =
-                         wlan_hdd_ipv4_changed;
-           ret = register_inetaddr_notifier(&pAdapter->ipv4_notifier);
-           if (ret)
-           {
-               hddLog(LOGE, FL("Failed to register IPv4 notifier"));
-           }
-           else
-           {
-               hddLog(LOG1, FL("Registered IPv4 notifier"));
-               pAdapter->ipv4_notifier_registered = true;
-           }
-       }
        return VOS_STATUS_SUCCESS;
    }
    else
    {
-       if (pAdapter->ipv4_notifier_registered)
-       {
-           hddLog(LOG1, FL("Unregistered IPv4 notifier"));
-           unregister_inetaddr_notifier(&pAdapter->ipv4_notifier);
-           pAdapter->ipv4_notifier_registered = false;
-       }
        vos_mem_zero((void *)&offLoadRequest, sizeof(tSirHostOffloadReq));
        offLoadRequest.enableOrDisable = SIR_OFFLOAD_DISABLE;
        offLoadRequest.offloadType =  SIR_IPV4_ARP_REPLY_OFFLOAD;
@@ -1431,6 +1352,7 @@ void hdd_suspend_wlan(void)
       return;
    }
 
+   pHddCtx->hdd_wlan_suspended = TRUE;
    hdd_set_pwrparams(pHddCtx);
    status =  hdd_get_front_adapter ( pHddCtx, &pAdapterNode );
    while ( NULL != pAdapterNode && VOS_STATUS_SUCCESS == status )
@@ -1482,7 +1404,6 @@ void hdd_suspend_wlan(void)
        status = hdd_get_next_adapter ( pHddCtx, pAdapterNode, &pNext );
        pAdapterNode = pNext;
    }
-   pHddCtx->hdd_wlan_suspended = TRUE;
 
 #ifdef SUPPORT_EARLY_SUSPEND_STANDBY_DEEPSLEEP
   if(pHddCtx->cfg_ini->nEnableSuspend == WLAN_MAP_SUSPEND_TO_STANDBY)
@@ -1882,7 +1803,6 @@ VOS_STATUS hdd_wlan_shutdown(void)
    v_CONTEXT_t      pVosContext = NULL;
    hdd_context_t    *pHddCtx = NULL;
    pVosSchedContext vosSchedContext = NULL;
-   long ret;
 
    hddLog(VOS_TRACE_LEVEL_FATAL, "%s: WLAN driver shutting down! ",__func__);
 
@@ -1958,24 +1878,14 @@ VOS_STATUS hdd_wlan_shutdown(void)
    set_bit(MC_SHUTDOWN_EVENT_MASK, &vosSchedContext->mcEventFlag);
    set_bit(MC_POST_EVENT_MASK, &vosSchedContext->mcEventFlag);
    wake_up_interruptible(&vosSchedContext->mcWaitQueue);
-   ret = wait_for_completion_interruptible(&vosSchedContext->McShutdown);
-   if (0 >= ret)
-   {
-       hddLog(VOS_TRACE_LEVEL_ERROR, "%s:wait on McShutdown failed %ld",
-           __func__, ret);
-   }
+   wait_for_completion(&vosSchedContext->McShutdown);
 
    /* Wait for TX to exit */
    hddLog(VOS_TRACE_LEVEL_FATAL, "%s: Shutting down TX thread",__func__);
    set_bit(TX_SHUTDOWN_EVENT_MASK, &vosSchedContext->txEventFlag);
    set_bit(TX_POST_EVENT_MASK, &vosSchedContext->txEventFlag);
    wake_up_interruptible(&vosSchedContext->txWaitQueue);
-   ret = wait_for_completion_interruptible(&vosSchedContext->TxShutdown);
-   if (0 >= ret)
-   {
-       hddLog(VOS_TRACE_LEVEL_ERROR, "%s:wait on TxShutdown failed %ld",
-           __func__, ret);
-   }
+   wait_for_completion(&vosSchedContext->TxShutdown);
 
    /* Wait for RX to exit */
    hddLog(VOS_TRACE_LEVEL_FATAL, "%s: Shutting down RX thread",__func__);
@@ -1983,12 +1893,7 @@ VOS_STATUS hdd_wlan_shutdown(void)
    set_bit(RX_POST_EVENT_MASK, &vosSchedContext->rxEventFlag);
    wake_up_interruptible(&vosSchedContext->rxWaitQueue);
 
-   ret = wait_for_completion_interruptible(&vosSchedContext->RxShutdown);
-   if (0 >= ret)
-   {
-       hddLog(VOS_TRACE_LEVEL_ERROR, "%s:wait on RxShutdown failed %ld",
-           __func__, ret);
-   }
+   wait_for_completion(&vosSchedContext->RxShutdown);
 
 #ifdef WLAN_BTAMP_FEATURE
    vosStatus = WLANBAP_Stop(pVosContext);
@@ -2192,6 +2097,16 @@ VOS_STATUS hdd_wlan_re_init(void)
          __func__);
       goto err_vosstop;
    }
+
+#ifdef CONFIG_ENABLE_LINUX_REG
+   vosStatus = wlan_hdd_init_channels_for_cc(pHddCtx, REINIT);
+   if ( !VOS_IS_STATUS_SUCCESS( vosStatus ) )
+   {
+      hddLog(VOS_TRACE_LEVEL_FATAL, "%s: wlan_hdd_init_channels_for_cc failed",
+             __func__);
+      goto err_vosstop;
+   }
+#endif
 
 #ifdef WLAN_BTAMP_FEATURE
    vosStatus = WLANBAP_Open(pVosContext);

@@ -1392,6 +1392,9 @@ extern int get_diag_enable(void);
 #define COMMAND_DLOAD_RESET	0x3A
 #define COMMAND_TEST_MODE	0xFA
 #define COMMAND_TEST_MODE_RESET	0x29
+#if defined(CONFIG_MACH_MSM8974_G3_VZW) || defined(CONFIG_MACH_MSM8974_G2_VZW)
+#define COMMAND_VZW_AT_LOCK	0xF8
+#endif
 
 int is_filtering_command(char *buf)
 {
@@ -1418,6 +1421,11 @@ int is_filtering_command(char *buf)
 	case COMMAND_TEST_MODE_RESET :
 	    ret = 1;
 	    break;
+#if defined(CONFIG_MACH_MSM8974_G3_VZW) || defined(CONFIG_MACH_MSM8974_G2_VZW)
+	case COMMAND_VZW_AT_LOCK :
+	    ret = 1;
+	    break;
+#endif
 	default:
 	    ret = 0;
 	    break;

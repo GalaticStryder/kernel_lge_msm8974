@@ -498,7 +498,7 @@ static struct of_device_id qpnp_charger_match_table[] = {
 	{}
 };
 
-/*                                                                      */
+/* BEGIN : janghyun.baek@lge.com 2013-01-25 For factory cable detection */
 #ifdef CONFIG_LGE_PM
 static struct qpnp_chg_chip *qpnp_chg;
 static unsigned int cable_type;
@@ -511,7 +511,7 @@ static bool is_factory_cable(void)
 	else
 		return 0;
 }
-/*                                        */
+/* END : janghyun.baek@lge.com 2013-01-25 */
 
 int32_t qpnp_charger_is_ready(void)
 {
@@ -1972,11 +1972,8 @@ qpnp_chg_usb_usbin_valid_irq_handler(int irq, void *_chip)
 					msecs_to_jiffies(EOC_CHECK_PERIOD_MS));
 			}
 #endif
-			if (!qpnp_chg_is_dc_chg_plugged_in(chip)) {
-				chip->delta_vddmax_mv = 0;
-				qpnp_chg_set_appropriate_vddmax(chip);
+			if (!qpnp_chg_is_dc_chg_plugged_in(chip))
 				chip->chg_done = false;
-			}
 
 			if (!qpnp_is_dc_higher_prio(chip))
 				qpnp_chg_idcmax_set(chip, chip->maxinput_dc_ma);
@@ -2017,13 +2014,9 @@ qpnp_chg_usb_usbin_valid_irq_handler(int irq, void *_chip)
 				}
 			}
 
-			if (!qpnp_chg_is_dc_chg_plugged_in(chip)) {
-				chip->delta_vddmax_mv = 0;
-				qpnp_chg_set_appropriate_vddmax(chip);
 #ifdef CONFIG_LGE_PM
-				chip->Is_first_chg_en = true;
+			chip->Is_first_chg_en = true;
 #endif
-			}
 			schedule_delayed_work(&chip->eoc_work,
 				msecs_to_jiffies(EOC_CHECK_PERIOD_MS));
 			schedule_work(&chip->soc_check_work);
@@ -2206,14 +2199,8 @@ qpnp_chg_dc_dcin_valid_irq_handler(int irq, void *_chip)
 			qpnp_chg_force_run_on_batt(chip, !dc_present ? 1 : 0);
 		if (!dc_present && (!qpnp_chg_is_usb_chg_plugged_in(chip) ||
 					qpnp_chg_is_otg_en_set(chip))) {
-			chip->delta_vddmax_mv = 0;
-			qpnp_chg_set_appropriate_vddmax(chip);
 			chip->chg_done = false;
 		} else {
-			if (!qpnp_chg_is_usb_chg_plugged_in(chip)) {
-				chip->delta_vddmax_mv = 0;
-				qpnp_chg_set_appropriate_vddmax(chip);
-			}
 			schedule_delayed_work(&chip->eoc_work,
 				msecs_to_jiffies(EOC_CHECK_PERIOD_MS));
 			schedule_work(&chip->soc_check_work);
@@ -4388,8 +4375,6 @@ qpnp_eoc_work(struct work_struct *work)
 							? "cool" : "warm",
 						qpnp_chg_vddmax_get(chip));
 				}
-				chip->delta_vddmax_mv = 0;
-				qpnp_chg_set_appropriate_vddmax(chip);
 				qpnp_chg_charge_en(chip, 0);
 				/* sleep for a second before enabling */
 				msleep(2000);
@@ -6137,6 +6122,12 @@ qpnp_chg_hwinit(struct qpnp_chg_chip *chip, u8 subtype,
 		rc = qpnp_chg_masked_write(chip,
 			chip->usb_chgpth_base + USB_OVP_CTL,
 			0x30, 0x20, 1);
+#endif
+#ifdef CONFIG_MACH_MSM8974_DZNY_DCM
+		/* set OVP to 9.5V, UVD_F to 4.15V, UVD_R to 4.35V  */
+		rc = qpnp_chg_masked_write(chip,
+			chip->usb_chgpth_base + USB_OVP_CTL,
+			0x3C, 0x04, 1);
 #endif
 
 		rc = qpnp_chg_masked_write(chip,

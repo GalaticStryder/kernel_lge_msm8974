@@ -50,7 +50,7 @@ config QCOM_TDLS
 	bool "Enable TDLS feature"
 	default n
 
-config CONFIG_ENABLE_LINUX_REG
+config ENABLE_LINUX_REG
 	bool "Enable linux regulatory feature"
 	default n
 

@@ -16,7 +16,6 @@
 /include/ "msm8974pro-g3-kddi-usb.dtsi"
 /include/ "msm8974pro-g3-kddi-misc.dtsi"
 /include/ "msm8974pro-g3-kddi-pm.dtsi"
-/include/ "msm8974pro-g3-kddi-fullseg-i2c.dtsi"
 /include/ "msm8974pro-g3-kddi-camera.dtsi"
 /include/ "msm8974pro-g3-kddi-nfc.dtsi"
 /include/ "msm8974pro-g3-kddi-sound.dtsi"

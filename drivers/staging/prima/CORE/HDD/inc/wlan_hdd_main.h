@@ -328,6 +328,7 @@ typedef struct hdd_tx_rx_stats_s
    // tx timeout stats
    __u32    txTimeoutCount;
    __u32    continuousTxTimeoutCount;
+   v_ULONG_t    jiffiesLastTxTimeOut;//Store time when last txtime out occur
 } hdd_tx_rx_stats_t;
 
 typedef struct hdd_chip_reset_stats_s
@@ -687,39 +688,6 @@ typedef struct hdd_hostapd_state_s
 /*
  * Per station structure kept in HDD for multiple station support for SoftAP
 */
-typedef struct {
-    /** The station entry is used or not  */
-    v_BOOL_t isUsed;
-
-    /** Station ID reported back from HAL (through SAP). Broadcast
-     *  uses station ID zero by default in both libra and volans. */
-    v_U8_t ucSTAId;
-
-    /** MAC address of the station */
-    v_MACADDR_t macAddrSTA;
-
-    /** Current Station state so HDD knows how to deal with packet
-     *  queue. Most recent states used to change TL STA state. */
-    WLANTL_STAStateType tlSTAState;
-
-   /** Transmit queues for each AC (VO,VI,BE etc). */
-   hdd_list_t wmm_tx_queue[NUM_TX_QUEUES];
-
-   /** Might need to differentiate queue depth in contention case */
-   v_U16_t aTxQueueDepth[NUM_TX_QUEUES];
-   
-   /**Track whether OS TX queue has been disabled.*/
-   v_BOOL_t txSuspended[NUM_TX_QUEUES];
-
-   /**Track whether 3/4th of resources are used */
-   v_BOOL_t vosLowResource;
-
-   /** Track QoS status of station */
-   v_BOOL_t isQosEnabled;
-
-   /** The station entry for which Deauth is in progress  */
-   v_BOOL_t isDeauthInProgress;
-} hdd_station_info_t;
 
 struct hdd_ap_ctx_s
 {
@@ -798,6 +766,7 @@ typedef struct hdd_scaninfo_s
    vos_event_t scan_finished_event;
 
    hdd_scan_pending_option_e scan_pending_option;
+   tANI_U8 sessionId;
 
 }hdd_scaninfo_t;
 
@@ -982,8 +951,6 @@ struct hdd_adapter_s
  */
     /** Multiple station supports */
    /** Per-station structure */
-   spinlock_t staInfo_lock; //To protect access to station Info  
-   hdd_station_info_t aStaInfo[WLAN_MAX_STA_COUNT];
    //v_U8_t uNumActiveStation;
 
    v_U16_t aTxQueueLimit[NUM_TX_QUEUES];
@@ -1214,7 +1181,10 @@ struct hdd_context_s
    
    /* Lock to avoid race condtion during start/stop bss*/
    struct mutex sap_lock;
-   
+
+   /* Lock to avoid race condtion between ROC timeout and
+      cancel callbacks*/
+   struct mutex roc_lock;
    /** ptt Process ID*/
    v_SINT_t ptt_pid;
 #ifdef WLAN_KD_READY_NOTIFIER
@@ -1324,6 +1294,8 @@ struct hdd_context_s
     v_BOOL_t btCoexModeSet;
     v_BOOL_t isPnoEnable;
     macAddrSpoof_t spoofMacAddr;
+    /* flag to decide if driver need to scan DFS channels or not */
+    v_BOOL_t  disable_dfs_flag;
 };
 
 
@@ -1480,5 +1452,11 @@ void wlan_hdd_send_svc_nlink_msg(int type, void *data, int len);
 boolean hdd_is_5g_supported(hdd_context_t * pHddCtx);
 
 int wlan_hdd_scan_abort(hdd_adapter_t *pAdapter);
+
+#ifdef CONFIG_ENABLE_LINUX_REG
+VOS_STATUS wlan_hdd_init_channels_for_cc(hdd_context_t *pHddCtx,  driver_load_type init  );
+#endif
+
+VOS_STATUS wlan_hdd_cancel_remain_on_channel(hdd_context_t *pHddCtx);
 
 #endif    // end #if !defined( WLAN_HDD_MAIN_H )

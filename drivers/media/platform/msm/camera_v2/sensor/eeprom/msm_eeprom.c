@@ -1093,7 +1093,7 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 		}
 
 		if(!verify_eeprom_data(e_ctrl)) {
-			pr_info("%s: eeprom data checksum success!\n", __func__);
+			pr_err("%s: eeprom data checksum success!\n", __func__);
 			break;
 		} else {
 			pr_err("%s: eeprom data checksum failed!, retry_cnt = %d\n", __func__, j--);

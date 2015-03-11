@@ -25,6 +25,10 @@
 #ifndef __FC8300_BB__
 #define __FC8300_BB__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern s32 fc8300_reset(HANDLE handle, DEVICEID devid);
 extern s32 fc8300_probe(HANDLE handle, DEVICEID devid);
 extern s32 fc8300_init(HANDLE handle, DEVICEID devid);
@@ -34,6 +38,10 @@ extern s32 fc8300_set_broadcast_mode(HANDLE handle, DEVICEID devid,
 		enum BROADCAST_TYPE broadcast);
 extern s32 fc8300_set_core_clk(HANDLE handle, DEVICEID devid,
 		enum BROADCAST_TYPE broadcast, u32 freq);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __FC8300_BB__ */
 

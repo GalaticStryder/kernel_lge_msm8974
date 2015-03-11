@@ -25,6 +25,9 @@
 #include "fci_types.h"
 #include "fc8300_regs.h"
 #include "fci_hal.h"
+#ifndef BBM_I2C_TSIF
+#include "fc8300_drv_api.h"
+#endif
 
 s32 (*fc8300_ac_callback)(u32 userdata, u8 bufid, u8 *data, s32 length) = NULL;
 s32 (*fc8300_ts_callback)(u32 userdata, u8 bufid, u8 *data, s32 length) = NULL;
@@ -34,54 +37,23 @@ u32 fc8300_ts_user_data;
 
 #ifndef BBM_I2C_TSIF
 static u8 ts_buffer[188 * 320];
-static u8 ac_buffer[2040];
 
 static void fc8300_data(HANDLE handle, DEVICEID devid, u8 buf_int_status)
 {
 	u32 size = 0;
-	s32 i;
 
-	for (i = 0; (i < 4) && (buf_int_status & 0x0f); i++) {
-		if (buf_int_status & (1 << i)) {
-			bbm_word_read(handle, devid,
-					BBM_BUF_TS0_THR + (i << 1),
-					(u16 *) &size);
-
-			if (size == 0)
-				continue;
-
-			size = (size + 1) << 1;
+	if (buf_int_status == 1) {
+		size = TS0_BUF_LENGTH;
 
 			bbm_data(handle, devid,
-					BBM_TS0_DATA + i, &ts_buffer[0], size);
+				BBM_TS0_DATA, &ts_buffer[0], size);
 
 			if (fc8300_ts_callback)
 				(*fc8300_ts_callback)(fc8300_ts_user_data,
-						i, &ts_buffer[0], size);
-		}
-	}
-
-	for (i = 4; i < 8 && (buf_int_status & 0xf0); i++) {
-		if (buf_int_status & (1 << i)) {
-			bbm_word_read(handle, devid,
-					BBM_BUF_TS0_THR + (i << 1),
-					(u16 *) &size);
-
-			if (size == 0)
-				continue;
-
-			size = (size + 1) << 1;
-
-			bbm_data(handle, devid,
-					BBM_TS0_DATA + i, &ac_buffer[0], size);
-
-			if (fc8300_ac_callback)
-				(*fc8300_ac_callback)(fc8300_ac_user_data,
-						i, &ac_buffer[0], size);
-		}
+					0, &ts_buffer[0], size);
 	}
 }
-#endif
+#endif /* #ifndef BBM_I2C_TSIF */
 
 #ifdef BBM_AUX_INT
 static void fc8300_aux_int(HANDLE handle, DEVICEID devid, u8 aux_int_status)
@@ -157,41 +129,53 @@ static void fc8300_aux_int(HANDLE handle, DEVICEID devid, u8 aux_int_status)
 
 		if (auto_switch & AUTO_SWITCH_1_SEG) /* 1-SEG */
 			;
-		else  /* 12-SEG */
+		else /* 12-SEG */
 			;
 	}
 }
 #endif
 
+#ifndef BBM_I2C_TSIF
+extern unsigned int overrun_count;
+#endif
+extern struct fc8300Status_t st;
+extern unsigned int irq_cnt;
+
 void fc8300_isr(HANDLE handle)
 {
-#ifndef BBM_I2C_TSIF
-	u8 buf_int_status = 0;
-#endif
-
 #ifdef BBM_AUX_INT
-	u8 aux_int_status = 0;
+    u8 aux_int_status = 0;
 #endif
 
 #ifndef BBM_I2C_TSIF
-	bbm_byte_read(handle, DIV_MASTER, BBM_BUF_STATUS_CLEAR,
-					&buf_int_status);
-	if (buf_int_status) {
-		bbm_byte_write(handle, DIV_MASTER,
-				BBM_BUF_STATUS_CLEAR, buf_int_status);
+    static unsigned int overrun_check_count = 0;
+	u8 buf_int_status = 0;
+    bbm_byte_read(handle, DIV_MASTER, BBM_BUF_STATUS_CLEAR,
+                    &buf_int_status);
+    if (buf_int_status) {
+        bbm_byte_write(handle, DIV_MASTER,
+                BBM_BUF_STATUS_CLEAR, buf_int_status);
 
-		fc8300_data(handle, DIV_MASTER, buf_int_status);
-	}
+        fc8300_data(handle, DIV_MASTER, buf_int_status);
 
-	buf_int_status = 0;
-	bbm_byte_read(handle, DIV_MASTER, BBM_BUF_STATUS_CLEAR,
-					&buf_int_status);
-	if (buf_int_status) {
-		bbm_byte_write(handle, DIV_MASTER,
-				BBM_BUF_STATUS_CLEAR, buf_int_status);
+        buf_int_status = 0;
+        bbm_byte_read(handle, DIV_MASTER, BBM_BUF_STATUS_CLEAR,
+                        &buf_int_status);
+        if (buf_int_status) {
+            bbm_byte_write(handle, DIV_MASTER,
+                    BBM_BUF_STATUS_CLEAR, buf_int_status);
 
-		fc8300_data(handle, DIV_MASTER, buf_int_status);
-	}
+            fc8300_data(handle, DIV_MASTER, buf_int_status);
+        }
+
+
+        irq_cnt++;
+            if((overrun_check_count%20) == 0)
+            {
+            tunerbb_drv_fc8300_Get_SignalInfo(&st, ISDBT_13SEG);
+            }
+            overrun_check_count++;
+    }
 #endif
 
 #ifdef BBM_AUX_INT

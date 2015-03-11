@@ -73,7 +73,7 @@ u8 int_mask_cust;
 int is_Sensing;
 int mfts_enable;
 int boot_mode = NORMAL_BOOT_MODE;
-
+int previous_pm_suspend = 0;
 /*static int ts_suspend = 0;
 int thermal_status = 0;
 extern int touch_thermal_mode;*/
@@ -405,7 +405,8 @@ void write_firmware_version_log(struct synaptics_ts_data *ts)
 	} else if (!(strncmp(ts->fw_info.fw_product_id, "s3320", 6))
 		|| !strncmp(ts->fw_info.fw_product_id, "PLG446", 6)
 		|| !strncmp(ts->fw_info.fw_product_id, "PLG468", 6)
-		|| !strncmp(ts->fw_info.fw_product_id, "PLG449", 6)) {
+		|| !strncmp(ts->fw_info.fw_product_id, "PLG449", 6)
+		|| !strncmp(ts->fw_info.fw_product_id, "PLG503", 6)) {
 		ver_outbuf += snprintf(version_string+ver_outbuf,
 				448-ver_outbuf,
 				"Touch IC : s3320\n");
@@ -848,7 +849,7 @@ static int sleep_control(struct synaptics_ts_data *ts, int mode, int recal)
 {
 	u8 curr = 0;
 	u8 next = 0;
-	int ret = 0;
+	//int ret = 0; L4 Workaround for Blackout
 
 	/*
 	 * NORMAL == 0 : resume & lpwg state
@@ -858,14 +859,17 @@ static int sleep_control(struct synaptics_ts_data *ts, int mode, int recal)
 
 	DO_SAFE(touch_i2c_read(ts->client, DEVICE_CONTROL_REG, 1, &curr), error);
 
-	if(mode == 3) {	/* in this case, reset Touch IC for sensor reset -> IC Reset */
-		TOUCH_DEBUG(DEBUG_BASE_INFO, "IC Soft reset for sensor reset.\n");
-		if (synaptics_ts_ic_ctrl(ts->client, IC_CTRL_RESET, DEVICE_COMMAND_RESET, &ret) < 0)
-			TOUCH_ERR_MSG("IC_RESET handling fail\n");
-	} else {
+	// L4 Workaround for Blackout
+	//if(mode == 3) {	/* in this case, reset Touch IC for sensor reset -> IC Reset */
+	//	TOUCH_DEBUG(DEBUG_BASE_INFO, "IC Soft reset for sensor reset.\n");
+	//	if (synaptics_ts_ic_ctrl(ts->client, IC_CTRL_RESET, DEVICE_COMMAND_RESET, &ret) < 0)
+	//		TOUCH_ERR_MSG("IC_RESET handling fail\n");
+	//} else
+	{
 		if (!strncmp(ts->fw_info.fw_product_id, "PLG446", 6)
 		|| !strncmp(ts->fw_info.fw_product_id, "PLG468", 6)
-		|| !strncmp(ts->fw_info.fw_product_id, "PLG449", 6)) {
+		|| !strncmp(ts->fw_info.fw_product_id, "PLG449", 6)
+		|| !strncmp(ts->fw_info.fw_product_id, "PLG503", 6)) {
 			if (((curr & 0xF8) == DEVICE_CONTROL_SLEEP) && !mode) { /* curr - sleep, next - sleep */
 				TOUCH_DEBUG(DEBUG_BASE_INFO, "%s : It's odd case (sleep)(sleep)\n", __func__);
 				return 0;
@@ -1012,11 +1016,13 @@ void matchUp_f51_regMap(struct synaptics_ts_data *ts)
 	if (!strncmp(ts->fw_info.fw_product_id, "PLG349", 6)
 		 || !(strncmp(ts->fw_info.fw_product_id, "s3320", 6))
 		 || !(strncmp(ts->fw_info.fw_product_id, "PLG446", 6))
-		 || !(strncmp(ts->fw_info.fw_product_id, "PLG449", 6))) {
+		 || !(strncmp(ts->fw_info.fw_product_id, "PLG449", 6))
+		 || !(strncmp(ts->fw_info.fw_product_id, "PLG503", 6))) {
 		if (!strcmp(ts->fw_info.fw_product_id, "PLG349")) {
 			TOUCH_INFO_MSG("[%s] This is Z2\n", __func__);
-		} else if(!strcmp(ts->fw_info.fw_product_id, "PLG449")) {
-			TOUCH_INFO_MSG("[%s] This is Disney\n", __func__);
+		} else if((!strcmp(ts->fw_info.fw_product_id, "PLG449"))
+				||(!strcmp(ts->fw_info.fw_product_id, "PLG503"))) {
+			TOUCH_INFO_MSG("[%s] This is L4\n", __func__);
 		} else {
 			TOUCH_INFO_MSG("[%s] This is Lion J\n", __func__);
 		}
@@ -1078,13 +1084,15 @@ void matchUp_f54_regMap(struct synaptics_ts_data *ts)
 		ts->f54_reg.freq_scan_im = 0x0A;
 	} else if (!(strncmp(ts->fw_info.fw_product_id, "s3320", 6))
 		 || !(strncmp(ts->fw_info.fw_product_id, "PLG446", 6))
-		 || !(strncmp(ts->fw_info.fw_product_id, "PLG449", 6))) {
+		 || !(strncmp(ts->fw_info.fw_product_id, "PLG449", 6))
+		 || !(strncmp(ts->fw_info.fw_product_id, "PLG503", 6))) {
 
-		if (!strcmp(ts->fw_info.fw_product_id, "PLG449")) {
-			TOUCH_INFO_MSG("[%s] This is Disney\n", __func__);
+		if ((!strcmp(ts->fw_info.fw_product_id, "PLG449"))
+			||(!strcmp(ts->fw_info.fw_product_id, "PLG503"))) {
+			TOUCH_INFO_MSG("[%s] This is L4\n", __func__);
 		} else {
 			TOUCH_INFO_MSG("[%s] This is G4 J\n", __func__);
-		}		
+		}
 
 		ts->f54_reg.interference__metric_LSB = 0x04;
 		ts->f54_reg.interference__metric_MSB = 0x05;
@@ -1878,7 +1886,8 @@ static ssize_t show_firmware(struct i2c_client *client, char *buf)
 	} else if (!(strncmp(ts->fw_info.fw_product_id, "s3320", 6))
 		|| !(strncmp(ts->fw_info.fw_product_id, "PLG446", 6))
 		|| !(strncmp(ts->fw_info.fw_product_id, "PLG468", 6))
-		|| !(strncmp(ts->fw_info.fw_product_id, "PLG449", 6))) {
+		|| !(strncmp(ts->fw_info.fw_product_id, "PLG449", 6))
+		|| !(strncmp(ts->fw_info.fw_product_id, "PLG503", 6))) {
 		ret += snprintf(buf + ret, PAGE_SIZE - ret,
 				"Touch IC : s3320\n\n");
 	} else {
@@ -1912,7 +1921,8 @@ static ssize_t show_firmware(struct i2c_client *client, char *buf)
 	} else if (!(strncmp(ts->fw_info.fw_image_product_id, "s3320", 6))
 		|| !(strncmp(ts->fw_info.fw_image_product_id, "PLG446", 6))
 		|| !(strncmp(ts->fw_info.fw_image_product_id, "PLG468", 6))
-		|| !(strncmp(ts->fw_info.fw_image_product_id, "PLG449", 6))) {
+		|| !(strncmp(ts->fw_info.fw_image_product_id, "PLG449", 6))
+		|| !(strncmp(ts->fw_info.fw_image_product_id, "PLG503", 6))) {
 		ret += snprintf(buf + ret, PAGE_SIZE - ret,
 				"Touch IC : s3320\n");
 	} else {
@@ -1965,7 +1975,8 @@ static ssize_t show_synaptics_fw_version(struct i2c_client *client, char *buf)
 	} else if (!(strncmp(ts->fw_info.fw_product_id, "s3320", 6))
 		|| !(strncmp(ts->fw_info.fw_product_id, "PLG446", 6))
 		|| !(strncmp(ts->fw_info.fw_product_id, "PLG468", 6))
-		|| !(strncmp(ts->fw_info.fw_product_id, "PLG449", 6))) {
+		|| !(strncmp(ts->fw_info.fw_product_id, "PLG449", 6))
+		|| !(strncmp(ts->fw_info.fw_product_id, "PLG503", 6))) {
 		ret += snprintf(buf + ret, PAGE_SIZE - ret,
 				"Touch IC : s3320\n\n");
 	} else {
@@ -3411,8 +3422,8 @@ static ssize_t store_fw_calibration(struct i2c_client *client, const char *buf, 
 	struct synaptics_ts_data *ts = (struct synaptics_ts_data *)get_touch_handle(client);
 	int value;
 	int ret;
-	u8 buf_1;
-	u8 buf_2;
+	u8 buf_1 = 0;
+	u8 buf_2 = 0;
 	u8 calibration_flag;
 	u8 calibration_status;
 	u8 start_calibration = 0x01;
@@ -3822,11 +3833,7 @@ static int get_ic_info(struct synaptics_ts_data *ts)
 	DO_SAFE(touch_i2c_read(ts->client, PRODUCT_ID_REG,
 				sizeof(ts->fw_info.fw_product_id) - 1,
 				ts->fw_info.fw_product_id), error);
-	
-	TOUCH_DEBUG(DEBUG_BASE_INFO, "Current product_id : %s\n", ts->fw_info.fw_product_id);
-	sprintf(ts->fw_info.fw_product_id,"%s","PLG449");
-	TOUCH_DEBUG(DEBUG_BASE_INFO, "Temporary Change -> product_id : %s\n", ts->fw_info.fw_product_id);
-	
+
 	DO_SAFE(touch_i2c_read(ts->client, FLASH_CONFIG_ID_REG,
 				sizeof(ts->fw_info.fw_version) - 1,
 				ts->fw_info.fw_version), error);
@@ -4152,7 +4159,8 @@ enum error_type synaptics_ts_init(struct i2c_client *client)
 		!(strncmp(ts->fw_info.fw_product_id, "s3320", 6)) ||
 		!(strncmp(ts->fw_info.fw_product_id, "PLG446", 6)) ||
 		!(strncmp(ts->fw_info.fw_product_id, "PLG468", 6)) ||
-		!(strncmp(ts->fw_info.fw_product_id, "PLG449", 6))) {
+		!(strncmp(ts->fw_info.fw_product_id, "PLG449", 6)) ||
+		!(strncmp(ts->fw_info.fw_product_id, "PLG503", 6))) {
 		DO_SAFE(touch_i2c_write_byte(client, INTERRUPT_ENABLE_REG,
 					buf | INTERRUPT_MASK_ABS0
 					| int_mask_cust), error);
@@ -4728,6 +4736,16 @@ enum error_type synaptics_ts_get_data(struct i2c_client *client,
 	} else if (ts->ts_data.interrupt_status_reg & INTERRUPT_MASK_FLASH) {
 		return ERROR;
 	} else {
+		if(previous_pm_suspend == 1) {
+			TOUCH_DEBUG(DEBUG_BASE_INFO, "%s : unknown interrupt in PM_SUSPEND\n", __func__);
+			previous_pm_suspend = 0;
+			tci_control(ts, REPORT_MODE_CTRL, 1);
+			if(!ts->lpwg_ctrl.sensor) { /* Active -> Deep sleep */
+				sleep_control(ts, 0, 0);
+				TOUCH_DEBUG(DEBUG_BASE_INFO, "%s : It's Active->deep sleep in PM_SUSPEND\n", __func__);
+			}
+			ts->lpwg_ctrl.protocol9_sleep_flag = true;
+		}
 		return IGNORE_EVENT;
 	}
 
@@ -5065,7 +5083,8 @@ enum error_type synaptics_ts_fw_upgrade(struct i2c_client *client,
 
 	if(!(strcmp(ts->fw_info.fw_product_id, "s3320")) ||
 		!(strncmp(ts->fw_info.fw_image_product_id, "PLG468", 6)) ||
-		!(strncmp(ts->fw_info.fw_image_product_id, "PLG449", 6)))
+		!(strncmp(ts->fw_info.fw_image_product_id, "PLG449", 6)) ||
+		!(strncmp(ts->fw_info.fw_image_product_id, "PLG503", 6)))
 		need_upgrade = 1;
 
 	rc = compare_fw_version(client, info);
@@ -5325,7 +5344,8 @@ enum error_type synaptics_ts_lpwg(struct i2c_client *client,
 			DO_SAFE(lpwg_update_all(ts, 1), error);
 			if ((!strncmp(ts->fw_info.fw_product_id, "PLG446", 6) 
 				|| !strncmp(ts->fw_info.fw_product_id, "PLG468", 6) 
-				|| !strncmp(ts->fw_info.fw_product_id, "PLG449", 6)) && !value) {
+				|| !strncmp(ts->fw_info.fw_product_id, "PLG449", 6)
+				|| !strncmp(ts->fw_info.fw_product_id, "PLG503", 6)) && !value) {
 				tci_control(ts, REPORT_MODE_CTRL, 1);
 			}
 		} else {

@@ -134,6 +134,7 @@ typedef enum
 
 #define IS_FW_IN_TX_PATH_FEATURE_ENABLE ((WDI_getHostWlanFeatCaps(FW_IN_TX_PATH)) & (WDA_getFwWlanFeatCaps(FW_IN_TX_PATH)))
 #define IS_MUMIMO_BFORMEE_CAPABLE ((WDI_getHostWlanFeatCaps(MU_MIMO)) & (WDA_getFwWlanFeatCaps(MU_MIMO)))
+#define IS_FEATURE_BCN_FLT_DELTA_ENABLE ((WDI_getHostWlanFeatCaps(BCN_IE_FLT_DELTA)) & (WDA_getFwWlanFeatCaps(BCN_IE_FLT_DELTA)))
 /*--------------------------------------------------------------------------
   Utilities
  --------------------------------------------------------------------------*/
@@ -487,10 +488,10 @@ typedef struct
    tSirLinkState        linkState;
    /* set, when BT AMP session is going on */
    v_BOOL_t             wdaAmpSessionOn;
-   v_U32_t              VosPacketToFree;
    v_BOOL_t             needShutdown;
    v_BOOL_t             wdiFailed;
    v_BOOL_t             wdaTimersCreated;
+   uintptr_t            VosPacketToFree;
 
    /* Event to wait for WDA stop on FTM mode */
    vos_event_t          ftmStopDoneEvent;

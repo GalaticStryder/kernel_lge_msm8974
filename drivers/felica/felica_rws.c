@@ -42,7 +42,8 @@ static int invoke_felica_apk(void)
 {
   char *argv[] = { "/system/bin/sh","/system/bin/am", "start", "-n", FELICA_INTENT, "--activity-clear-top", NULL };
 
-  static char *envp[] = {FELICA_LD_LIBRARY_PATH,FELICA_BOOTCLASSPATH,FELICA_PATH,NULL };
+  //static char *envp[] = {FELICA_LD_LIBRARY_PATH,FELICA_BOOTCLASSPATH,FELICA_PATH,NULL };
+  static char *envp[] = {FELICA_PATH, NULL };
   int rc = 0;
 
   FELICA_DEBUG_MSG_HIGH("[FELICA_RWS] invoke felica app... \n");

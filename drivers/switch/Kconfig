@@ -43,3 +43,10 @@ config EARJACK_DEBUGGER
     default n
     help
       Support earjack type UART debugger cable
+
+config  LGE_HEADSET_MIC_NOISE_WA
+    bool "Workaround for Headset MIC noise"
+    depends on MACH_LGE
+    default n
+    help
+      to reduce mic noise when remove earjack

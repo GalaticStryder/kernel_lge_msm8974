@@ -24,7 +24,6 @@
 / {
 	aliases {
 		serial0 = &lge_blsp1_uart1; /* ttyHSL0 for Debug */
-		serial3 = &lge_blsp2_uart5; /* ttyHSL3 for IrDA  */
 	};
 };
 
@@ -42,13 +41,6 @@
 		status = "ok";
 	};
 	
-	lge_blsp2_uart5: serial@f9962000 { /* IrDA Uart */
-		compatible = "qcom,msm-lsuart-v14";
-		reg = <0xf9962000 0x1000>;
-		interrupts = <0 118 0>;
-		status = "ok";
-	};
-
 	sdhc_2: sdhci@f98a4900 {
 	/*	cell-index = <2>; *//* SDC2 SD card slot */ /* This is not needed for SDHC driver */
 		compatible = "qcom,sdhci-msm";

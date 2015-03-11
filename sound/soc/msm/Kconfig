@@ -278,6 +278,14 @@ config SND_FM_RADIO
 	default n
 	help
 		mi2s interface for FM Radio
+
+# LGE_BSP_AUDIO, ew0804.kim@lge.com, switch between fm and bt.
+config SND_FM_SWTICH
+	bool "mi2s switch control between FM Radio and BT"
+	default n
+	help
+	 mi2s switch control between FM Radio and BT
+
 config HIFI_SOUND
 	bool "HIFI 24bit SOUND"
 	default y

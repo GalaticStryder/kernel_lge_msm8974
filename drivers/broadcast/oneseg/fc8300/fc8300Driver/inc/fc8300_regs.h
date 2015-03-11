@@ -40,8 +40,12 @@ extern "C" {
 /* #define BBM_4_DIVERSITY */
 /* #define BBM_DESCRAMBLER */
 /* #define BBM_SPI_30M */ /* ONLY CS */
-#define BBM_ES /* deprecated */
-/* #define BBM_ES_CURRENT */ /* deprecated */
+/* #define BBM_I2C_PARALLEL_TSIF */
+/* #define BBM_BRAZIL_FREQ */
+//DEL #define BBM_ES /* deprecated */
+//#define BBM_EXT_LNA
+#define BBM_EXT_LNA_ALWAYSON
+
 
 /* #define BBM_XTAL_FREQ               16000 */
 /* #define BBM_XTAL_FREQ               16384 */
@@ -225,6 +229,7 @@ extern "C" {
 	/* FRONT */
 #define BBM_ADC_CTRL                0x1000
 #define BBM_REF_AMP                 0x1008
+#define BBM_DC_EST_EN               0x1010
 #define BBM_IQC_EN                  0x1020
 #define BBM_LOW_IF_VALUE            0x1032
 #define BBM_NCO_OFFSET              0x103c
@@ -264,9 +269,14 @@ extern "C" {
 #define BBM_SFS_MTH                 0x2016
 #define BBM_IIFOECFG_EARLYSTOP_THM  0x2021
 
+	/* FTS */
+#define BBM_CFTSCFG_CIRGRMASKEXPSIZE_13SEG  0x2542
+#define BBM_CFTSCFG_CIRGRMASKEXPSIZE2_13SEG 0x255c
+
 	/* DEMOD */
 #define BBM_SYSTEM_MODE             0x3010
 #define BBM_CENTER_CH_NUM           0x3011
+#define BBM_GMASK_AUTO              0x3022
 #define BBM_RESYNC_ENABLE           0x3040
 #define BBM_HOLD_RST_EN             0x3052
 /* 1/12-SEG auto switch enable */
@@ -282,6 +292,8 @@ extern "C" {
 	/* CE */
 #define BBM_WSCN_MSQ                0x4063
 #define BBM_AD_GAIN_PERIOD          0x4070
+#define BBM_FAIP_MTD_SR_SHIFT_VALUE 0x417f
+#define BBM_CIR_THR_23              0x41c7
 #define BBM_MAN_PARTIAL_EN          0x41f1
 #define BBM_MAN_LAYER_A_SEG_NUM     0x41f2
 #define BBM_MAN_LAYER_B_SEG_NUM     0x41f3

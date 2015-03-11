@@ -22,12 +22,13 @@
 	History :
 	----------------------------------------------------------------------
 *******************************************************************************/
+#include "linux/io.h"
+
 #include "fci_types.h"
 #include "fc8300_regs.h"
 #include "fci_oal.h"
 
 #define BBM_BASE_ADDR       0x00
-#define BBM_BASE_OFFSET     0x00
 
 #define PPI_LEN             0x10
 #define PPI_REG             0x20
@@ -36,7 +37,8 @@
 #define PPI_WRITE           0x00
 #define PPI_AINC            0x80
 
-#define FC8300_PPI_REG      (*(volatile u8 *) BBM_BASE_ADDR)
+#define FC8300_PPI_REG_OUT(x)      outb(x, BBM_BASE_ADDR)
+#define FC8300_PPI_REG_IN      inb(BBM_BASE_ADDR)
 
 s32 fc8300_ppi_init(HANDLE handle, u16 param1, u16 param2)
 {
@@ -51,12 +53,14 @@ s32 fc8300_ppi_byteread(HANDLE handle, DEVICEID devid, u16 addr, u8 *data)
 	u8 command = PPI_READ;
 
 	OAL_OBTAIN_SEMAPHORE();
-	FC8300_PPI_REG = (addr & 0xff00) >> 8;
-	FC8300_PPI_REG = addr & 0xff;
-	FC8300_PPI_REG = command;
-	FC8300_PPI_REG = length & 0xff;
 
-	*data = FC8300_PPI_REG;
+	FC8300_PPI_REG_OUT((addr & 0xff00) >> 8);
+	FC8300_PPI_REG_OUT(addr & 0xff);
+	FC8300_PPI_REG_OUT(command);
+	FC8300_PPI_REG_OUT(length & 0xff);
+
+	*data = FC8300_PPI_REG_IN;
+
 	OAL_RELEASE_SEMAPHORE();
 
 	return BBM_OK;
@@ -68,13 +72,15 @@ s32 fc8300_ppi_wordread(HANDLE handle, DEVICEID devid, u16 addr, u16 *data)
 	u8 command = PPI_AINC | PPI_READ;
 
 	OAL_OBTAIN_SEMAPHORE();
-	FC8300_PPI_REG = (addr & 0xff00) >> 8;
-	FC8300_PPI_REG = addr & 0xff;
-	FC8300_PPI_REG = command;
-	FC8300_PPI_REG = length & 0xff;
 
-	*data = FC8300_PPI_REG;
-	*data |= FC8300_PPI_REG << 8;
+	FC8300_PPI_REG_OUT((addr & 0xff00) >> 8);
+	FC8300_PPI_REG_OUT(addr & 0xff);
+	FC8300_PPI_REG_OUT(command);
+	FC8300_PPI_REG_OUT(length & 0xff);
+
+	*data = FC8300_PPI_REG_IN;
+	*data |= FC8300_PPI_REG_IN << 8;
+
 	OAL_RELEASE_SEMAPHORE();
 
 	return BBM_OK;
@@ -86,15 +92,17 @@ s32 fc8300_ppi_longread(HANDLE handle, DEVICEID devid, u16 addr, u32 *data)
 	u8 command = PPI_AINC | PPI_READ;
 
 	OAL_OBTAIN_SEMAPHORE();
-	FC8300_PPI_REG = (addr & 0xff00) >> 8;
-	FC8300_PPI_REG = addr & 0xff;
-	FC8300_PPI_REG = command;
-	FC8300_PPI_REG = length & 0xff;
 
-	*data = FC8300_PPI_REG;
-	*data |= FC8300_PPI_REG << 8;
-	*data |= FC8300_PPI_REG << 16;
-	*data |= FC8300_PPI_REG << 24;
+	FC8300_PPI_REG_OUT((addr & 0xff00) >> 8);
+	FC8300_PPI_REG_OUT(addr & 0xff);
+	FC8300_PPI_REG_OUT(command);
+	FC8300_PPI_REG_OUT(length & 0xff);
+
+	*data = FC8300_PPI_REG_IN;
+	*data |= FC8300_PPI_REG_IN << 8;
+	*data |= FC8300_PPI_REG_IN << 16;
+	*data |= FC8300_PPI_REG_IN << 24;
+
 	OAL_RELEASE_SEMAPHORE();
 
 	return BBM_OK;
@@ -107,13 +115,15 @@ s32 fc8300_ppi_bulkread(HANDLE handle, DEVICEID devid,
 	u8 command = PPI_AINC | PPI_READ;
 
 	OAL_OBTAIN_SEMAPHORE();
-	FC8300_PPI_REG = (addr & 0xff00) >> 8;
-	FC8300_PPI_REG = addr & 0xff;
-	FC8300_PPI_REG = command;
-	FC8300_PPI_REG = length & 0xff;
+
+	FC8300_PPI_REG_OUT((addr & 0xff00) >> 8);
+	FC8300_PPI_REG_OUT(addr & 0xff);
+	FC8300_PPI_REG_OUT(command);
+	FC8300_PPI_REG_OUT(length & 0xff);
 
 	for (i = 0; i < length; i++)
-		data[i] = FC8300_PPI_REG;
+		data[i] = FC8300_PPI_REG_IN;
+
 	OAL_RELEASE_SEMAPHORE();
 
 	return BBM_OK;
@@ -125,12 +135,14 @@ s32 fc8300_ppi_bytewrite(HANDLE handle, DEVICEID devid, u16 addr, u8 data)
 	u8 command = PPI_WRITE;
 
 	OAL_OBTAIN_SEMAPHORE();
-	FC8300_PPI_REG = (addr & 0xff00) >> 8;
-	FC8300_PPI_REG = addr & 0xff;
-	FC8300_PPI_REG = command;
-	FC8300_PPI_REG = length & 0xff;
 
-	FC8300_PPI_REG = data;
+	FC8300_PPI_REG_OUT((addr & 0xff00) >> 8);
+	FC8300_PPI_REG_OUT(addr & 0xff);
+	FC8300_PPI_REG_OUT(command);
+	FC8300_PPI_REG_OUT(length & 0xff);
+
+	FC8300_PPI_REG_OUT(data);
+
 	OAL_RELEASE_SEMAPHORE();
 
 	return BBM_OK;
@@ -142,13 +154,14 @@ s32 fc8300_ppi_wordwrite(HANDLE handle, DEVICEID devid, u16 addr, u16 data)
 	u8 command = PPI_AINC | PPI_WRITE;
 
 	OAL_OBTAIN_SEMAPHORE();
-	FC8300_PPI_REG = (addr & 0xff00) >> 8;
-	FC8300_PPI_REG = addr & 0xff;
-	FC8300_PPI_REG = command;
-	FC8300_PPI_REG = length & 0xff;
 
-	FC8300_PPI_REG = data & 0xff;
-	FC8300_PPI_REG = (data & 0xff00) >> 8;
+	FC8300_PPI_REG_OUT((addr & 0xff00) >> 8);
+	FC8300_PPI_REG_OUT(addr & 0xff);
+	FC8300_PPI_REG_OUT(command);
+	FC8300_PPI_REG_OUT(length & 0xff);
+
+	FC8300_PPI_REG_OUT(data & 0xff);
+	FC8300_PPI_REG_OUT((data & 0xff00) >> 8);
 	OAL_RELEASE_SEMAPHORE();
 
 	return BBM_OK;
@@ -160,15 +173,16 @@ s32 fc8300_ppi_longwrite(HANDLE handle, DEVICEID devid, u16 addr, u32 data)
 	u8 command = PPI_AINC | PPI_WRITE;
 
 	OAL_OBTAIN_SEMAPHORE();
-	FC8300_PPI_REG = (addr & 0xff00) >> 8;
-	FC8300_PPI_REG = addr & 0xff;
-	FC8300_PPI_REG = command;
-	FC8300_PPI_REG = length & 0xff;
 
-	FC8300_PPI_REG = data &  0x000000ff;
-	FC8300_PPI_REG = (data & 0x0000ff00) >> 8;
-	FC8300_PPI_REG = (data & 0x00ff0000) >> 16;
-	FC8300_PPI_REG = (data & 0xff000000) >> 24;
+	FC8300_PPI_REG_OUT((addr & 0xff00) >> 8);
+	FC8300_PPI_REG_OUT(addr & 0xff);
+	FC8300_PPI_REG_OUT(command);
+	FC8300_PPI_REG_OUT(length & 0xff);
+
+	FC8300_PPI_REG_OUT(data &  0x000000ff);
+	FC8300_PPI_REG_OUT((data & 0x0000ff00) >> 8);
+	FC8300_PPI_REG_OUT((data & 0x00ff0000) >> 16);
+	FC8300_PPI_REG_OUT((data & 0xff000000) >> 24);
 	OAL_RELEASE_SEMAPHORE();
 
 	return BBM_OK;
@@ -181,13 +195,14 @@ s32 fc8300_ppi_bulkwrite(HANDLE handle, DEVICEID devid,
 	u8 command = PPI_AINC | PPI_WRITE;
 
 	OAL_OBTAIN_SEMAPHORE();
-	FC8300_PPI_REG = (addr & 0xff00) >> 8;
-	FC8300_PPI_REG = addr & 0xff;
-	FC8300_PPI_REG = command;
-	FC8300_PPI_REG = length & 0xff;
+
+	FC8300_PPI_REG_OUT((addr & 0xff00) >> 8);
+	FC8300_PPI_REG_OUT(addr & 0xff);
+	FC8300_PPI_REG_OUT(command);
+	FC8300_PPI_REG_OUT(length & 0xff);
 
 	for (i = 0; i < length; i++)
-		FC8300_PPI_REG = data[i];
+		FC8300_PPI_REG_OUT(data[i]);
 
 	OAL_RELEASE_SEMAPHORE();
 
@@ -202,13 +217,14 @@ s32 fc8300_ppi_dataread(HANDLE handle, DEVICEID devid,
 
 	OAL_OBTAIN_SEMAPHORE();
 
-	FC8300_PPI_REG = (addr & 0xff00) >> 8;
-	FC8300_PPI_REG = addr & 0xff;
-	FC8300_PPI_REG = command;
-	FC8300_PPI_REG = 0;
+	FC8300_PPI_REG_OUT((addr & 0xff00) >> 8);
+	FC8300_PPI_REG_OUT(addr & 0xff);
+	FC8300_PPI_REG_OUT(command);
+	FC8300_PPI_REG_OUT(0);
 
 	for (i = 0; i < length; i++)
-		data[i] = FC8300_PPI_REG;
+		data[i] = FC8300_PPI_REG_IN;
+
 	OAL_RELEASE_SEMAPHORE();
 
 	return BBM_OK;

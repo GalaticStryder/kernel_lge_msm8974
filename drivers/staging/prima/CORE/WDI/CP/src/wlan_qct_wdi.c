@@ -190,7 +190,11 @@ static placeHolderInCapBitmap supportEnabledFeatures[] =
    ,DYNAMIC_WMM_PS                 //43
 
    ,MAC_SPOOFED_SCAN               //44
-
+   ,FEATURE_NOT_SUPPORTED          //45
+   ,FEATURE_NOT_SUPPORTED          //46
+   ,FEATURE_NOT_SUPPORTED          //47
+   ,WPS_PRBRSP_TMPL                //48
+   ,BCN_IE_FLT_DELTA               //49
 };
 
 /*-------------------------------------------------------------------------- 
@@ -1393,6 +1397,17 @@ void WDI_TraceHostFWCapabilities(tANI_U32 *capabilityBitmap)
 
                      case MAC_SPOOFED_SCAN: snprintf(pCapStr, sizeof("MAC_SPOOFED_SCAN"), "%s", "MAC_SPOOFED_SCAN");
                           pCapStr += strlen("MAC_SPOOFED_SCAN");
+                          break;
+                     case WPS_PRBRSP_TMPL: snprintf(pCapStr, sizeof("WPS_PRBRSP_TMPL"), "%s", "WPS_PRBRSP_TMPL");
+                          pCapStr += strlen("WPS_PRBRSP_TMPL");
+                          break;
+                     case BCN_IE_FLT_DELTA: snprintf(pCapStr, sizeof("BCN_IE_FLT_DELTA"), "%s", "BCN_IE_FLT_DELTA");
+                          pCapStr += strlen("BCN_IE_FLT_DELTA");
+                          break;
+
+
+                     case BMU_ERROR_GENERIC_RECOVERY: snprintf(pCapStr, sizeof("BMU_ERROR_GENERIC_RECOVERY"), "%s", "BMU_ERROR_GENERIC_RECOVERY");
+                          pCapStr += strlen("BMU_ERROR_GENERIC_RECOVERY");
                           break;
 
                  }
@@ -8579,7 +8594,7 @@ WDI_ProcessConfigBSSReq
 
   pWDICtx->wdiReqStatusCB     = pwdiConfigBSSParams->wdiReqStatusCB;
   pWDICtx->pReqStatusUserData = pwdiConfigBSSParams->pUserData;
-
+  wpalMemoryZero(&halConfigBssReqMsg, sizeof(halConfigBssReqMsg));
   /*-------------------------------------------------------------------------
     Send Config BSS Request to HAL
   -------------------------------------------------------------------------*/
@@ -8925,6 +8940,7 @@ WDI_ProcessPostAssocReq
                   pwdiPostAssocParams,
                   sizeof(pWDICtx->wdiCachedPostAssocReq));
 
+  wpalMemoryZero(&halPostAssocReqMsg, sizeof(halPostAssocReqMsg));
   /*-------------------------------------------------------------------------
     Send Post Assoc Request to HAL
   -------------------------------------------------------------------------*/
@@ -9482,7 +9498,7 @@ WDI_ProcessSetStaKeyReq
 
   pWDICtx->wdiReqStatusCB     = pwdiSetSTAKeyParams->wdiReqStatusCB;
   pWDICtx->pReqStatusUserData = pwdiSetSTAKeyParams->pUserData;
-
+  wpalMemoryZero(&halSetStaKeyReqMsg, sizeof(halSetStaKeyReqMsg));
   /*-------------------------------------------------------------------------
     Send Set STA Key Request to HAL
   -------------------------------------------------------------------------*/
@@ -14679,7 +14695,7 @@ WDI_ProcessHostOffloadReq
                             &pBSSSes);
    if ( NULL == pBSSSes )
    {
-       WPAL_TRACE( eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+       WPAL_TRACE( eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_WARN,
                  " %s : Association for this BSSID does not exist " MAC_ADDRESS_STR,
                  __func__, MAC_ADDR_ARRAY(pwdiHostOffloadParams->wdiHostOffloadInfo.bssId));
        goto fail;
@@ -22117,6 +22133,10 @@ WDI_SendMsg
   {
      /*Inform upper stack layers that a transport fatal error occurred*/
      WDI_DetectedDeviceError(pWDICtx, WDI_ERR_TRANSPORT_FAILURE);
+     if (eWLAN_PAL_STATUS_E_FAILURE == ret)
+     {
+         wdiStatus = WDI_STATUS_DEV_INTERNAL_FAILURE;
+     }
   }
 
   return wdiStatus;
@@ -22330,9 +22350,10 @@ WDI_ResponseTimerCB
     {
       if(wpalIsSsrPanicOnFailure())
           wpalDevicePanic();
+    } else {
+       /* if this timer fires, it means Riva did not receive the FIQ */
+       wpalTimerStart(&pWDICtx->ssrTimer, WDI_SSR_TIMEOUT);
     }
-    /* if this timer fires, it means Riva did not receive the FIQ */
-    wpalTimerStart(&pWDICtx->ssrTimer, WDI_SSR_TIMEOUT);
 #else
     WDI_DetectedDeviceError(pWDICtx, WDI_ERR_BASIC_OP_FAILURE);
     wpalWlanReload();
@@ -26569,7 +26590,7 @@ WDI_ProcessPrefNetworkFoundInd
 
   // DEBUG
   WPAL_TRACE( eWLAN_MODULE_DAL_CTRL,  eWLAN_PAL_TRACE_LEVEL_FATAL,
-              "[PNO WDI] PREF_NETWORK_FOUND_IND Type (%x) data (SSID=%.*s, LENGTH=%u,  RSSI=%u)",
+              "[PNO WDI] PREF_NETWORK_FOUND_IND Type (%d) data (SSID=%.*s, LENGTH=%u,  RSSI=%u)",
               wdiInd.wdiIndicationType,
               wdiInd.wdiIndicationData.wdiPrefNetworkFoundInd.ssId.ucLength,
               wdiInd.wdiIndicationData.wdiPrefNetworkFoundInd.ssId.sSSID,
@@ -30627,6 +30648,8 @@ WDI_ProcessHT40OBSSScanInd
          pwdiHT40OBSSScanInd->selfStaIdx;
   pHT40ObssScanInd->bssIdx =
          pwdiHT40OBSSScanInd->bssIdx;
+  pHT40ObssScanInd->currentOperatingClass =
+         pwdiHT40OBSSScanInd->currentOperatingClass;
   pHT40ObssScanInd->fortyMHZIntolerent =
          pwdiHT40OBSSScanInd->fortyMHZIntolerent;
   pHT40ObssScanInd->channelCount =

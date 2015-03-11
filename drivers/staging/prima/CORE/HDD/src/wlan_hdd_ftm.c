@@ -71,7 +71,6 @@
 #include "i_vos_packet.h"
 #include "vos_nvitem.h"
 #include "wlan_hdd_main.h"
-#include "vos_power.h"
 #include "qwlan_version.h"
 
 #include "wlan_nv.h"
@@ -1541,11 +1540,6 @@ int wlan_hdd_ftm_open(hdd_context_t *pHddCtx)
        goto err_nl_srv_init;
     }
 #endif
-    if (!VOS_IS_STATUS_SUCCESS(vos_chipVoteOnXOBuffer(NULL, NULL, NULL)))
-    {
-        hddLog(VOS_TRACE_LEVEL_FATAL, "%s: Failed to configure 19.2 MHz Clock", __func__);
-        goto err_nl_srv_init;
-    }
 
    pHddCtx->ftm.processingNVTable    = NV_MAX_TABLE;
    pHddCtx->ftm.targetNVTableSize    = 0;
@@ -1626,24 +1620,6 @@ int wlan_hdd_ftm_close(hdd_context_t *pHddCtx)
                   "%s: Ftm has been started. stopping ftm", __func__);
         wlan_ftm_stop(pHddCtx);
     }
-
-    //Assert Deep sleep signal now to put Libra HW in lowest power state
-    vosStatus = vos_chipAssertDeepSleep( NULL, NULL, NULL );
-    if (!VOS_IS_STATUS_SUCCESS(vosStatus)){
-       VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-          "%s: Failed to assert deep sleep signal", __func__);
-       VOS_ASSERT( 0 );
-    }
-
-    //Vote off any PMIC voltage supplies
-    vosStatus = vos_chipPowerDown(NULL, NULL, NULL);
-    if (!VOS_IS_STATUS_SUCCESS(vosStatus)){
-       VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-          "%s: Failed to put HW into low power", __func__);
-       VOS_ASSERT( 0 );
-    }
-
-    vos_chipVoteOffXOBuffer(NULL, NULL, NULL);
 
 #ifdef WLAN_KD_READY_NOTIFIER
     nl_srv_exit(pHddCtx->ptt_pid);
@@ -5777,12 +5753,15 @@ static const struct iw_priv_args we_ftm_private_args[] = {
 
 const struct iw_handler_def we_ftm_handler_def = {
    .num_standard     = 0,
+#ifdef CONFIG_WEXT_PRIV
    .num_private      = sizeof(we_ftm_private) / sizeof(we_ftm_private[0]),
    .num_private_args = sizeof(we_ftm_private_args) / sizeof(we_ftm_private_args[0]),
-
+#endif
    .standard         = (iw_handler *)NULL,
+#ifdef CONFIG_WEXT_PRIV
    .private          = (iw_handler *)we_ftm_private,
    .private_args     = we_ftm_private_args,
+#endif
    .get_wireless_stats = NULL,
 };
 
@@ -5793,9 +5772,9 @@ static int wlan_ftm_register_wext(hdd_adapter_t *pAdapter)
 
     // Zero the memory.  This zeros the profile structure.
     //memset(pwextBuf, 0,sizeof(hdd_wext_state_t));
-
+#ifdef CONFIG_WIRELESS_EXT
     pAdapter->dev->wireless_handlers = (struct iw_handler_def *)&we_ftm_handler_def;
-
+#endif
     return 0;
 }
 

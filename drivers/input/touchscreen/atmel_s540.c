@@ -907,6 +907,7 @@ void trigger_baseline_state_machine(int plug_in, int type)
 			dev_info(&touch_test_dev->client->dev, " WIRELESS TA NOT CONNECTED.\n");
 			touch_test_dev->charging_mode = 0;
 			wireless = 0;
+
 #ifdef TSP_PATCH
 			if (!touch_test_dev->suspended) {
 				if(touch_test_dev->power_status == MXT_POWER_OFF || touch_test_dev->power_status == MXT_POWER_CFG_DEEPSLEEP){
@@ -924,9 +925,22 @@ void trigger_baseline_state_machine(int plug_in, int type)
 					wait_change_cfg = true;
 					touch_test_dev->ta_status = MXT_PATCH_WAKEUP_BAT_MODE_EVENT;
 				}else{
-					dev_info(&touch_test_dev->client->dev, " WAKEUP_BAT_MODE %d\n", MXT_PATCH_WAKEUP_BAT_MODE_EVENT);
-					touch_test_dev->ta_status = MXT_PATCH_WAKEUP_BAT_MODE_EVENT;
-					mxt_patch_test_event(touch_test_dev, MXT_PATCH_WAKEUP_BAT_MODE_EVENT);
+					dev_info(&touch_test_dev->client->dev, " wireless: lpwg_mode: %d, ta_status: %d\n", touch_test_dev->lpwg_mode, touch_test_dev->ta_status);
+					if(touch_test_dev->lpwg_mode == LPWG_DOUBLE_TAP){
+						dev_info(&touch_test_dev->client->dev, " ~KNOCKON_BAT_MODE %d\n", MXT_PATCH_KNOCKON_BAT_MODE_EVENT);
+						touch_test_dev->ta_status = MXT_PATCH_KNOCKON_BAT_MODE_EVENT;
+						mxt_patch_test_event(touch_test_dev, MXT_PATCH_KNOCKON_BAT_MODE_EVENT);
+					}
+					else if(touch_test_dev->lpwg_mode == LPWG_PASSWORD){
+						dev_info(&touch_test_dev->client->dev, " ~PASSWORD_BAT_MODE %d\n", MXT_PATCH_PASSWORD_BAT_MODE_EVENT);
+						touch_test_dev->ta_status = MXT_PATCH_PASSWORD_BAT_MODE_EVENT;
+						mxt_patch_test_event(touch_test_dev, MXT_PATCH_PASSWORD_BAT_MODE_EVENT);
+					}
+					else{
+						dev_info(&touch_test_dev->client->dev, " WAKEUP_BAT_MODE %d\n", MXT_PATCH_WAKEUP_BAT_MODE_EVENT);
+						touch_test_dev->ta_status = MXT_PATCH_WAKEUP_BAT_MODE_EVENT;
+						mxt_patch_test_event(touch_test_dev, MXT_PATCH_WAKEUP_BAT_MODE_EVENT);
+					}
 				}
 			}
 #endif
@@ -951,9 +965,22 @@ void trigger_baseline_state_machine(int plug_in, int type)
 					wait_change_cfg = true;
 					touch_test_dev->ta_status = MXT_PATCH_WAKEUP_WIRELESS_TA_MODE_EVENT;
 				}else{
-					dev_info(&touch_test_dev->client->dev, " WAKEUP_WIRELESS_TA_MODE %d\n", MXT_PATCH_WAKEUP_WIRELESS_TA_MODE_EVENT);
-					touch_test_dev->ta_status = MXT_PATCH_WAKEUP_WIRELESS_TA_MODE_EVENT;
-					mxt_patch_test_event(touch_test_dev, MXT_PATCH_WAKEUP_WIRELESS_TA_MODE_EVENT);
+					dev_info(&touch_test_dev->client->dev, " wireless: lpwg_mode: %d, ta_status: %d\n", touch_test_dev->lpwg_mode, touch_test_dev->ta_status);
+					if(touch_test_dev->lpwg_mode == LPWG_DOUBLE_TAP){
+						dev_info(&touch_test_dev->client->dev, " ~KNOCKON_TA_MODE %d\n", MXT_PATCH_KNOCKON_TA_MODE_EVENT);
+						touch_test_dev->ta_status = MXT_PATCH_KNOCKON_TA_MODE_EVENT;
+						mxt_patch_test_event(touch_test_dev, MXT_PATCH_KNOCKON_TA_MODE_EVENT);
+					}
+					else if(touch_test_dev->lpwg_mode == LPWG_PASSWORD){
+						dev_info(&touch_test_dev->client->dev, " ~PASSWORD_TA_MODE %d\n", MXT_PATCH_PASSWORD_TA_MODE_EVENT);
+						touch_test_dev->ta_status = MXT_PATCH_PASSWORD_TA_MODE_EVENT;
+						mxt_patch_test_event(touch_test_dev, MXT_PATCH_PASSWORD_TA_MODE_EVENT);
+					}
+					else{
+						dev_info(&touch_test_dev->client->dev, " WAKEUP_WIRELESS_TA_MODE %d\n", MXT_PATCH_WAKEUP_WIRELESS_TA_MODE_EVENT);
+						touch_test_dev->ta_status = MXT_PATCH_WAKEUP_WIRELESS_TA_MODE_EVENT;
+						mxt_patch_test_event(touch_test_dev, MXT_PATCH_WAKEUP_WIRELESS_TA_MODE_EVENT);
+					}
 				}
 			}
 #endif
@@ -2022,6 +2049,7 @@ static void mxt_proc_t93_messages(struct mxt_data *data, u8 *message)
 	dev_info(dev, "T93 %u \n",msg);
 
 	if( msg & 0x01){
+		mutex_lock(&data->input_dev->mutex);
 		mxt_t6_command(data, MXT_COMMAND_DIAGNOSTIC, 50, false);
 		mxt_proc_t37_message(data, message);
 #ifdef UDF_CONTROL_CLEAR_T37_DATA
@@ -2040,6 +2068,7 @@ static void mxt_proc_t93_messages(struct mxt_data *data, u8 *message)
 #else
 		send_uevent(lpwg_event);
 #endif
+		mutex_unlock(&data->input_dev->mutex);
 	}
 }
 #endif
@@ -2231,7 +2260,7 @@ static int mxt_read_and_process_messages(struct mxt_data *data, u8 count)
 }
 
 #ifdef CUST_B_TOUCH
-//                                                                 
+// LGE_CHANGE_S [naomi.kim@lge.com] 13.06.18, make width minor data
 #if TOUCHEVENTFILTER
 int set_minor_data(struct mxt_data *data, int area, u8 vector)
 {
@@ -2294,7 +2323,7 @@ int set_minor_data(struct mxt_data *data, int area, u8 vector)
 	return minor;
 }
 #endif
-//                                                                 
+// LGE_CHANGE_E [naomi.kim@lge.com] 13.06.18, make width minor data
 
 static char* get_tool_type(struct mxt_data *data, struct t_data touch_data) {
 	if (touch_data.tool == MT_TOOL_FINGER) {
@@ -2527,7 +2556,7 @@ static void mxt_process_messages_t44(struct work_struct *work)
 				input_report_abs(data->input_dev, ABS_MT_WIDTH_MINOR,
 					data->ts_data.curr_data[i].touch_minor);
 
-			//                                                                   
+			// LGE_CHANGE_S [naomi.kim@lge.com] 13.06.18, add more debugging data
 				#if TOUCHEVENTFILTER
 				dev_dbg(dev,
 					"report_data[%d] : x: %d y: %d, z: %d, M: %d, m: %d, orient: %d)\n",
@@ -2549,7 +2578,7 @@ static void mxt_process_messages_t44(struct work_struct *work)
 						data->ts_data.curr_data[i].orientation
 				);
 				#endif
-				//                                                                   
+				// LGE_CHANGE_E [naomi.kim@lge.com] 13.06.18, add more debugging data
 			}
 		}
 #if DEBUG_ABS
@@ -5488,6 +5517,9 @@ static int gesture_control(struct mxt_data *data, int on)
 #endif
 	return NO_ERROR;
 mode_change:
+	if(data->mxt_password_enable == 0){
+		hrtimer_try_to_cancel(&data->multi_tap_timer);
+	}
 #ifdef MXT_FACTORY
 	if(factorymode){
 		dev_info(&data->client->dev,"[FACTORY MODE] Gesture_control Mode Change (%s)  KnockOn: %d / PASSWD : %d\n",
@@ -5588,7 +5620,12 @@ static void mxt_start(struct mxt_data *data)
 	//printk("lge_touch config_crc_mfts=0 at %s\n", __func__);
 	/* Recalibrate since touch doesn't power off when lcd on */
 	mxt_t6_command(data, MXT_COMMAND_CALIBRATE, 1, false);
-	touch_enable_irq(data->irq);
+	/* disabled report touch irq until probing is finished */
+	if(!is_probing){
+		touch_enable_irq(data->irq);
+	}
+	else
+		TOUCH_INFO_MSG("probing isn't finished yet\n");
 	do_gettimeofday(&t_ex_debug[TIME_START_TIME]);
 }
 

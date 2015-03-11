@@ -63,8 +63,8 @@ struct dwc3_otg {
 	struct dwc3		*dwc;
 	void __iomem		*regs;
 	struct regulator	*vbus_otg;
-#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
-#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G2) || defined (CONFIG_MACH_MSM8974_TIGERS)
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4) || defined(CONFIG_TOUCHSCREEN_ATMEL_S540)
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G2) || defined (CONFIG_MACH_MSM8974_TIGERS) || defined(CONFIG_MACH_MSM8974_B1_KR) || defined(CONFIG_MACH_MSM8974_B1W)
 	struct work_struct		touch_work;
 #endif
 #endif

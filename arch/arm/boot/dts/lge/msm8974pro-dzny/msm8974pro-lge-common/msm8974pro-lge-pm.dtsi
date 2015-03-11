@@ -34,7 +34,7 @@
 		pm8941_chg: qcom,charger {
 			status = "disable";
 			qcom,vbatdet-delta-mv = <50>;
-			qcom,ibatterm-ma = <100>;
+			qcom,ibatterm-ma = <130>;
 			qcom,tchg-mins = <480>;
 			qcom,ibatmax-ma = <1500>;
 			qcom,ibatsafe-ma = <1500>;
@@ -139,7 +139,7 @@
 		};
 
 		qcom,leds@d300 {
-			flash_boost-supply = <&pm8941_chg_boost>;
+			flash-boost-supply = <&pm8941_chg_boost>;
 		};
 
 	};

@@ -26,6 +26,12 @@
 };
 
 &soc {
+	mdss_mdp: qcom,mdss_mdp@fd900000 {
+
+	/* Fudge factors */
+	qcom,mdss-clk-factor = <7 5>;	/* 1.4 times */
+	};
+
 	i2c@f9967000 {
 		lion_dsv@3e {
 			status = "ok";
