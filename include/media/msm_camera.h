@@ -270,6 +270,14 @@ struct msm_mctl_post_proc_cmd {
 #define MSM_CAMERA_LED_INIT 3
 #define MSM_CAMERA_LED_RELEASE 4
 
+#if defined(CONFIG_MACH_LGE)
+/*           
+                                    
+                                
+ */
+#define MSM_CAMERA_LED_TORCH 5
+#endif
+
 #define MSM_CAMERA_STROBE_FLASH_NONE 0
 #define MSM_CAMERA_STROBE_FLASH_XENON 1
 
@@ -1305,6 +1313,7 @@ enum msm_sensor_resolution_t {
 	MSM_SENSOR_RES_5,
 	MSM_SENSOR_RES_6,
 	MSM_SENSOR_RES_7,
+	MSM_SENSOR_RES_8,	 //                                                                       
 	MSM_SENSOR_INVALID_RES,
 };
 

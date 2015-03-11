@@ -130,11 +130,18 @@ static int _get_more_prng_bytes(struct prng_context *ctx, int cont_test)
 			 * First check that we didn't produce the same
 			 * random data that we did last time around through this
 			 */
+#if FIPS_CRYPTO_TEST == 3
+			memcpy(ctx->rand_data, ctx->last_rand_data, DEFAULT_BLK_SZ);
+#endif
 			if (!memcmp(ctx->rand_data, ctx->last_rand_data,
 					DEFAULT_BLK_SZ)) {
 				if (cont_test) {
+#ifdef CONFIG_CRYPTO_FIPS
+					set_fips_error();
+#else
 					panic("cprng %p Failed repetition check!\n",
 						ctx);
+#endif
 				}
 
 				printk(KERN_ERR
@@ -371,6 +378,11 @@ static int cprng_reset(struct crypto_rng *tfm, u8 *seed, unsigned int slen)
 
 	if (slen < DEFAULT_PRNG_KSZ + DEFAULT_BLK_SZ)
 		return -EINVAL;
+
+#ifdef CONFIG_CRYPTO_FIPS
+	if (!memcmp(key, seed, DEFAULT_PRNG_KSZ))
+		return -EINVAL;
+#endif
 
 	if (slen >= (2 * DEFAULT_BLK_SZ + DEFAULT_PRNG_KSZ))
 		dt = key + DEFAULT_PRNG_KSZ;

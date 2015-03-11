@@ -188,9 +188,12 @@ struct msm_gpio_set_tbl {
 	uint32_t delay;
 };
 
+/*                                
+                                                                
+ */
 struct msm_camera_gpio_num_info {
-	uint16_t gpio_num[10];
-	uint8_t valid[10];
+	uint16_t gpio_num[13]; //                                                                                    
+	uint8_t valid[13];
 };
 
 struct msm_camera_gpio_conf {
@@ -392,6 +395,10 @@ struct msm_panel_common_pdata {
 	int (*panel_num)(void);
 	void (*panel_config_gpio)(int);
 	int (*vga_switch)(int select_vga);
+#ifdef CONFIG_LGE_LCD_TUNING
+	int (*read_regset)(unsigned long);
+	int (*write_regset)(unsigned long);
+#endif
 	int *gpio_num;
 	u32 mdp_max_clk;
 #ifdef CONFIG_MSM_BUS_SCALING

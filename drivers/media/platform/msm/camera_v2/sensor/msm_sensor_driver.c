@@ -19,7 +19,7 @@
 #include "msm_camera_dt_util.h"
 
 /* Logging macro */
-/*#define MSM_SENSOR_DRIVER_DEBUG*/
+#define MSM_SENSOR_DRIVER_DEBUG
 #undef CDBG
 #ifdef MSM_SENSOR_DRIVER_DEBUG
 #define CDBG(fmt, args...) pr_err(fmt, ##args)
@@ -350,6 +350,7 @@ int32_t msm_sensor_driver_probe(void *setting)
 	}
 
 	/* Print slave info */
+	CDBG("sensor name %s", slave_info->sensor_name);
 	CDBG("camera id %d", slave_info->camera_id);
 	CDBG("slave_addr %x", slave_info->slave_addr);
 	CDBG("addr_type %d", slave_info->addr_type);

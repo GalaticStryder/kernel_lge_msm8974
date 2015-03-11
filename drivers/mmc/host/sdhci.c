@@ -140,6 +140,8 @@ static void sdhci_dumpregs(struct sdhci_host *host)
 		       readl(host->ioaddr + SDHCI_ADMA_ERROR),
 		       readl(host->ioaddr + SDHCI_ADMA_ADDRESS));
 
+	if (host->ops->dump_vendor_regs)
+		host->ops->dump_vendor_regs(host);
 	sdhci_dump_state(host);
 	pr_info(DRIVER_NAME ": ===========================================\n");
 }
@@ -518,7 +520,7 @@ static int sdhci_pre_dma_transfer(struct sdhci_host *host,
 
 	if (!next && data->host_cookie &&
 	    data->host_cookie != host->next_data.cookie) {
-		printk(KERN_WARNING "[%s] invalid cookie: data->host_cookie %d"
+        printk(KERN_WARNING "[%s] invalid cookie: data->host_cookie %d"
 		       " host->next_data.cookie %d\n",
 		       __func__, data->host_cookie, host->next_data.cookie);
 		data->host_cookie = 0;
@@ -1538,7 +1540,21 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	/* If polling, assume that the card is always present. */
 	if (host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION)
+	#ifdef CONFIG_MACH_LGE
+	/*           
+                                                                 
+                                                                    
+                                 
+ */
+	{
+		if (mmc->index == MMC_HOST_DRIVER_INDEX_MMC1)
+			present = mmc_cd_get_status(mmc);
+		else
+			present = true;
+	}
+	#else
 		present = true;
+	#endif
 	else
 		present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
 				SDHCI_CARD_PRESENT;
@@ -3172,6 +3188,18 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	caps[1] = (host->version >= SDHCI_SPEC_300) ?
 		sdhci_readl(host, SDHCI_CAPABILITIES_1) : 0;
+
+#ifdef CONFIG_LGE_MMC_SD_USE_SDCC3
+	/*           
+                                             
+                                                          
+                           
+                                 
+  */
+	if (strcmp(host->hw_name, "msm_sdcc.3") == 0) {
+		caps[0] |= (SDHCI_CAN_VDD_330 | SDHCI_CAN_VDD_300 | SDHCI_CAN_VDD_180);
+	}
+#endif
 
 	if (host->quirks & SDHCI_QUIRK_FORCE_DMA)
 		host->flags |= SDHCI_USE_SDMA;

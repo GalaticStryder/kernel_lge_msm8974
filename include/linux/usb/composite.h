@@ -46,6 +46,10 @@
  */
 #define USB_GADGET_DELAYED_STATUS       0x7fff	/* Impossibly large value */
 
+#ifdef CONFIG_USB_G_LGE_ANDROID
+#define CONFIG_USB_GADGET_VBUS_DRAW_30	900
+#endif
+
 struct usb_configuration;
 
 /**
@@ -145,6 +149,9 @@ struct usb_function {
 	int			(*get_status)(struct usb_function *);
 	int			(*func_suspend)(struct usb_function *,
 						u8 suspend_opt);
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+	int			(*desc_change)(struct usb_function *, bool is_mac);
+#endif
 	/* private: */
 	/* internals */
 	struct list_head		list;

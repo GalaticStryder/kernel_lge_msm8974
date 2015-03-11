@@ -1637,7 +1637,7 @@ static int mdp3_overlay_prepare(struct msm_fb_data_type *mfd,
 		return -EINVAL;
 	}
 
-	if (copy_from_user(&req_list, ovlist.overlay_list, sizeof(struct mdp_overlay*)))
+	if (copy_from_user(&req_list, ovlist.overlay_list, sizeof(struct mdp_overlay *)))
 		return -EFAULT;
 
 	if (copy_from_user(req, req_list, sizeof(*req)))

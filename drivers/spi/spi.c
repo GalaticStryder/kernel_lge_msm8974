@@ -367,8 +367,13 @@ int spi_add_device(struct spi_device *spi)
 
 	d = bus_find_device_by_name(&spi_bus_type, NULL, dev_name(&spi->dev));
 	if (d != NULL) {
+#ifdef CONFIG_SND_SOC_WM5110
+		dev_err(dev, "chipselect %d already in use dev_name:%s\n",
+				spi->chip_select, dev_name(&spi->dev));
+#else
 		dev_err(dev, "chipselect %d already in use\n",
 				spi->chip_select);
+#endif
 		put_device(d);
 		status = -EBUSY;
 		goto done;
@@ -1394,14 +1399,24 @@ int spi_write_then_read(struct spi_device *spi,
 	struct spi_message	message;
 	struct spi_transfer	x[2];
 	u8			*local_buf;
-
-	/* Use preallocated DMA-safe buffer.  We can't avoid copying here,
-	 * (as a pure convenience thing), but we can keep heap costs
-	 * out of the hot path ...
+	/* Use preallocated DMA-safe buffer if we can.  We can't avoid
+	 * copying here, (as a pure convenience thing), but we can
+	 * keep heap costs out of the hot path unless someone else is
+	 * using the pre-allocated buffer or the transfer is too large.
 	 */
+#ifdef CONFIG_SND_SOC_WM5110
+	/*                                                           */
+	if ((n_tx + n_rx) > SPI_BUFSIZ || !mutex_trylock(&lock)) {
+		local_buf = kmalloc(max((unsigned int)SPI_BUFSIZ, (unsigned int)(n_tx + n_rx)), GFP_KERNEL);
+		if (!local_buf)
+			return -ENOMEM;
+	} else {
+		local_buf = buf;
+	}
+#else
 	if ((n_tx + n_rx) > SPI_BUFSIZ)
-		return -EINVAL;
-
+	       return -EINVAL;
+#endif
 	spi_message_init(&message);
 	memset(x, 0, sizeof x);
 	if (n_tx) {
@@ -1412,15 +1427,15 @@ int spi_write_then_read(struct spi_device *spi,
 		x[1].len = n_rx;
 		spi_message_add_tail(&x[1], &message);
 	}
-
+#ifndef CONFIG_SND_SOC_WM5110
 	/* ... unless someone else is using the pre-allocated buffer */
 	if (!mutex_trylock(&lock)) {
-		local_buf = kmalloc(SPI_BUFSIZ, GFP_KERNEL);
-		if (!local_buf)
-			return -ENOMEM;
+	      local_buf = kmalloc(SPI_BUFSIZ, GFP_KERNEL);
+	      if (!local_buf)
+	          return -ENOMEM;
 	} else
-		local_buf = buf;
-
+	    local_buf = buf;
+#endif
 	memcpy(local_buf, txbuf, n_tx);
 	x[0].tx_buf = local_buf;
 	x[1].rx_buf = local_buf + n_tx;

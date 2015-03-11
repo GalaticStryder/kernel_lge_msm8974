@@ -506,4 +506,283 @@ config QPNP_BMS
 	  Say Y here to enable support for QPNP chip bms device.
 	  It registers a fuelgauge bms power supply to report
 	  State of Charge.
+
+config LGE_PM
+	tristate "PM8941 LGE Feature"
+	depends on SPMI
+	help
+      Say Y here to enable support for pm8941 chip lge feature.
+	  LGE_PM releasted changed.
+	  Power Management, Battery charging, Battery Monitoring System
+	  with battery FET and fuel gauge.
+
+config ADC_READY_CHECK_JB
+	tristate "PM8941 and PM8841 combibation JB ADC ready check feature"
+	depends on LGE_PM
+	help
+	  Say Y here to enable support for JB adc ready check feature
+	  QCT changed ADC read way in KK for next MSM8974 AC and later version
+	  thease platform have two channel ADC in each PMICs
+	  This Feature MUST used in MSM8974 AA/AB only
+
+
+config LGE_CHARGER_TEMP_SCENARIO
+	depends on LGE_PM
+	default n
+	bool "LGE CHARGING TEMP SCENARIO Configuration"
+	help
+	  LGE CHARGER TEMP SCENARIO Configuration
+
+config LGE_WLC_CHARGER_TEMP_SCENARIO
+	depends on LGE_PM
+	default n
+	bool "LGE Wireless CHARGING TEMP SCENARIO Configuration"
+	help
+	  LGE Wireless CHARGER TEMP SCENARIO Configuration
+	  only use the VZW model.
+
+config SMB349_VZW_FAST_CHG
+	depends on SMB349_CHARGER
+	default n
+	bool "SMB349 Verizon Fast Charging"
+	help
+	  Say Y to Support Verizon Fast Charging
+
+config LGE_QC_2_0_SCENARIO
+	tristate "LGE CHARGING SCENARIO of QC 2.0"
+	depends on QPNP_CHARGER
+	depends on LGE_PM
+	default n
+	help
+	  LGE CHARGING SCENARIO of QC 2.0
+
+config WIRELESS_CHARGER
+	bool "Wireless Charger Configuration"
+	default n
+	help
+	  Say Y here to enable support for wireless charger driver
+	  charging current is 800mA and can charge enable/disable on the
+	  scenario.
+	  should be applied only to VZW/LGU/KT/SKT model.
+
+config BQ51051B_CHARGER
+	bool "TI BQ51051B charger control Driver"
+	depends on WIRELESS_CHARGER
+	help
+	  TI BQ51051B wireless charging control driver
+	  BQ51051B is a high efficiency, wireless power reveiver with
+	  Li-Ion/Li-Pol battery charge controller for portable application.
+	  Power state output tracks rectifier and battery voltage
+	  to ensure maximum efficiency across the full charg cycle.
+
+config BQ51053B_CHARGER
+	bool "TI BQ51053B charger control Driver"
+	depends on WIRELESS_CHARGER
+	default n
+	help
+	  TI BQ51053B wireless charging control driver
+	  BQ51053B is a high efficiency, wireless power reveiver with
+	  Li-Ion/Li-Pol battery charge controller for portable application.
+	  Power state output tracks rectifier and battery voltage
+	  to ensure maximum efficiency across the full charg cycle.
+
+config FTT_CHARGER_V3
+	bool "Wireless charging support FTT v3"
+	default n
+	help
+	  Wireless charging support FTT v3
+	  Android ftt_ctrld : v3.2.1
+	  FTT Kernel device driver : v3.2.1
+	  FTT Demo app : 120326-1
+
+config FTT_SYSFS
+	bool "Wireless charging support FTT v3 sysfs"
+	depends on FTT_CHARGER_V3
+	default n
+	help
+	  Wireless charging support FTT v3 sysfs
+	  type_test is wireless and
+	  power_supply_type is POWER_SUPPLY_TYPE_WIRELESS.
+	  power supply item is ftt_anntena_level.
+
+config LGE_QC_2_0_SCENARIO_WITH_VOLTAGE
+	tristate "lge usb input voltage scenario of QC 2.0"
+	depends on QPNP_CHARGER
+	depends on LGE_PM
+	depends on LGE_QC_2_0_SCENARIO
+	default n
+	help
+	  lge usb input voltage scenario of QC 2.0
+
+config MAX17048_FUELGAUGE
+	tristate "Maxim MAX17048 fuel gauging external driver"
+	depends on I2C && LGE_PM
+	default n
+	help
+	  MAX17048 is fuel-gauge systems for lithium-ion (Li+) batteries
+	  in handheld and portable equipment. The MAX17048 is configured
+	  to operate with a single lithium cell
+
+config MAX17050_FUELGAUGE
+	tristate "Maxim MAX17050 fuel gauging external driver"
+	depends on I2C && LGE_PM
+	default n
+	help
+	  MAX17050 is fuel-gauge systems for lithium-ion (Li+) batteries
+	  in handheld and portable equipment. The MAX17050 is configured
+	  to operate with a single lithium cell.
+
+config LGE_PM_BATTERY_ID_CHECKER
+	tristate "Virtual Device for LGE Battery ID Checker"
+	default n
+	help
+	  Say Y here to enable LGE Battery ID Checker
+
+config LGE_CURRENTNOW
+	bool "Virtual Device for LGE current now reading"
+	default n
+	help
+	  Say Y here to enable LGE current now reader
+
+config LGE_ONLY_READ_CURRENT
+	bool "Only use feature that read current of battery at BMS"
+	default n
+	help
+	  Say Y here to enable BMS current now reader
+
+config BQ24192_CHARGER
+	tristate "bq24192 charger"
+	depends on I2C
+	help
+	  Say Y to enable support for the BQ24192 switching mode based charger
+	  and sysfs. The driver supports controlling charger-enable and
+	  current limiting capabilities. The driver also lets the
+	  BQ24192 be operated as a slave device via the power supply
+	  framework.
+
+config BQ24296_CHARGER
+	tristate "bq24296 charger"
+	depends on I2C
+	default n
+	help
+	  Say Y to enable support for the BQ24296 switching mode based charger
+	  and sysfs. The driver supports controlling charger-enable and
+	  current limiting capabilities. The driver also lets the
+	  BQ24296 be operated as a slave device via the power supply
+	  framework.
+
+config CHARGER_MAX77819
+	tristate "Maxim MAX77819 PMIC battery charger driver"
+	depends on MFD_MAX77819
+	default n
+	help
+	  Say Y to enable support for the MAX77819 PMIC battery charger.
+config CHARGER_MAX8971
+	tristate "Maxim MAX8971 Charger driver"
+	depends on I2C
+	default n
+	help 
+		Say Y to enable support for the Max8971 switching mode based charger
+		and sysfs. The driver supports controlling charger-enable and current
+		limiting capavilities. The driver also supports dual-charging with
+		Max77819
+config CHARGER_MAX8971_FORCE_SINGLE_CHARGING
+	tristate "Maxim MAX77819 PMIC battery charger driver"
+	depends on CHARGER_MAX8971
+	default n
+	help
+	  Say Y to enable support for the MAX8971 PMIC force-single charger.
+config CHARGER_UNIFIED_WLC
+	tristate "wireless charger control driver"
+	default n
+	help
+		wireless charger control driver
+config CHARGER_UNIFIED_WLC_BQ5102X
+	tristate "wireless charger control driver"
+	depends on CHARGER_UNIFIED_WLC
+	default n
+	help
+		wireless charger control driver
+config CHARGER_UNIFIED_WLC_ALIGNMENT
+	tristate "wireless charger alignment"
+	depends on CHARGER_UNIFIED_WLC
+	default n
+	help
+		wireless charger alignment
+choice
+	prompt "WLC Alignment"
+	depends on CHARGER_UNIFIED_WLC
+
+config CHARGER_UNIFIED_WLC_ALIGNMENT_IDT9025A
+	tristate "wireless charger alignment"
+	select CHARGER_UNIFIED_WLC_ALIGNMENT
+	default n
+	help
+		wireless charger alignment
+config CHARGER_UNIFIED_WLC_ALIGNMENT_BQ5102X
+	tristate "wireless charger alignment"
+	select CHARGER_UNIFIED_WLC_ALIGNMENT
+	default n
+	help
+		wireless charger alignment
+endchoice
+config CHARGER_FACTORY_MODE
+	bool "Enable charger factory mode"
+	depends on BQ24296_CHARGER
+	depends on CHARGER_MAX77819
+	help
+		charger factory mode
+config VZW_POWER_REQ
+    tristate "implementation power requirements of Verizon"
+    depends on BQ24296_CHARGER
+    default n
+    help
+		power requirements for verizon
+config LGE_PM_CHARGING_SUPPORT_PHIHONG
+    tristate "Support Phihong travel charger"
+    depends on BQ24296_CHARGER
+    default n
+    help
+		Chargers which is not support AICL need this feature.
+config LGE_PM_LLK_MODE
+    tristate "implementation power requirements of retail mode"
+	default n
+    help
+		power requirements for retail mode
+config LGE_LOW_BATT_LIMIT
+	tristate "to prevent UVLO at low voltage"
+	default n
+config LGE_SMART_CHARGING
+	tristate "smart charging driver"
+	default n
+	help
+		Say Y to enable support for smart charging
+
+config LGE_G2_EMBEDDED_BATT
+	depends on SMB349_CHARGER
+	bool "56K & 910K Factory Cable Configuration"
+	default n
+	help
+	  Say Y to stop charging at 56k & 910k factory cable
+
+config VZW_LLK
+	depends on SMB349_CHARGER
+	default n
+	bool "SMB349 Verizon LLK"
+	help
+	  Say Y to Support Verizon LLK
+
+config LGE_PM_BATTERY_BATT_ADC_G2_BASE
+	bool "Apply batt adc table for G2 base model"
+	depends on LGE_PM
+	default n
+	help
+		Say Y to apply batt adc table for g2 base model
+
+config LGE_PM_CHARGING_TEMP_SCENARIO_V1_7
+	bool "LGE CHARGING TEMP SCENARIO V1.7 Configuration"
+	depends on LGE_PM
+	default n
+	help
+		LGE CHARGING TEMP SCENARIO V1.7 Configuration
 endif # POWER_SUPPLY

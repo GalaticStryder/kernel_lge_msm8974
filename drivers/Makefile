@@ -143,5 +143,14 @@ obj-$(CONFIG_MOBICORE_SUPPORT)  += gud/
 
 obj-$(CONFIG_CORESIGHT)		+= coresight/
 
+# LGE_BROADCAST_TDMB {
+obj-$(CONFIG_LGE_BROADCAST_TDMB) += broadcast/
+# LGE_BROADCAST_TDMB }
+# LGE_BROADCAST_ISDBT_JAPAN {
+obj-$(CONFIG_LGE_BROADCAST_ISDBT_JAPAN) += broadcast/
+
+#FeliCa
+obj-$(CONFIG_LGE_FELICA)        += felica/
+
 obj-$(CONFIG_BIF)		+= bif/
 obj-$(CONFIG_SENSORS)		+= sensors/

@@ -2575,12 +2575,21 @@ int snd_pcm_add_volume_ctls(struct snd_pcm *pcm, int stream,
 		kfree(info);
 		return -ENOMEM;
 	}
+#ifdef CONFIG_SND_SOC_WM5110
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+		snprintf((char *)knew.name, size, "%s %d %s",
+			"Playback", pcm->device, "Volume");
+	else
+		snprintf((char *)knew.name, size, "%s %d %s",
+			"Capture", pcm->device, "Volume");
+#else
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
 		snprintf(knew.name, size, "%s %d %s",
 			"Playback", pcm->device, "Volume");
 	else
 		snprintf(knew.name, size, "%s %d %s",
 			"Capture", pcm->device, "Volume");
+#endif
 	knew.device = pcm->device;
 	knew.count = pcm->streams[stream].substream_count;
 	knew.private_value = private_value;

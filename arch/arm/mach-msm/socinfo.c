@@ -24,6 +24,9 @@
 #include <linux/string.h>
 #include <linux/sysdev.h>
 #include <linux/types.h>
+#ifdef CONFIG_MACH_LGE
+#include <linux/io.h>
+#endif
 
 #include <asm/mach-types.h>
 #include <asm/system_misc.h>
@@ -451,6 +454,17 @@ static struct socinfo_v1 dummy_socinfo = {
 	.version = 1,
 };
 
+#ifdef CONFIG_LGE_PM
+u16 *poweron_st = 0;
+uint16_t power_on_status_info_get(void)
+{
+	poweron_st = smem_alloc(SMEM_POWER_ON_STATUS_INFO, sizeof(poweron_st));
+
+	if (poweron_st == NULL) return 0;
+	return *poweron_st;
+}
+#endif
+
 uint32_t socinfo_get_id(void)
 {
 	return (socinfo) ? socinfo->v1.id : 0;
@@ -613,6 +627,360 @@ socinfo_show_build_id(struct sys_device *dev,
 
 	return snprintf(buf, PAGE_SIZE, "%-.32s\n", socinfo_get_build_id());
 }
+
+#ifdef CONFIG_MACH_LGE
+#define QFPROM_PTE_EFUSE_ADDR 0xfc4b80b0
+#define QFPROM_CORR_SPARE_REG28_ROW0_LSB 0xfc4bc450
+#define QFPROM_CORR_SPARE_REG28_ROW0_MSB 0xfc4bc454
+#define QFPROM_CORR_SPARE_REG27_ROW0_LSB 0xfc4bc440
+#define QFPROM_CORR_SPARE_REG27_ROW0_MSB 0xfc4bc444
+#define QFPROM_CORR_SPARE_REG28_ROW2_LSB 0xfc4bc460
+#define QFPROM_CORR_SPARE_REG28_ROW2_MSB 0xfc4bc464
+#define QFPROM_CORR_IMEI_ESN2_LSB 0xfc4bc0e0
+#define QFPROM_CORR_CALIB_ROW1_MSB 0xfc4bc1cc
+
+#define MASK_AND_SHIFT_TO_LSB(value, offset_of_lsb, number_of_bits) \
+	(((value) << (32-((offset_of_lsb)+(number_of_bits))) ) >> (32-(number_of_bits)))
+
+static bool rbcpr_use_redundant_fuses(void)
+{
+	void __iomem* tmp;
+	u32 fuse, redundancy_select;
+	tmp = ioremap(QFPROM_CORR_CALIB_ROW1_MSB, 0x4);
+	fuse = (u32)readl(tmp);
+	redundancy_select = MASK_AND_SHIFT_TO_LSB(fuse, 29, 1);
+	return (redundancy_select == 0x1);
+}
+
+typedef enum {
+	TURBO_MODE,
+	NOMINAL_MODE,
+	SVS_MODE
+}  avs_mode_type;
+
+typedef struct
+{
+	u32 fuse_base;
+	int offset;
+} efuse_addr;
+
+typedef struct
+{
+	int fuse_index;
+	int offset;
+} fuse_setting_type;
+
+typedef struct
+{
+	u32* base_addr;
+	fuse_setting_type turbo_target;
+	fuse_setting_type nominal_target;
+	fuse_setting_type svs_target;
+} efuse_info_type;
+
+efuse_info_type vddcx = {
+	.base_addr = (unsigned[])
+	{
+		QFPROM_CORR_SPARE_REG28_ROW0_LSB,
+		QFPROM_CORR_SPARE_REG28_ROW0_MSB,
+	},
+	.turbo_target =
+	{
+		.fuse_index = 0,
+		.offset = 0,
+	},
+	.nominal_target =
+	{
+		.fuse_index = 0,
+		.offset = 5,
+	},
+	.svs_target =
+	{
+		.fuse_index = 1,
+		.offset = 3,
+	}
+};
+
+efuse_info_type vddcx_rd = {
+	.base_addr = (unsigned[])
+	{
+		QFPROM_CORR_SPARE_REG27_ROW0_LSB,
+		QFPROM_CORR_SPARE_REG27_ROW0_MSB,
+	},
+	.turbo_target =
+	{
+		.fuse_index = 0,
+		.offset = 0,
+	},
+	.nominal_target =
+	{
+		.fuse_index = 0,
+		.offset = 5,
+	},
+	.svs_target =
+	{
+		.fuse_index = 1,
+		.offset = 3,
+	}
+};
+
+efuse_info_type vddgfx = {
+	.base_addr = (unsigned[])
+	{
+		QFPROM_CORR_SPARE_REG28_ROW2_LSB,
+		QFPROM_CORR_SPARE_REG28_ROW2_MSB,
+	},
+	.turbo_target =
+	{
+		.fuse_index = 0,
+		.offset = 0,
+	},
+	.nominal_target =
+	{
+		.fuse_index = 0,
+		.offset = 5,
+	},
+	.svs_target =
+	{
+		.fuse_index = 1,
+		.offset = 3,
+	}
+};
+
+efuse_info_type vddgfx_rd = {
+	.base_addr = (unsigned[])
+	{
+		QFPROM_CORR_SPARE_REG28_ROW2_MSB,
+		QFPROM_CORR_IMEI_ESN2_LSB,
+	},
+	.turbo_target =
+	{
+		.fuse_index = 0,
+		.offset = 14,
+	},
+	.nominal_target =
+	{
+		.fuse_index = 0,
+		.offset = 19,
+	},
+	.svs_target =
+	{
+		.fuse_index = 1,
+		.offset = 16,
+	}
+};
+
+efuse_addr rbcpr_read_efuse(efuse_info_type efuse_info, avs_mode_type mode)
+{
+	efuse_addr efuse_addr_info;
+	fuse_setting_type fuse_set;
+
+	switch(mode) {
+	case TURBO_MODE:
+		fuse_set = efuse_info.turbo_target;
+		break;
+	case NOMINAL_MODE:
+		fuse_set = efuse_info.nominal_target;
+		break;
+	case SVS_MODE:
+		fuse_set = efuse_info.svs_target;
+		break;
+	default :
+	        fuse_set = efuse_info.nominal_target;
+	        break;
+	}
+
+	efuse_addr_info.fuse_base = efuse_info.base_addr[fuse_set.fuse_index];
+	efuse_addr_info.offset = fuse_set.offset;
+
+	return efuse_addr_info;
+}
+
+u32 get_avs_value(u32 fuse_base, char offset, int num)
+{
+	void __iomem* tmp;
+	u32 avs_efuse;
+	tmp = ioremap(fuse_base, 0x4);
+	avs_efuse = (u32)readl(tmp);
+	return MASK_AND_SHIFT_TO_LSB(avs_efuse, offset, num);
+}
+
+static u32 socinfo_get_vddcx(void)
+{
+	u32 avs_value = 0, tmp;
+	bool redundant_sel;
+	efuse_addr efuse_addr_info;
+	efuse_info_type *efuse_ptr;
+
+	redundant_sel = rbcpr_use_redundant_fuses();
+	efuse_ptr = (redundant_sel ? &vddcx_rd : &vddcx);
+	efuse_addr_info = rbcpr_read_efuse(*efuse_ptr, TURBO_MODE);
+	tmp = get_avs_value(efuse_addr_info.fuse_base, efuse_addr_info.offset, 5);
+	avs_value = (tmp * 10000);
+	efuse_addr_info = rbcpr_read_efuse(*efuse_ptr, NOMINAL_MODE);
+	tmp = get_avs_value(efuse_addr_info.fuse_base, efuse_addr_info.offset, 5);
+	avs_value += (tmp * 100);
+	efuse_addr_info = rbcpr_read_efuse(*efuse_ptr, SVS_MODE);
+	tmp = get_avs_value(efuse_addr_info.fuse_base, efuse_addr_info.offset, 5);
+	avs_value += tmp;
+	return avs_value;
+}
+
+static u32 socinfo_get_vddgfx(void)
+{
+	u32 avs_value = 0, tmp;
+	bool redundant_sel;
+	efuse_addr efuse_addr_info;
+	efuse_info_type *efuse_ptr;
+
+	redundant_sel = rbcpr_use_redundant_fuses();
+	efuse_ptr = (redundant_sel ? &vddgfx_rd : &vddgfx);
+	efuse_addr_info = rbcpr_read_efuse(*efuse_ptr, TURBO_MODE);
+	tmp = get_avs_value(efuse_addr_info.fuse_base, efuse_addr_info.offset, 5);
+	avs_value = (tmp * 10000);
+	efuse_addr_info = rbcpr_read_efuse(*efuse_ptr, NOMINAL_MODE);
+	tmp = get_avs_value(efuse_addr_info.fuse_base, efuse_addr_info.offset, 5);
+	avs_value += (tmp * 100);
+	efuse_addr_info = rbcpr_read_efuse(*efuse_ptr, SVS_MODE);
+	tmp = get_avs_value(efuse_addr_info.fuse_base, efuse_addr_info.offset, 5);
+	avs_value += tmp;
+	return avs_value;
+}
+
+static ssize_t
+socinfo_show_avs_cx(struct sys_device *dev,
+		      struct sysdev_attribute *attr,
+		      char *buf)
+{
+	u32 avs_value = 0;
+	avs_value = socinfo_get_vddcx();
+	if (avs_value < 0) {
+		pr_err("%s: err during get socinfo! so default avs_bin\n", __func__);
+		return 0;
+	}
+	return snprintf(buf, PAGE_SIZE, "%d\n", avs_value);
+}
+
+static ssize_t
+socinfo_show_avs_gfx(struct sys_device *dev,
+		      struct sysdev_attribute *attr,
+		      char *buf)
+{
+	u32 avs_value = 0;
+	avs_value = socinfo_get_vddgfx();
+	if (avs_value < 0) {
+		pr_err("%s: err during get socinfo! so default avs_bin\n", __func__);
+		return 0;
+	}
+	return snprintf(buf, PAGE_SIZE, "%d\n", avs_value);
+}
+
+static int socinfo_get_speed_bin(void)
+{
+    u32 pte_efuse, redundant_sel;
+	int speed_bin;
+	void __iomem *tmp;
+
+    tmp = ioremap(QFPROM_PTE_EFUSE_ADDR, 0x4);
+	pte_efuse = (u32)readl(tmp);
+    redundant_sel = (pte_efuse >> 24) & 0x7;
+    speed_bin = pte_efuse & 0x7;
+    if (redundant_sel == 1)
+        speed_bin = (pte_efuse >> 27) & 0xF;
+
+	return speed_bin;
+}
+
+static int socinfo_get_pvs(void)
+{
+    u32 pte_efuse, redundant_sel;
+	int pvs;
+	void __iomem *tmp;
+
+    tmp = ioremap(QFPROM_PTE_EFUSE_ADDR, 0x4);
+	pte_efuse = (u32)readl(tmp);
+    redundant_sel = (pte_efuse >> 4) & 0x3;
+    pvs = ((pte_efuse >> 28) & 0x8) | ((pte_efuse >> 6) & 0x7);
+
+    if (redundant_sel == 2)
+        pvs = (pte_efuse >> 27) & 0xF;
+
+	pte_efuse = (u32)readl(tmp + 0x4);
+    if (!!(pte_efuse & BIT(21)))
+		return pvs;
+	return -1;
+}
+
+static ssize_t
+socinfo_show_speed_bin(struct sys_device *dev,
+		      struct sysdev_attribute *attr,
+		      char *buf)
+{
+	int speed_bin = 0;
+	if (!socinfo) {
+		pr_err("%s: No socinfo found!\n", __func__);
+		return 0;
+	}
+
+	speed_bin = socinfo_get_speed_bin();
+	if (speed_bin < 0) {
+		pr_err("%s: err during get socinfo! so default speed_bin\n", __func__);
+		return 0;
+	}
+	return snprintf(buf, PAGE_SIZE, "%d\n", speed_bin);
+}
+
+static ssize_t
+socinfo_show_pvs(struct sys_device *dev,
+		      struct sysdev_attribute *attr,
+		      char *buf)
+{
+	int pvs = 0;
+	if (!socinfo) {
+		pr_err("%s: No socinfo found!\n", __func__);
+		return 0;
+	}
+
+	pvs = socinfo_get_pvs();
+	if (pvs < 0) {
+		pr_err("%s: err during get socinfo! so default pvs\n", __func__);
+		return 0;
+	}
+	return snprintf(buf, PAGE_SIZE, "%d\n", pvs);
+}
+
+static ssize_t
+socinfo_show_soc_name(struct sys_device *dev,
+					  struct sysdev_attribute *attr,
+					  char *buf)
+{
+    char *soc_name;
+    if (!socinfo) {
+        pr_err("%s: No socinfo found!\n", __func__);
+        return 0;
+    }
+
+    switch(cpu_of_id[socinfo_get_id()].generic_soc_type) {
+    case MSM_CPU_8974:
+        soc_name = "MSM_CPU_8974";
+        break;
+    case MSM_CPU_8974PRO_AA:
+        soc_name = "MSM_CPU_8974PRO_AA";
+        break;
+    case MSM_CPU_8974PRO_AB:
+        soc_name = "MSM_CPU_8974PRO_AB";
+        break;
+    case MSM_CPU_8974PRO_AC:
+        soc_name = "MSM_CPU_8974PRO_AC";
+        break;
+    default:
+        soc_name = "NOT_8974";
+        break;
+    }
+
+    return snprintf(buf, PAGE_SIZE, "%s\n", soc_name);
+}
+#endif
 
 static ssize_t
 socinfo_show_raw_id(struct sys_device *dev,
@@ -1023,6 +1391,13 @@ static struct sysdev_attribute socinfo_v1_files[] = {
 	_SYSDEV_ATTR(id, 0444, socinfo_show_id, NULL),
 	_SYSDEV_ATTR(version, 0444, socinfo_show_version, NULL),
 	_SYSDEV_ATTR(build_id, 0444, socinfo_show_build_id, NULL),
+#ifdef CONFIG_MACH_LGE
+	_SYSDEV_ATTR(speed_bin, 0444, socinfo_show_speed_bin, NULL),
+	_SYSDEV_ATTR(pvs_bin, 0444, socinfo_show_pvs, NULL),
+	_SYSDEV_ATTR(soc_name, 0444, socinfo_show_soc_name, NULL),
+	_SYSDEV_ATTR(cx_avs, 0444, socinfo_show_avs_cx, NULL),
+	_SYSDEV_ATTR(gfx_avs, 0444, socinfo_show_avs_gfx, NULL),
+#endif
 };
 
 static struct sysdev_attribute socinfo_v2_files[] = {

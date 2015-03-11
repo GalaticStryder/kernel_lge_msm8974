@@ -18,12 +18,24 @@
 #include <linux/usb/hcd.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
+#include <linux/usb/msm_hsusb.h>
 
 #include "core.h"
 #include "dwc3_otg.h"
 #include "io.h"
 #include "xhci.h"
 
+#ifdef CONFIG_LGE_PM
+#include <mach/board_lge.h>
+#include <linux/power_supply.h>
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+#include <linux/slimport.h>
+#endif
+#endif
+#ifdef CONFIG_MACH_LGE
+#define PARAMETER_OVERRIDE_X_REG (0xF8814)
+#define DEFAULT_HSPHY_INIT (0x00D195A4) /* qcom,dwc-hsphy-init */
+#endif
 #define VBUS_REG_CHECK_DELAY	(msecs_to_jiffies(1000))
 #define MAX_INVALID_CHRGR_RETRY 3
 static int max_chgr_retry_count = MAX_INVALID_CHRGR_RETRY;
@@ -33,6 +45,18 @@ static void dwc3_otg_reset(struct dwc3_otg *dotg);
 
 static void dwc3_otg_notify_host_mode(struct usb_otg *otg, int host_mode);
 static void dwc3_otg_reset(struct dwc3_otg *dotg);
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G3) && defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+void update_status(int code, int value);
+#endif
+#ifdef CONFIG_QPNP_CHARGER
+extern struct pseudo_batt_info_type pseudo_batt_info;
+#endif
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G2) || defined (CONFIG_MACH_MSM8974_TIGERS)
+struct workqueue_struct *touch_otg_wq;
+extern void trigger_baseline_state_machine(int plug_in, int type);
+#endif
+#endif
 
 /**
  * dwc3_otg_set_host_regs - reset dwc3 otg registers to host operation.
@@ -47,6 +71,14 @@ static void dwc3_otg_set_host_regs(struct dwc3_otg *dotg)
 	u32 reg;
 	struct dwc3 *dwc = dotg->dwc;
 	struct dwc3_ext_xceiv *ext_xceiv = dotg->ext_xceiv;
+
+#ifdef CONFIG_MACH_LGE
+	/* use default qcom,dwc-hsphy-init value for Host Mode */
+	reg = dwc3_readl(dwc->regs, PARAMETER_OVERRIDE_X_REG);
+	reg &= ~(0x03FFFFFF);
+	reg |= (DEFAULT_HSPHY_INIT & 0x03FFFFFF);
+	dwc3_writel(dwc->regs, PARAMETER_OVERRIDE_X_REG, reg);
+#endif
 
 	if (ext_xceiv && !ext_xceiv->otg_capability) {
 		/* Set OCTL[6](PeriMode) to 0 (host) */
@@ -530,11 +562,40 @@ static void dwc3_otg_notify_host_mode(struct usb_otg *otg, int host_mode)
 		power_supply_set_scope(dotg->psy, POWER_SUPPLY_SCOPE_DEVICE);
 }
 
+/*                                                                                           */
+#if defined(CONFIG_LGE_PM) && !defined(CONFIG_USB_DWC3_LGE_SINGLE_PSY)
+static int dwc3_otg_get_psy(struct usb_phy *phy)
+{
+	struct dwc3_otg *dotg = container_of(phy->otg, struct dwc3_otg, otg);
+
+	if (dotg->charger->chg_type == DWC3_DCP_CHARGER) {
+		pr_info("msm_otg_notify_power_supply: "
+				"power_supply_get_by_name(ac)\n");
+		dotg->psy = power_supply_get_by_name("ac");
+	} else {
+		pr_info("msm_otg_notify_power_supply: "
+				"power_supply_get_by_name(usb)\n");
+		dotg->psy = power_supply_get_by_name("usb");
+	}
+	if (!dotg->psy) {
+		goto psy_error;
+	}
+
+	return 0;
+
+psy_error:
+	dev_dbg(phy->dev, "power supply error when setting property\n");
+	return -ENXIO;
+}
+#endif
+
 static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 {
 	static int power_supply_type;
 	struct dwc3_otg *dotg = container_of(phy->otg, struct dwc3_otg, otg);
-
+#if defined(CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT) && defined(CONFIG_LGE_PM)
+	static bool chglogo_check = false;
+#endif
 
 	if (!dotg->psy || !dotg->charger) {
 		dev_err(phy->dev, "no usb power supply/charger registered\n");
@@ -544,7 +605,12 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 	if (dotg->charger->charging_disabled)
 		return 0;
 
+#ifdef CONFIG_LGE_PM
+	if (dotg->charger->chg_type == DWC3_SDP_CHARGER ||
+			dotg->charger->chg_type == DWC3_FLOATED_CHARGER)
+#else
 	if (dotg->charger->chg_type == DWC3_SDP_CHARGER)
+#endif
 		power_supply_type = POWER_SUPPLY_TYPE_USB;
 	else if (dotg->charger->chg_type == DWC3_CDP_CHARGER)
 		power_supply_type = POWER_SUPPLY_TYPE_USB_CDP;
@@ -554,7 +620,51 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 	else
 		power_supply_type = POWER_SUPPLY_TYPE_UNKNOWN;
 
+#ifndef CONFIG_LGE_PM
 	power_supply_set_supply_type(dotg->psy, power_supply_type);
+#endif
+
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G3) && defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+	update_status(1, dotg->charger->chg_type);
+#endif
+
+#if defined(CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT) && defined(CONFIG_LGE_PM)
+	if (!chglogo_check && lge_get_boot_mode() == LGE_BOOT_MODE_CHARGERLOGO &&
+			dotg->charger->chg_type == DWC3_SDP_CHARGER) {
+		if (mA > IUNIT)
+			chglogo_check = true;
+		else if (mA <= 2) {
+			dotg->charger->max_power = mA;
+			return 0;
+		}
+	}
+
+	if (mA > 2 && lge_pm_get_cable_type() != NO_INIT_CABLE) {
+		if (dotg->charger->chg_type == DWC3_DCP_CHARGER)
+			mA = lge_pm_get_ta_current();
+	}
+#elif defined(CONFIG_LGE_PM)
+	if (mA > 2 && lge_pm_get_cable_type() != NO_INIT_CABLE) {
+		if (dotg->charger->chg_type == DWC3_SDP_CHARGER) {
+			if (dotg->dwc->gadget.speed == USB_SPEED_SUPER) {
+				if (dotg->charger->max_power > 2)
+					dotg->charger->max_power = 0;
+				mA = DWC3_USB30_CHG_CURRENT;
+			} else {
+				mA = lge_pm_get_usb_current();
+			}
+#ifdef CONFIG_QPNP_CHARGER
+			/* For MST, boost current up over 900mA in spite of USB */
+			if (pseudo_batt_info.mode && mA == 500 )
+				mA = DWC3_USB30_CHG_CURRENT;
+#endif
+		} else if (dotg->charger->chg_type == DWC3_DCP_CHARGER) {
+			mA = lge_pm_get_ta_current();
+		} else if (dotg->charger->chg_type == DWC3_FLOATED_CHARGER) {
+			mA = lge_pm_get_usb_current();
+		}
+	}
+#endif
 
 	if (dotg->charger->chg_type == DWC3_CDP_CHARGER)
 		mA = DWC3_IDEV_CHG_MAX;
@@ -564,12 +674,52 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 
 	dev_info(phy->dev, "Avail curr from USB = %u\n", mA);
 
+/*                                                                                           */
+#ifdef CONFIG_LGE_PM
+#ifndef CONFIG_USB_DWC3_LGE_SINGLE_PSY
+	if (dwc3_otg_get_psy(phy) < 0)
+		goto psy_error;
+#else
+	if (strcmp(dotg->psy->name, "usb")) {
+		pr_info("%s psy name is %s, so change psy to usb.\n", __func__, dotg->psy->name);
+		dotg->psy = power_supply_get_by_name("usb");
+		if (!dotg->psy)
+			goto psy_error;
+	}
+#endif
+	power_supply_set_supply_type(dotg->psy, power_supply_type);
+#endif
+
+#if defined(CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT) && defined(CONFIG_LGE_PM)
+	if (dotg->charger->max_power <= IUNIT && mA > 2) {
+#else
 	if (dotg->charger->max_power <= 2 && mA > 2) {
+#endif
 		/* Enable charging */
 		if (power_supply_set_online(dotg->psy, true))
 			goto psy_error;
 		if (power_supply_set_current_limit(dotg->psy, 1000*mA))
 			goto psy_error;
+#ifdef CONFIG_QPNP_CHARGER
+		if (!strncmp(dotg->psy->name, "ac", 2)) {
+			dotg->psy = power_supply_get_by_name("usb");
+			if (!dotg->psy)
+				goto psy_error;
+
+			if (power_supply_set_online(dotg->psy, true))
+				goto psy_error;
+
+			if (power_supply_set_supply_type(dotg->psy, power_supply_type))
+				goto psy_error;
+
+			if (power_supply_set_current_limit(dotg->psy, 1000*mA))
+				goto psy_error;
+
+			dotg->psy = power_supply_get_by_name("ac");
+			if (!dotg->psy)
+				goto psy_error;
+		}
+#endif
 	} else if (dotg->charger->max_power > 0 && (mA == 0 || mA == 2)) {
 		/* Disable charging */
 		if (power_supply_set_online(dotg->psy, false))
@@ -577,10 +727,42 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		/* Set max current limit */
 		if (power_supply_set_current_limit(dotg->psy, 0))
 			goto psy_error;
+
+#ifdef CONFIG_QPNP_CHARGER
+		if (!strncmp(dotg->psy->name, "ac", 2)) {
+			dotg->psy = power_supply_get_by_name("usb");
+			if (!dotg->psy)
+				goto psy_error;
+
+			if (power_supply_set_online(dotg->psy, false))
+				goto psy_error;
+
+			if (power_supply_set_supply_type(dotg->psy, power_supply_type))
+				goto psy_error;
+
+			if (power_supply_set_current_limit(dotg->psy, 0))
+				goto psy_error;
+
+			dotg->psy = power_supply_get_by_name("ac");
+			if (!dotg->psy)
+				goto psy_error;
+		}
+#endif
+#ifndef CONFIG_USB_DWC3_LGE_SINGLE_PSY
+		dotg->charger->chg_type = DWC3_INVALID_CHARGER;
+#endif
 	}
 
 	power_supply_changed(dotg->psy);
+
 	dotg->charger->max_power = mA;
+
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G2) || defined (CONFIG_MACH_MSM8974_TIGERS)
+	queue_work(touch_otg_wq, &dotg->touch_work);
+#endif
+#endif
+
 	return 0;
 
 psy_error:
@@ -693,6 +875,27 @@ void dwc3_otg_init_sm(struct dwc3_otg *dotg)
 	}
 }
 
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G2) || defined (CONFIG_MACH_MSM8974_TIGERS)
+static void touch_otg_work(struct work_struct *w)
+{
+	struct dwc3_otg *dotg = container_of(w, struct dwc3_otg, touch_work);
+
+	if (dotg->charger->max_power == 0) {
+		trigger_baseline_state_machine(0, -1);
+		pr_info("[Touch] TA/USB OUT!!!!!!!!!!!!!!!!\n");
+	} else {
+			if (dotg->charger->chg_type == DWC3_DCP_CHARGER) {
+					trigger_baseline_state_machine(1, 1);
+					pr_info("[Touch] TA IN!!!!!!!!!!!!!!!!\n");
+			} else {
+					trigger_baseline_state_machine(1, 0);
+					pr_info("[Touch] USB IN!!!!!!!!!!!!!!!!\n");
+			}
+	}
+}
+#endif
+#endif
 /**
  * dwc3_otg_sm_work - workqueue function.
  *
@@ -760,8 +963,14 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			if (charger) {
 				/* Has charger been detected? If no detect it */
 				switch (charger->chg_type) {
-				case DWC3_DCP_CHARGER:
 				case DWC3_PROPRIETARY_CHARGER:
+#if defined(CONFIG_LGE_PM)
+					dwc3_otg_set_power(phy,
+							DWC3_IDEV_CHG_PROPRIETARY_MAX);
+					pm_runtime_put_sync(phy->dev);
+					break;
+#endif
+				case DWC3_DCP_CHARGER:
 					dev_dbg(phy->dev, "lpm, DCP charger\n");
 					dwc3_otg_set_power(phy,
 							DWC3_IDEV_CHG_MAX);
@@ -776,6 +985,8 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					work = 1;
 					break;
 				case DWC3_SDP_CHARGER:
+					dwc3_otg_set_power(phy,
+								IUNIT);
 					dwc3_otg_start_peripheral(&dotg->otg,
 									1);
 					phy->state = OTG_STATE_B_PERIPHERAL;
@@ -796,8 +1007,30 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					 */
 					if (dotg->charger_retry_count ==
 						max_chgr_retry_count) {
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+						if (slimport_is_connected()) {
+							dwc3_otg_set_power(phy, IDEV_CHG_MIN);
+							pm_runtime_put_sync(phy->dev);
+							break;
+						}
+#endif
+#ifdef CONFIG_LGE_PM
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+						queue_delayed_work(system_nrt_wq, dotg->charger->drv_check_state_wq, 0);
+						dwc3_otg_set_power(phy, IUNIT);
+						dwc3_otg_start_peripheral(&dotg->otg, 1);
+						phy->state = OTG_STATE_B_PERIPHERAL;
+						work = 1;
+#else
+						dwc3_otg_set_power(phy,	IUNIT);
+						dwc3_otg_start_peripheral(&dotg->otg, 1);
+						phy->state = OTG_STATE_B_PERIPHERAL;
+						work = 1;
+#endif
+#else
 						dwc3_otg_set_power(phy, 0);
 						pm_runtime_put_sync(phy->dev);
+#endif
 						break;
 					}
 					charger->start_detection(dotg->charger,
@@ -840,8 +1073,14 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			dev_dbg(phy->dev, "!id || !bsv\n");
 			dwc3_otg_start_peripheral(&dotg->otg, 0);
 			phy->state = OTG_STATE_B_IDLE;
+#if defined(CONFIG_DWC3_MSM_CDP_SUPPORT)
+			if ((charger) && (charger->chg_type != DWC3_CDP_CHARGER)) {
+				charger->chg_type = DWC3_INVALID_CHARGER;
+			}
+#else
 			if (charger)
 				charger->chg_type = DWC3_INVALID_CHARGER;
+#endif
 			work = 1;
 		}
 		break;
@@ -855,6 +1094,15 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			work = 1;
 		} else {
 			phy->state = OTG_STATE_A_HOST;
+#ifdef CONFIG_LGE_PM
+			/*
+                                        
+                                                              
+    */
+			dotg->psy = power_supply_get_by_name("usb");
+			if (!dotg->psy)
+				dev_err(phy->dev, "couldn't get usb power supply\n");
+#endif
 			ret = dwc3_otg_start_host(&dotg->otg, 1);
 			if ((ret == -EPROBE_DEFER) &&
 						dotg->vbus_retry_count < 3) {
@@ -1022,6 +1270,17 @@ int dwc3_otg_init(struct dwc3 *dwc)
 	dotg->otg.phy->state = OTG_STATE_UNDEFINED;
 
 	init_completion(&dotg->dwc3_xcvr_vbus_init);
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G2) || defined (CONFIG_MACH_MSM8974_TIGERS)
+	touch_otg_wq = create_singlethread_workqueue("touch_otg_wq");
+	if (!touch_otg_wq) {
+		dev_err(dwc->dev, "CANNOT create new workqueue\n");
+		goto err4;
+	}
+
+	INIT_WORK(&dotg->touch_work, touch_otg_work);
+#endif
+#endif
 	INIT_DELAYED_WORK(&dotg->sm_work, dwc3_otg_sm_work);
 
 	ret = request_irq(dotg->irq, dwc3_otg_interrupt, IRQF_SHARED,
@@ -1036,6 +1295,13 @@ int dwc3_otg_init(struct dwc3 *dwc)
 
 	return 0;
 
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G2) || defined (CONFIG_MACH_MSM8974_TIGERS)
+err4:
+	if (touch_otg_wq)
+		destroy_workqueue(touch_otg_wq);
+#endif
+#endif
 err3:
 	cancel_delayed_work_sync(&dotg->sm_work);
 	usb_set_transceiver(NULL);
@@ -1070,4 +1336,10 @@ void dwc3_otg_exit(struct dwc3 *dwc)
 		kfree(dotg);
 		dwc->dotg = NULL;
 	}
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G2) || defined (CONFIG_MACH_MSM8974_TIGERS)
+	if (touch_otg_wq)
+		destroy_workqueue(touch_otg_wq);
+#endif
+#endif
 }

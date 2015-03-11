@@ -48,6 +48,11 @@
 #define MIPI_DSI_PANEL_720P_PT	8
 #define DSI_PANEL_MAX	8
 
+#if defined(CONFIG_LGE_MIPI_DZNY_JDI_INCELL_FHD_VIDEO_PANEL)
+#define DSV_TPS65132 1
+#define DSV_SM5107 2
+#define DSV_DW8768 3
+#endif
 enum {		/* mipi dsi panel */
 	DSI_VIDEO_MODE,
 	DSI_CMD_MODE,
@@ -82,6 +87,9 @@ enum dsi_panel_bl_ctrl {
 	BL_PWM,
 	BL_WLED,
 	BL_DCS_CMD,
+#if defined(CONFIG_MACH_LGE_BACKLIGHT_SUPPORT)
+BL_OTHERS,
+#endif
 	UNKNOWN_CTRL,
 };
 
@@ -159,6 +167,10 @@ enum dsi_lane_map_type {
 extern struct device dsi_dev;
 extern u32 dsi_irq;
 extern struct mdss_dsi_ctrl_pdata *ctrl_list[];
+#ifdef CONFIG_LGE_LCD_TUNING
+extern struct dsi_cmd_desc *dsi_panel_tun_cmds;
+extern int num_of_tun_cmds;
+#endif
 
 struct dsiphy_pll_divider_config {
 	u32 clk_rate;
@@ -271,6 +283,9 @@ struct mdss_dsi_ctrl_pdata {
 	int irq_cnt;
 	int rst_gpio;
 	int disp_en_gpio;
+#ifdef CONFIG_MACH_LGE
+int disp_en_gpio2;
+#endif
 	int disp_te_gpio;
 	int mode_gpio;
 	int disp_te_gpio_requested;
@@ -281,6 +296,15 @@ struct mdss_dsi_ctrl_pdata {
 	int bklt_max;
 	int new_fps;
 	int pwm_enabled;
+#ifdef CONFIG_MACH_LGE
+int io_gpio; /* for china model */
+#endif
+#ifdef CONFIG_LGE_MIPI_DZNY_JDI_INCELL_FHD_VIDEO_PANEL
+	int dsv_ena;
+	int dsv_enb;
+	int dsv_manufacturer;
+	struct notifier_block notif;
+#endif
 	struct pwm_device *pwm_bl;
 	struct dsi_drv_cm_data shared_pdata;
 	u32 pclk_rate;
@@ -292,6 +316,12 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_panel_cmds on_cmds;
 	struct dsi_panel_cmds off_cmds;
+
+#ifdef CONFIG_MACH_LGE
+int num_of_dsv_enable_pin;
+int lm3697_start_rev;
+#endif
+
 	struct dsi_panel_cmds status_cmds;
 	u32 status_value;
 
@@ -360,6 +390,13 @@ void mdss_dsi_clk_deinit(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 int mdss_dsi_enable_bus_clocks(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 void mdss_dsi_disable_bus_clocks(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable);
+#if defined(CONFIG_B1_LGD_PANEL)
+void mdss_dsi_free_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+#endif
+#if defined(CONFIG_MACH_MSM8974_G3) || defined(CONFIG_MACH_MSM8974_DZNY)
+void mdss_dsi_panel_io(struct mdss_panel_data *pdata, int enable);
+#endif
 void mdss_dsi_phy_disable(struct mdss_dsi_ctrl_pdata *ctrl);
 void mdss_dsi_phy_init(struct mdss_panel_data *pdata);
 void mdss_dsi_phy_sw_reset(unsigned char *ctrl_base);

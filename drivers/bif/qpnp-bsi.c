@@ -26,6 +26,13 @@
 #include <linux/workqueue.h>
 #include <linux/bif/driver.h>
 #include <linux/qpnp/qpnp-adc.h>
+#if defined(CONFIG_LGE_PM)
+#include <mach/msm_smem.h>
+#include <mach/board_lge.h>
+#include <linux/power_supply.h>
+#include <linux/kthread.h>
+#include <linux/reboot.h>
+#endif
 
 enum qpnp_bsi_irq {
 	QPNP_BSI_IRQ_ERR,
@@ -57,6 +64,10 @@ struct qpnp_bsi_chip {
 	int			batt_present_irq;
 	enum qpnp_vadc_channels	batt_id_adc_channel;
 	struct qpnp_vadc_chip	*vadc_dev;
+#if defined(CONFIG_LGE_PM)
+	bool			battery_present;
+	struct task_struct	*battery_removal_task;
+#endif
 };
 
 #define QPNP_BSI_DRIVER_NAME	"qcom,qpnp-bsi"
@@ -1390,6 +1401,61 @@ static int qpnp_bsi_get_battery_rid(struct bif_ctrl_dev *bdev)
 	return rid_ohm;
 }
 
+#if defined(CONFIG_LGE_PM)
+static inline void battery_removal_notify(int present)
+{
+	union power_supply_propval val;
+	struct power_supply *psy = power_supply_get_by_name("battery");
+	val.intval = present;
+	if (likely(psy))
+		psy->set_property(psy, POWER_SUPPLY_PROP_PRESENT, &val);
+}
+
+static __ref int do_battery_removal(void *data)
+{
+	int time = 5;
+	struct qpnp_bsi_chip *chip = data;
+	while(!kthread_should_stop()) {
+		pr_info("count down %d sec!!\n", time--);
+		msleep(1000);
+		if (time < 0)
+			break;
+		if (chip->battery_present)
+			return 0;
+	}
+	kernel_restart("oem-11");
+	return 0;
+
+}
+
+#define LT_CABLE_56K			6
+#define LT_CABLE_130K			7
+#define LT_CABLE_910K			11
+static bool is_factory_cable(void)
+{
+	unsigned int cable_info;
+	unsigned int cable_type;
+	unsigned int cable_smem_size;
+	unsigned int *p_cable_type = (unsigned int *)
+		(smem_get_entry(SMEM_ID_VENDOR1, &cable_smem_size));
+	cable_info = lge_pm_get_cable_type();
+	if (p_cable_type)
+		cable_type = *p_cable_type;
+	else
+		cable_type = 0;
+
+	if ((cable_info == CABLE_56K ||
+		cable_info == CABLE_130K ||
+		cable_info == CABLE_910K) ||
+		(cable_type == LT_CABLE_56K ||
+		cable_type == LT_CABLE_130K ||
+		cable_type == LT_CABLE_910K))
+		return true;
+	else
+		return false;
+}
+#endif
+
 /*
  * Returns 1 if a battery pack is present on the BIF bus, 0 if a battery pack
  * is not present, or errno if detection fails.
@@ -1409,6 +1475,31 @@ static int qpnp_bsi_get_battery_presence(struct bif_ctrl_dev *bdev)
 			__func__, rc);
 		return rc;
 	}
+#if defined(CONFIG_LGE_PM)
+	chip->battery_present = !!(reg & QPNP_SMBB_BAT_IF_BATT_PRES_MASK);
+	if (chip->battery_present) {
+		if (chip->battery_removal_task) {
+			kthread_stop(chip->battery_removal_task);
+			chip->battery_removal_task = NULL;
+		}
+	} else {
+		if (chip->battery_removal_task) {
+			kthread_stop(chip->battery_removal_task);
+			chip->battery_removal_task = NULL;
+		}
+		if (!is_factory_cable()) {
+			chip->battery_removal_task =
+				kthread_run(do_battery_removal, (void*)chip,
+				"battery_removal");
+			if (IS_ERR(chip->battery_removal_task)) {
+				pr_err("%s: Failed to create "\
+					"battery_removal_task\n",
+					KBUILD_MODNAME);
+			}
+		}
+	}
+	battery_removal_notify(chip->battery_present);
+#endif
 
 	return !!(reg & QPNP_SMBB_BAT_IF_BATT_PRES_MASK);
 }

@@ -164,6 +164,7 @@ export srctree objtree VPATH
 # line overrides the setting of ARCH below.  If a native build is happening,
 # then ARCH is assigned, getting whatever value it gets normally, and 
 # SUBARCH is subsequently ignored.
+ARCH := arm
 
 SUBARCH := $(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ \
 				  -e s/arm.*/arm/ -e s/sa110/arm/ \

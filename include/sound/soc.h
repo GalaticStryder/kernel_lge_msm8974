@@ -43,11 +43,26 @@
 	((unsigned long)&(struct soc_mixer_control) \
 	{.reg = xlreg, .rreg = xrreg, .shift = xshift, .rshift = xshift, \
 	.max = xmax, .platform_max = xmax, .invert = xinvert})
+#ifdef CONFIG_SND_SOC_WM5110
+#define SOC_DOUBLE_R_RANGE_VALUE(xlreg, xrreg, xshift, xmin, xmax, xinvert) \
+	((unsigned long)&(struct soc_mixer_control) \
+	{.reg = xlreg, .rreg = xrreg, .shift = xshift, .rshift = xshift, \
+	.min = xmin, .max = xmax, .platform_max = xmax, .invert = xinvert})
+#endif
 #define SOC_SINGLE(xname, reg, shift, max, invert) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
 	.info = snd_soc_info_volsw, .get = snd_soc_get_volsw,\
 	.put = snd_soc_put_volsw, \
 	.private_value =  SOC_SINGLE_VALUE(reg, shift, max, invert) }
+#ifdef CONFIG_SND_SOC_WM5110
+#define SOC_SINGLE_RANGE(xname, xreg, xshift, xmin, xmax, xinvert) \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
+	.info = snd_soc_info_volsw_range, .get = snd_soc_get_volsw_range, \
+	.put = snd_soc_put_volsw_range, \
+	.private_value = (unsigned long)&(struct soc_mixer_control) \
+		{.reg = xreg, .shift = xshift, .min = xmin,\
+		 .max = xmax, .platform_max = xmax, .invert = xinvert} }
+#endif
 #define SOC_SINGLE_TLV(xname, reg, shift, max, invert, tlv_array) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
 	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ |\
@@ -66,6 +81,30 @@
 	.private_value = (unsigned long)&(struct soc_mixer_control) \
 		{.reg = xreg, .min = xmin, .max = xmax, \
 		 .platform_max = xmax} }
+#ifdef CONFIG_SND_SOC_WM5110
+#define SOC_SINGLE_SX_TLV(xname, xreg, xshift, xmin, xmax, tlv_array) \
+{       .iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
+	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ | \
+	SNDRV_CTL_ELEM_ACCESS_READWRITE, \
+	.tlv.p  = (tlv_array),\
+	.info = snd_soc_info_volsw, \
+	.get = snd_soc_get_volsw_sx,\
+	.put = snd_soc_put_volsw_sx, \
+	.private_value = (unsigned long)&(struct soc_mixer_control) \
+		{.reg = xreg, .rreg = xreg, \
+		.shift = xshift, .rshift = xshift, \
+		.max = xmax, .min = xmin} }
+#define SOC_SINGLE_RANGE_TLV(xname, xreg, xshift, xmin, xmax, xinvert, tlv_array) \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
+	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ |\
+		 SNDRV_CTL_ELEM_ACCESS_READWRITE,\
+	.tlv.p = (tlv_array), \
+	.info = snd_soc_info_volsw_range, \
+	.get = snd_soc_get_volsw_range, .put = snd_soc_put_volsw_range, \
+	.private_value = (unsigned long)&(struct soc_mixer_control) \
+		{.reg = xreg, .shift = xshift, .min = xmin,\
+		 .max = xmax, .platform_max = xmax, .invert = xinvert} }
+#endif
 #define SOC_DOUBLE(xname, reg, shift_left, shift_right, max, invert) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
 	.info = snd_soc_info_volsw, .get = snd_soc_get_volsw, \
@@ -78,6 +117,15 @@
 	.get = snd_soc_get_volsw, .put = snd_soc_put_volsw, \
 	.private_value = SOC_DOUBLE_R_VALUE(reg_left, reg_right, xshift, \
 					    xmax, xinvert) }
+#ifdef CONFIG_SND_SOC_WM5110
+#define SOC_DOUBLE_R_RANGE(xname, reg_left, reg_right, xshift, xmin, \
+			   xmax, xinvert)		\
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
+	.info = snd_soc_info_volsw_range, \
+	.get = snd_soc_get_volsw_range, .put = snd_soc_put_volsw_range, \
+	.private_value = SOC_DOUBLE_R_RANGE_VALUE(reg_left, reg_right, \
+					    xshift, xmin, xmax, xinvert) }
+#endif
 #define SOC_DOUBLE_TLV(xname, reg, shift_left, shift_right, max, invert, tlv_array) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
 	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ |\
@@ -96,6 +144,30 @@
 	.get = snd_soc_get_volsw, .put = snd_soc_put_volsw, \
 	.private_value = SOC_DOUBLE_R_VALUE(reg_left, reg_right, xshift, \
 					    xmax, xinvert) }
+#ifdef CONFIG_SND_SOC_WM5110
+#define SOC_DOUBLE_R_RANGE_TLV(xname, reg_left, reg_right, xshift, xmin, \
+			       xmax, xinvert, tlv_array)		\
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
+	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ |\
+		 SNDRV_CTL_ELEM_ACCESS_READWRITE,\
+	.tlv.p = (tlv_array), \
+	.info = snd_soc_info_volsw_range, \
+	.get = snd_soc_get_volsw_range, .put = snd_soc_put_volsw_range, \
+	.private_value = SOC_DOUBLE_R_RANGE_VALUE(reg_left, reg_right, \
+					    xshift, xmin, xmax, xinvert) }
+#define SOC_DOUBLE_R_SX_TLV(xname, xreg, xrreg, xshift, xmin, xmax, tlv_array) \
+{       .iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
+	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ | \
+	SNDRV_CTL_ELEM_ACCESS_READWRITE, \
+	.tlv.p  = (tlv_array), \
+	.info = snd_soc_info_volsw, \
+	.get = snd_soc_get_volsw_sx, \
+	.put = snd_soc_put_volsw_sx, \
+	.private_value = (unsigned long)&(struct soc_mixer_control) \
+		{.reg = xreg, .rreg = xrreg, \
+		.shift = xshift, .rshift = xshift, \
+		.max = xmax, .min = xmin} }
+#endif
 #define SOC_DOUBLE_S8_TLV(xname, xreg, xmin, xmax, tlv_array) \
 {	.iface  = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
 	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ | \
@@ -189,7 +261,24 @@
 	.info = snd_soc_info_enum_ext, \
 	.get = xhandler_get, .put = xhandler_put, \
 	.private_value = (unsigned long)&xenum }
+#ifdef CONFIG_SND_SOC_WM5110
+#define SND_SOC_BYTES(xname, xbase, xregs)		      \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname,   \
+	.info = snd_soc_bytes_info, .get = snd_soc_bytes_get, \
+	.put = snd_soc_bytes_put, .private_value =	      \
+		((unsigned long)&(struct soc_bytes)           \
+		{.base = xbase, .num_regs = xregs }) }
 
+#define SND_SOC_BYTES_MASK(xname, xbase, xregs, xmask)	      \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname,   \
+	.info = snd_soc_bytes_info, .get = snd_soc_bytes_get, \
+	.put = snd_soc_bytes_put, .private_value =	      \
+		((unsigned long)&(struct soc_bytes)           \
+		{.base = xbase, .num_regs = xregs,	      \
+		 .mask = xmask }) }
+#endif
+
+#ifndef CONFIG_SND_SOC_WM5110
 #define SOC_DOUBLE_R_SX_TLV(xname, xreg_left, xreg_right, xshift,\
 		xmin, xmax, tlv_array) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
@@ -203,7 +292,7 @@
 		{.reg = xreg_left, \
 		 .rreg = xreg_right, .shift = xshift, \
 		 .min = xmin, .max = xmax} }
-
+#endif
 
 /*
  * Simplified versions of above macros, declaring a struct and calculating
@@ -435,7 +524,11 @@ void snd_soc_card_change_online_state(struct snd_soc_card *soc_card,
  *Controls
  */
 struct snd_kcontrol *snd_soc_cnew(const struct snd_kcontrol_new *_template,
+#ifdef CONFIG_SND_SOC_WM5110
+				  void *data, const char *long_name,
+#else
 				  void *data, char *long_name,
+#endif
 				  const char *prefix);
 int snd_soc_add_codec_controls(struct snd_soc_codec *codec,
 	const struct snd_kcontrol_new *controls, int num_controls);
@@ -470,12 +563,26 @@ int snd_soc_put_volsw(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 #define snd_soc_get_volsw_2r snd_soc_get_volsw
 #define snd_soc_put_volsw_2r snd_soc_put_volsw
+#ifdef CONFIG_SND_SOC_WM5110
+int snd_soc_get_volsw_sx(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int snd_soc_put_volsw_sx(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+#endif
 int snd_soc_info_volsw_s8(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_info *uinfo);
 int snd_soc_get_volsw_s8(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 int snd_soc_put_volsw_s8(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
+#ifdef CONFIG_SND_SOC_WM5110
+int snd_soc_info_volsw_range(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_info *uinfo);
+int snd_soc_put_volsw_range(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int snd_soc_get_volsw_range(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+#endif
 int snd_soc_limit_volume(struct snd_soc_codec *codec,
 	const char *name, int max);
 int snd_soc_info_volsw_2r_sx(struct snd_kcontrol *kcontrol,
@@ -484,6 +591,14 @@ int snd_soc_get_volsw_2r_sx(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 int snd_soc_put_volsw_2r_sx(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
+#ifdef CONFIG_SND_SOC_WM5110
+int snd_soc_bytes_info(struct snd_kcontrol *kcontrol,
+		       struct snd_ctl_elem_info *uinfo);
+int snd_soc_bytes_get(struct snd_kcontrol *kcontrol,
+		      struct snd_ctl_elem_value *ucontrol);
+int snd_soc_bytes_put(struct snd_kcontrol *kcontrol,
+		      struct snd_ctl_elem_value *ucontrol);
+#endif
 
 /**
  * struct snd_soc_reg_access - Describes whether a given register is
@@ -1018,6 +1133,14 @@ struct soc_multi_mixer_control {
 	unsigned int reg, rreg, shift, rshift, invert;
 };
 
+#ifdef CONFIG_SND_SOC_WM5110
+/*                                                           */
+struct soc_bytes {
+	int base;
+	int num_regs;
+	u32 mask;
+};
+#endif
 
 /* enumerated kcontrol */
 struct soc_enum {

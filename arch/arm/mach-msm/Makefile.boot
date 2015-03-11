@@ -47,6 +47,7 @@ endif
 
 # MSM8974
    zreladdr-$(CONFIG_ARCH_MSM8974)	:= 0x00008000
+ifeq ($(CONFIG_MACH_LGE),n)
         dtb-$(CONFIG_ARCH_MSM8974)	+= msm8974-v1-cdp.dtb
         dtb-$(CONFIG_ARCH_MSM8974)	+= msm8974-v1-fluid.dtb
         dtb-$(CONFIG_ARCH_MSM8974)	+= msm8974-v1-liquid.dtb
@@ -76,6 +77,44 @@ endif
         dtb-$(CONFIG_ARCH_MSM8974)	+= msm8974pro-ac-pm8941-liquid.dtb
         dtb-$(CONFIG_ARCH_MSM8974)	+= msm8974pro-ac-pm8941-mtp.dtb
         dtb-$(CONFIG_ARCH_MSM8974)	+= msm8974pro-ac-pma8084-pm8941-mtp.dtb
+else ifneq ($(CONFIG_DTS_TARGET),"")
+        dtb-$(CONFIG_MACH_MSM8974_G3_LGU)  += msm8974pro-g3-kr.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_LGU)  += msm8974pro-ac-g3-kr.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_SKT)  += msm8974pro-g3-kr.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_SKT)  += msm8974pro-ac-g3-kr.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_KT)  += msm8974pro-g3-kr.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_KT)  += msm8974pro-ac-g3-kr.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_LGU_EVB)  += msm8974pro-g3-kr-evb.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_VZW)  += msm8974pro-g3-vzw.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_VZW)  += msm8974pro-ac-g3-vzw.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_ATT)  += msm8974pro-g3-att.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_ATT)  += msm8974pro-ac-g3-att.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_TMO_US)  += msm8974pro-g3-tmo_us.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_TMO_US)  += msm8974pro-ac-g3-tmo_us.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_SPR_US)  += msm8974pro-g3-spr_us.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_SPR_US)  += msm8974pro-ac-g3-spr_us.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_USC_US)  += msm8974pro-g3-usc_us.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_USC_US)  += msm8974pro-ac-g3-usc_us.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_ACG_US)  += msm8974pro-g3-acg_us.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_ACG_US)  += msm8974pro-ac-g3-acg_us.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_CMCC_CN)  += msm8974pro-g3-cn.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_CMCC_CN)  += msm8974pro-ac-g3-cn.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_CTC_CN)  += msm8974pro-g3-cn.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_CTC_CN)  += msm8974pro-ac-g3-cn.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_CUCC_CN)  += msm8974pro-g3-cn.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_CUCC_CN)  += msm8974pro-ac-g3-cn.dtb  		
+        dtb-$(CONFIG_MACH_MSM8974_G3_OPEN_HK)  += msm8974pro-g3-cn.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_OPEN_HK)  += msm8974pro-ac-g3-cn.dtb  		
+	dtb-$(CONFIG_MACH_MSM8974_G3_KDDI)  += msm8974pro-g3-kddi.dtb
+	dtb-$(CONFIG_MACH_MSM8974_G3_KDDI)  += msm8974pro-ac-g3-kddi.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_KDDI_EVB)  += msm8974pro-g3-kddi-evb.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_GLOBAL_COM)  += msm8974pro-g3-global_com.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_GLOBAL_COM)  += msm8974pro-ac-g3-global_com.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_CA)  += msm8974pro-g3-ca.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_CA)  += msm8974pro-ac-g3-ca.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_LRA)  += msm8974pro-g3-lra.dtb
+        dtb-$(CONFIG_MACH_MSM8974_G3_LRA)  += msm8974pro-ac-g3-lra.dtb
+endif
 
 # APQ8084
    zreladdr-$(CONFIG_ARCH_APQ8084)	:= 0x00008000

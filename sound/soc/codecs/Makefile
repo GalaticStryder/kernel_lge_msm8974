@@ -13,7 +13,9 @@ snd-soc-ak4535-objs := ak4535.o
 snd-soc-ak4641-objs := ak4641.o
 snd-soc-ak4642-objs := ak4642.o
 snd-soc-ak4671-objs := ak4671.o
+snd-soc-arizona-objs := arizona.o
 snd-soc-cq93vc-objs := cq93vc.o
+snd-soc-cs35l32-objs := cs35l32.o
 snd-soc-cs42l51-objs := cs42l51.o
 snd-soc-cs42l73-objs := cs42l73.o
 snd-soc-cs4270-objs := cs4270.o
@@ -58,6 +60,9 @@ snd-soc-wl1273-objs := wl1273.o
 snd-soc-wm1250-ev1-objs := wm1250-ev1.o
 snd-soc-wm2000-objs := wm2000.o
 snd-soc-wm5100-objs := wm5100.o wm5100-tables.o
+snd-soc-wm-adsp-objs := wm_adsp.o
+snd-soc-wm5102-objs := wm5102.o
+snd-soc-wm5110-objs := wm5110.o
 snd-soc-wm8350-objs := wm8350.o
 snd-soc-wm8400-objs := wm8400.o
 snd-soc-wm8510-objs := wm8510.o
@@ -109,6 +114,7 @@ obj-$(CONFIG_SND_SOC_MSM_HDMI_CODEC_RX) := msm_hdmi_codec_rx.o
 # Amp
 snd-soc-max9877-objs := max9877.o
 snd-soc-tpa6130a2-objs := tpa6130a2.o
+snd-soc-tpa2015d1-objs := tpa2015d1.o
 
 obj-$(CONFIG_SND_SOC_88PM860X)	+= snd-soc-88pm860x.o
 obj-$(CONFIG_SND_SOC_AC97_CODEC)	+= snd-soc-ac97.o
@@ -127,7 +133,9 @@ obj-$(CONFIG_SND_SOC_AK4642)	+= snd-soc-ak4642.o
 obj-$(CONFIG_SND_SOC_AK4671)	+= snd-soc-ak4671.o
 obj-$(CONFIG_SND_SOC_ALC5623)    += snd-soc-alc5623.o
 obj-$(CONFIG_SND_SOC_ALC5632)	+= snd-soc-alc5632.o
+obj-$(CONFIG_SND_SOC_ARIZONA)	+= snd-soc-arizona.o
 obj-$(CONFIG_SND_SOC_CQ0093VC) += snd-soc-cq93vc.o
+obj-$(CONFIG_SND_SOC_CS35L32)	+= snd-soc-cs35l32.o
 obj-$(CONFIG_SND_SOC_CS42L51)	+= snd-soc-cs42l51.o
 obj-$(CONFIG_SND_SOC_CS42L73)	+= snd-soc-cs42l73.o
 obj-$(CONFIG_SND_SOC_CS4270)	+= snd-soc-cs4270.o
@@ -165,11 +173,14 @@ obj-$(CONFIG_SND_SOC_WCD9310)	+= snd-soc-wcd9310.o
 obj-$(CONFIG_SND_SOC_CS8427)	+= snd-soc-cs8427.o
 obj-$(CONFIG_SND_SOC_WCD9320)	+= snd-soc-wcd9320.o
 obj-$(CONFIG_SND_SOC_WCD9306)	+= snd-soc-wcd9306.o wcd9xxx-resmgr.o wcd9xxx-mbhc.o
-obj-$(CONFIG_SND_SOC_MSM8X10_WCD)	+= snd-soc-msm8x10-wcd.o wcd9xxx-resmgr.o wcd9xxx-mbhc.o
+obj-$(CONFIG_SND_SOC_MSM8X10_WCD) += snd-soc-msm8x10-wcd.o wcd9xxx-resmgr.o wcd9xxx-mbhc.o
 obj-$(CONFIG_SND_SOC_WL1273)	+= snd-soc-wl1273.o
 obj-$(CONFIG_SND_SOC_WM1250_EV1) += snd-soc-wm1250-ev1.o
 obj-$(CONFIG_SND_SOC_WM2000)	+= snd-soc-wm2000.o
 obj-$(CONFIG_SND_SOC_WM5100)	+= snd-soc-wm5100.o
+obj-$(CONFIG_SND_SOC_WM5102)	+= snd-soc-wm5102.o
+obj-$(CONFIG_SND_SOC_WM5110)	+= snd-soc-wm5110.o
+obj-$(CONFIG_SND_SOC_WM_ADSP)	+= snd-soc-wm-adsp.o
 obj-$(CONFIG_SND_SOC_WM8350)	+= snd-soc-wm8350.o
 obj-$(CONFIG_SND_SOC_WM8400)	+= snd-soc-wm8400.o
 obj-$(CONFIG_SND_SOC_WM8510)	+= snd-soc-wm8510.o
@@ -218,3 +229,8 @@ obj-$(CONFIG_SND_SOC_MSM_STUB)  += snd-soc-msm-stub.o
 # Amp
 obj-$(CONFIG_SND_SOC_MAX9877)	+= snd-soc-max9877.o
 obj-$(CONFIG_SND_SOC_TPA6130A2)	+= snd-soc-tpa6130a2.o
+obj-$(CONFIG_SND_SOC_TPA2015D) 	+= snd-soc-tpa2015d1.o
+# LGE_BSP_AUDIO, jeremy.pi@lge.com, 2012-11-17, Audience es325 ALSA SoC Audio driver
+ifeq ($(CONFIG_SND_SOC_ES325_SLIM),y)
+obj-$(CONFIG_SND_SOC_ES325_SLIM) += es325.o
+endif

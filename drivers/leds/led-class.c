@@ -18,12 +18,42 @@
 #include <linux/timer.h>
 #include <linux/err.h>
 #include <linux/ctype.h>
+#include <linux/power_supply.h>
 #include <linux/leds.h>
 #include "leds.h"
+#if defined(CONFIG_MACH_LGE)
+#include <mach/board_lge.h>
+#endif
+#if defined(CONFIG_LEDS_WINDOW_COLOR)
+#include <linux/string.h>
+#endif
 
 #define LED_BUFF_SIZE 50
 
 static struct class *leds_class;
+#ifdef CONFIG_LEDS_PM8941_EMOTIONAL
+extern void make_blink_led_pattern(int rgb, int delay_on, int delay_off);
+extern void make_onoff_led_pattern(int rgb);
+extern void change_led_pattern(int pattern);
+extern void make_input_led_pattern(int patterns[],
+			int red_start, int red_length, int red_duty,
+			int red_pause, int green_start, int green_length,
+			int green_duty,	int green_pause, int blue_start,
+			int blue_length, int blue_duty, int blue_pause,
+			int red_flag, int green_flag, int blue_flag,
+			int period);
+extern void set_kpdbl_pattern (int pattern);
+static int onoff_rgb;
+#endif
+
+#if defined(CONFIG_LEDS_KEY_REAR)
+extern void make_rear_blink_led_pattern(int delay_on, int delay_off);
+#endif
+
+#if defined(CONFIG_LEDS_WINDOW_COLOR)
+enum WINDOW_COLORS window_color;
+unsigned char win_color[] = "com.lge.systemui.theme.xxxxxx";
+#endif
 
 static void led_update_brightness(struct led_classdev *led_cdev)
 {
@@ -31,7 +61,7 @@ static void led_update_brightness(struct led_classdev *led_cdev)
 		led_cdev->brightness = led_cdev->brightness_get(led_cdev);
 }
 
-static ssize_t led_brightness_show(struct device *dev, 
+static ssize_t led_brightness_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct led_classdev *led_cdev = dev_get_drvdata(dev);
@@ -92,10 +122,43 @@ static ssize_t led_max_brightness_show(struct device *dev,
 	return snprintf(buf, LED_BUFF_SIZE, "%u\n", led_cdev->max_brightness);
 }
 
+#if defined(CONFIG_MACH_MSM8974_G3_VZW) || defined(CONFIG_MACH_MSM8974_G3_LRA) \
+    || defined(CONFIG_MACH_MSM8974_G2_VZW)
+static int lge_thm_status;
+static ssize_t thermald_status_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", lge_thm_status);
+}
+
+static ssize_t thermald_status_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	unsigned long state = 0;
+	int rc = 1;
+
+	if (strncmp(buf, "0", 1) == 0)
+		lge_thm_status = 0;
+	else if (strncmp(buf, "1", 1) == 0) {
+		state = LED_FULL;
+		led_cdev->max_brightness = state;
+		led_set_brightness(led_cdev, led_cdev->brightness);
+
+		lge_thm_status = 1;
+	}
+	return rc;
+}
+#endif
+
 static struct device_attribute led_class_attrs[] = {
 	__ATTR(brightness, 0644, led_brightness_show, led_brightness_store),
 	__ATTR(max_brightness, 0644, led_max_brightness_show,
 			led_max_brightness_store),
+#if defined(CONFIG_MACH_MSM8974_G3_VZW) || defined(CONFIG_MACH_MSM8974_G3_LRA) \
+    || defined(CONFIG_MACH_MSM8974_G2_VZW)
+	__ATTR(thermald_status, 0644, thermald_status_show, thermald_status_store),
+#endif
 #ifdef CONFIG_LEDS_TRIGGERS
 	__ATTR(trigger, 0644, led_trigger_show, led_trigger_store),
 #endif
@@ -214,6 +277,321 @@ int led_classdev_register(struct device *parent, struct led_classdev *led_cdev)
 }
 EXPORT_SYMBOL_GPL(led_classdev_register);
 
+#ifdef CONFIG_LEDS_PM8941_EMOTIONAL
+static ssize_t get_pattern(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int count = 0;
+	/* count = sprintf(buf,"%d %d\n", pattern_num,pattern_on ); */
+
+	return count;
+}
+
+static ssize_t set_pattern(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	ssize_t ret = -EINVAL;
+	int pattern_num = 0;
+
+	if (sscanf(buf, "%d", &pattern_num) != 1) {
+		printk("[RGB LED] bad arguments ");
+	}
+	ret = size;
+
+	if (lge_get_boot_mode() <= LGE_BOOT_MODE_CHARGERLOGO) {
+		printk("[RGB LED] pattern_num = %d\n", pattern_num);
+
+		if ((pattern_num != 35) && (pattern_num != 36))
+			change_led_pattern(pattern_num);
+	}
+
+	return ret;
+}
+
+static DEVICE_ATTR(setting, 0644, get_pattern, set_pattern);
+
+#if defined(CONFIG_LEDS_WINDOW_COLOR)
+static ssize_t get_window_color(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, " - Window Color is '%s' \n", win_color);
+}
+
+static ssize_t set_window_color(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	ssize_t ret = -EINVAL;
+	unsigned char color[30];
+
+	if (sscanf(buf, "%29s", color) != 1) {
+		printk("[RGB LED] bad arguments ");
+	}
+	ret = size;
+
+	printk("[RGB LED] # Window Color [%s] # Set Color [%s]\n", color, win_color);
+
+	memcpy(win_color, color, sizeof(color));
+
+	if (strstr(color, "black") != NULL) {
+		window_color = WINDOW_COLOR_BK;
+		printk("[RGB LED] window_color is black\n");
+	} else if (strstr(color, "white") != NULL) {
+		window_color = WINDOW_COLOR_WH;
+		printk("[RGB LED] window_color is white\n");
+	} else if (strstr(color, "silver") != NULL) {
+		window_color = WINDOW_COLOR_SV;
+		printk("[RGB LED] window_color is silver\n");
+	} else if (strstr(color, "titan") != NULL) {
+		window_color = WINDOW_COLOR_TK;
+		printk("[RGB LED] window_color is titan\n");
+	} else {
+		memcpy(win_color, "black", sizeof("black"));
+		window_color = WINDOW_COLOR_BK;
+		printk("[RGB LED] window_color is default(black)\n");
+	}
+
+	return ret;
+}
+
+static DEVICE_ATTR(window_color, 0644, get_window_color, set_window_color);
+#endif
+
+static ssize_t get_input_pattern(struct device *dev,
+						struct device_attribute *attr,
+						char *buf)
+{
+	int count = 0;
+	return count;
+}
+
+static ssize_t set_input_pattern(struct device *dev,
+						struct device_attribute *attr,
+						const char *buf, size_t size)
+{
+	ssize_t ret = -EINVAL;
+	int patterns[63];
+
+	int red_start_idx;
+	int red_length;
+	int red_duty;
+	int red_pause_lo;
+
+	int green_start_idx;
+	int green_length;
+	int green_duty;
+	int green_pause_lo;
+
+	int blue_start_idx;
+	int blue_length;
+	int blue_duty;
+	int blue_pause_lo;
+
+	int red_flag;
+	int green_flag;
+	int blue_flag;
+	int period;
+
+	int i = 0;
+
+	if (sscanf(buf, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
+			&patterns[0], &patterns[1], &patterns[2],
+			&patterns[3], &patterns[4], &patterns[5],
+			&patterns[6], &patterns[7],	&patterns[8],
+			&patterns[9], &patterns[10], &patterns[11],
+			&patterns[12], &patterns[13], &patterns[14],
+			&patterns[15], &patterns[16], &patterns[17],
+			&patterns[18], &patterns[19], &patterns[20],
+			&patterns[21], &patterns[22], &patterns[23],
+			&patterns[24], &patterns[25], &patterns[26],
+			&patterns[27], &patterns[28], &patterns[29],
+			&patterns[30], &patterns[31], &patterns[32],
+			&patterns[33], &patterns[34], &patterns[35],
+			&patterns[36], &patterns[37], &patterns[38],
+			&patterns[39], &patterns[40], &patterns[41],
+			&patterns[42], &patterns[43], &patterns[44],
+			&patterns[45], &patterns[46], &patterns[47],
+			&patterns[48], &patterns[49], &patterns[50],
+			&patterns[51], &patterns[52], &patterns[53],
+			&patterns[54], &patterns[55], &patterns[56],
+			&patterns[57], &patterns[58], &patterns[59],
+			&patterns[60], &patterns[61], &patterns[62],
+			&red_start_idx, &red_length, &red_duty,
+			&red_pause_lo, &green_start_idx, &green_length,
+			&green_duty, &green_pause_lo, &blue_start_idx,
+			&blue_length,  &blue_duty,  &blue_pause_lo,
+			&red_flag, &green_flag, &blue_flag, &period) != 79){
+			printk(KERN_INFO "[RGB LED] bad arguments ");
+		}
+	ret = size;
+
+	printk("[RGB LED] LUT is \n");
+	for (i = 0; i < ARRAY_SIZE(patterns); i++)
+		printk(KERN_INFO "%d ", patterns[i]);
+	printk("\n");
+	printk(KERN_INFO "[RGB LED] [RED] duty_ms:%d, pause_lo:%d, start:%d, length:%d \n",
+		   red_duty, red_pause_lo, red_start_idx, red_length);
+	printk(KERN_INFO "[RGB LED] [GREEN] duty_ms:%d, pause_lo:%d, start:%d, length:%d \n",
+		   green_duty, green_pause_lo, green_start_idx, green_length);
+	printk(KERN_INFO "[RGB LED] [BLUE] duty_ms:%d, pause_lo:%d, start:%d, length:%d \n",
+		   blue_duty, blue_pause_lo, blue_start_idx, blue_length);
+	printk(KERN_INFO "[RGB LED] [FLAG] red:%d, green:%d, blue:%d\n",
+		   red_flag, green_flag, blue_flag);
+	make_input_led_pattern((int *)&patterns, red_start_idx, red_length,
+			red_duty, red_pause_lo, green_start_idx, green_length,
+			green_duty, green_pause_lo, blue_start_idx, blue_length,
+			blue_duty, blue_pause_lo, red_flag, green_flag,
+			blue_flag, period);
+
+	return ret;
+}
+
+static DEVICE_ATTR(input_patterns, 0644, get_input_pattern, set_input_pattern);
+
+static ssize_t confirm_blink_pattern(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int count = 0;
+
+	/* count = sprintf(buf,"%d %d\n", pattern_num,pattern_on ); */
+
+	return count;
+}
+
+
+static ssize_t make_blink_pattern(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+
+	ssize_t ret = -EINVAL;
+	int rgb;
+	int delay_on;
+	int delay_off;
+
+	if (sscanf(buf, "0x%06x,%d,%d", &rgb, &delay_on, &delay_off) != 3)
+		printk("[RGB LED] make_blink_pattern() bad arguments ");
+
+	ret = size;
+
+	printk("[RGB LED] make_blink_pattern rgb is %06x\n", rgb);
+	printk("[RGB LED] make_blink_pattern delay_on is %d\n", delay_on);
+	printk("[RGB LED] make_blink_pattern delay_off %d\n", delay_off);
+	make_blink_led_pattern(rgb, delay_on, delay_off);
+
+	return ret;
+}
+
+static DEVICE_ATTR(blink_patterns, 0644, confirm_blink_pattern, make_blink_pattern);
+
+#if defined(CONFIG_LEDS_KEY_REAR)
+static ssize_t get_rear_pattern(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return 0;
+}
+
+static ssize_t set_rear_pattern(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	ssize_t ret = -EINVAL;
+	int pattern_num = 0;
+
+	if (sscanf(buf, "%d", &pattern_num) != 1) {
+		printk("[REAR LED] bad arguments ");
+	}
+	ret = size;
+
+	if (lge_get_boot_mode() <= LGE_BOOT_MODE_CHARGERLOGO) {
+		printk("[REAR LED] pattern_num = %d\n", pattern_num);
+
+		set_kpdbl_pattern(pattern_num);
+	}
+	return ret;
+}
+
+static DEVICE_ATTR(rear_setting, 0644, get_rear_pattern, set_rear_pattern);
+
+static ssize_t confirm_rear_blink_pattern(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return 0;
+}
+
+static ssize_t make_rear_blink_pattern(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	ssize_t ret = -EINVAL;
+	int rgb;
+	int delay_on = 0;
+	int delay_off = 0;
+
+	if (sscanf(buf, "0x%06x,%d,%d", &rgb, &delay_on, &delay_off) != 3)
+		printk("[RGB LED] make_rear_blink_pattern() bad arguments ");
+
+	ret = size;
+
+	make_rear_blink_led_pattern(delay_on, delay_off);
+
+	return ret;
+}
+
+static DEVICE_ATTR(rear_blink_patterns, 0644, confirm_rear_blink_pattern, make_rear_blink_pattern);
+#endif
+
+static ssize_t confirm_onoff_pattern(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, LED_BUFF_SIZE, "0x%06x\n", onoff_rgb);
+}
+
+static ssize_t make_onoff_pattern(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+
+	ssize_t ret = -EINVAL;
+
+	if (sscanf(buf, "0x%06x", &onoff_rgb) != 1)
+		printk("[RGB LED] make_onoff_pattern() bad arguments ");
+
+	ret = size;
+
+	/* printk("[RGB LED] make_onoff_rgb is %06x\n",rgb); */
+	make_onoff_led_pattern(onoff_rgb);
+
+	return ret;
+}
+
+static DEVICE_ATTR(onoff_patterns, 0644, confirm_onoff_pattern, make_onoff_pattern);
+
+int led_pattern_sysfs_register(void)
+{
+	struct class *lg_rgb;
+	struct device *pattern_sysfs_dev;
+	lg_rgb = class_create(THIS_MODULE, "lg_rgb_led");
+	if (IS_ERR(lg_rgb)) {
+		printk("Failed to create class(lg_rgb_led)!\n");
+	}
+	pattern_sysfs_dev = device_create(lg_rgb, NULL, 0, NULL, "use_patterns");
+	if (IS_ERR(pattern_sysfs_dev))
+		return PTR_ERR(pattern_sysfs_dev);
+
+	if (device_create_file(pattern_sysfs_dev, &dev_attr_setting) < 0)
+		printk("Failed to create device file(%s)!\n", dev_attr_setting.attr.name);
+
+	if (device_create_file(pattern_sysfs_dev, &dev_attr_blink_patterns) < 0)
+		printk("Failed to create device file(%s)!\n", dev_attr_blink_patterns.attr.name);
+
+#if defined(CONFIG_LEDS_KEY_REAR)
+	if (device_create_file(pattern_sysfs_dev, &dev_attr_rear_setting) < 0)
+		printk("Failed to create device file(%s)!\n", dev_attr_rear_setting.attr.name);
+
+	if (device_create_file(pattern_sysfs_dev, &dev_attr_rear_blink_patterns) < 0)
+		printk("Failed to create device file(%s)!\n", dev_attr_rear_blink_patterns.attr.name);
+#endif
+
+	if (device_create_file(pattern_sysfs_dev, &dev_attr_input_patterns) < 0)
+		printk("Failed to create device file(%s)!\n", dev_attr_input_patterns.attr.name);
+
+	if (device_create_file(pattern_sysfs_dev, &dev_attr_onoff_patterns) < 0)
+		printk("Failed to create device file(%s)!\n", dev_attr_onoff_patterns.attr.name);
+
+#if defined(CONFIG_LEDS_WINDOW_COLOR)
+	if (device_create_file(pattern_sysfs_dev, &dev_attr_window_color) < 0)
+		printk("Failed to create device file(%s)!\n", dev_attr_window_color.attr.name);
+#endif
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(led_pattern_sysfs_register);
+#endif
+
 /**
  * led_classdev_unregister - unregisters a object of led_properties class.
  * @led_cdev: the led device to unregister
@@ -248,6 +626,9 @@ static int __init leds_init(void)
 	leds_class->suspend = led_suspend;
 	leds_class->resume = led_resume;
 	leds_class->dev_attrs = led_class_attrs;
+#ifdef CONFIG_LEDS_PM8941_EMOTIONAL
+	led_pattern_sysfs_register();
+#endif
 	return 0;
 }
 

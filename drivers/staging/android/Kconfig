@@ -95,6 +95,11 @@ config ANDROID_INTF_ALARM_DEV
 	  elapsed realtime, and a non-wakeup alarm on the monotonic clock.
 	  Also exports the alarm interface to user-space.
 
+config VIBRATOR_PM8941_HAPTIC
+	tristate "Support for vibrator power control using pm8974"
+	help
+	  This option enables support for the vibrator power control.
+
 endif # if ANDROID
 
 endmenu

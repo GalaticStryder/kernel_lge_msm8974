@@ -34,7 +34,11 @@
 #define PHASE_STEP_SHIFT	21
 #define MAX_MIXER_WIDTH		2048
 #define MAX_LINE_BUFFER_WIDTH	2048
+#if defined(CONFIG_MACH_LGE)
+#define MAX_MIXER_HEIGHT	2560
+#else
 #define MAX_MIXER_HEIGHT	0xFFFF
+#endif
 #define MAX_IMG_WIDTH		0x3FFF
 #define MAX_IMG_HEIGHT		0x3FFF
 #define MAX_DST_W		MAX_MIXER_WIDTH
@@ -79,6 +83,10 @@ static inline u32 mdss_mdp_reg_read(u32 addr)
 #endif
 #define PERF_STATUS_DONE 0
 #define PERF_STATUS_BUSY 1
+
+#if defined(CONFIG_MACH_MSM8974_G3) || defined(CONFIG_MACH_MSM8974_DZNY)
+#define VIDEO_PLAYBACK_AB_1_1_G3
+#endif
 
 enum mdss_mdp_perf_state_type {
 	PERF_SW_COMMIT_STATE = 0,
@@ -154,12 +162,23 @@ enum mdss_mdp_wb_ctl_type {
 	MDSS_MDP_WB_CTL_TYPE_LINE
 };
 
+#ifdef VIDEO_PLAYBACK_AB_1_1_G3
+enum mdss_mdp_bw_vote_mode {
+    MDSS_MDP_BW_MODE_NONE = 0,
+    MDSS_MDP_BW_MODE_VIDEO = BIT(0),
+    MDSS_MDP_BW_MODE_MAX
+};
+#endif
+
 struct mdss_mdp_perf_params {
 	u64 bw_overlap;
 	u64 bw_prefill;
 	u32 prefill_bytes;
 	u64 bw_ctl;
 	u32 mdp_clk_rate;
+#ifdef VIDEO_PLAYBACK_AB_1_1_G3
+	u32 bw_vote_mode;
+#endif
 };
 
 struct mdss_mdp_ctl {
@@ -439,7 +458,7 @@ struct mdss_overlay_private {
 
 	struct mdss_data_type *mdata;
 	struct mutex ov_lock;
-        struct mutex dfps_lock;
+	struct mutex dfps_lock;
 	struct mdss_mdp_ctl *ctl;
 	struct mdss_mdp_wb *wb;
 
@@ -463,6 +482,9 @@ struct mdss_overlay_private {
 	struct mdss_mdp_vsync_handler vsync_retire_handler;
 	struct work_struct retire_work;
 	int retire_cnt;
+#ifdef MDP_BW_LIMIT_AB
+	bool bw_limit;
+#endif
 };
 
 /**
@@ -716,6 +738,9 @@ int mdss_mdp_wb_ioctl_handler(struct msm_fb_data_type *mfd, u32 cmd, void *arg);
 int mdss_mdp_get_ctl_mixers(u32 fb_num, u32 *mixer_id);
 u32 mdss_mdp_fb_stride(u32 fb_index, u32 xres, int bpp);
 void mdss_check_dsi_ctrl_status(struct work_struct *work, uint32_t interval);
+#ifdef CONFIG_MACH_LGE
+int mdss_dsi_panel_invert(u32 enable);
+#endif
 
 int mdss_panel_register_done(struct mdss_panel_data *pdata);
 int mdss_mdp_limited_lut_igc_config(struct mdss_mdp_ctl *ctl);

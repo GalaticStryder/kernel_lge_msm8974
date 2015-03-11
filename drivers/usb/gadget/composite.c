@@ -21,6 +21,22 @@
 #include <linux/usb/composite.h>
 #include <asm/unaligned.h>
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
+#ifdef CONFIG_USB_G_LGE_ANDROID
+#include <linux/usb/cdc.h>
+#endif
+#ifdef CONFIG_LGE_PM
+#include <mach/board_lge.h>
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+#include <linux/slimport.h>
+#endif
+#endif
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+#include "u_lgeusb.h"
+#endif
+
 /*
  * The code in this file is utility code, used to build a gadget driver
  * from one or more "function" drivers, one or more "configuration"
@@ -371,7 +387,12 @@ static int config_buf(struct usb_configuration *config,
 	c->iConfiguration = config->iConfiguration;
 	c->bmAttributes = USB_CONFIG_ATT_ONE | config->bmAttributes;
 	c->bMaxPower = config->bMaxPower ? :
+#ifdef CONFIG_USB_G_LGE_ANDROID
+		(speed == USB_SPEED_SUPER ? CONFIG_USB_GADGET_VBUS_DRAW_30 :
+		CONFIG_USB_GADGET_VBUS_DRAW) / config->cdev->vbus_draw_units;
+#else
 		(CONFIG_USB_GADGET_VBUS_DRAW / config->cdev->vbus_draw_units);
+#endif
 
 	/* There may be e.g. OTG descriptors */
 	if (config->descriptors) {
@@ -386,6 +407,10 @@ static int config_buf(struct usb_configuration *config,
 	/* add each function's descriptors */
 	list_for_each_entry(f, &config->functions, list) {
 		struct usb_descriptor_header **descriptors;
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+		if (f->desc_change)
+			f->desc_change(f, lgeusb_get_host_os());
+#endif
 
 		switch (speed) {
 		case USB_SPEED_SUPER:
@@ -704,6 +729,9 @@ static int set_config(struct usb_composite_dev *cdev,
 
 	/* when we return, be sure our power usage is valid */
 	power = c->bMaxPower ? (cdev->vbus_draw_units * c->bMaxPower) :
+#ifdef CONFIG_USB_G_LGE_ANDROID
+			gadget->speed == USB_SPEED_SUPER ? CONFIG_USB_GADGET_VBUS_DRAW_30 :
+#endif
 			CONFIG_USB_GADGET_VBUS_DRAW;
 done:
 	usb_gadget_vbus_draw(gadget, power);
@@ -1181,6 +1209,9 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 						USB_DT_OTG);
 			break;
 		case USB_DT_STRING:
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+			lgeusb_set_host_os(w_length);
+#endif
 			value = get_string(cdev, req->buf,
 					w_index, w_value & 0xff);
 			if (value >= 0)
@@ -1403,7 +1434,9 @@ static void composite_disconnect(struct usb_gadget *gadget)
 {
 	struct usb_composite_dev	*cdev = get_gadget_data(gadget);
 	unsigned long			flags;
-
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+	lgeusb_set_host_os(WIN_LINUX_TYPE);
+#endif
 	/* REVISIT:  should we have config and device level
 	 * disconnect callbacks?
 	 */
@@ -1477,6 +1510,184 @@ static u8 override_id(struct usb_composite_dev *cdev, u8 *desc)
 
 	return *desc;
 }
+#if defined CONFIG_DEBUG_FS && defined CONFIG_USB_G_LGE_ANDROID
+static char debug_buffer[PAGE_SIZE];
+
+static ssize_t debug_desc_read(struct file *file, char __user *ubuf,
+		size_t count, loff_t *ppos)
+{
+	struct usb_composite_dev *cdev = file->private_data;
+	struct usb_device_descriptor *desc;
+	struct usb_configuration *config;
+	struct usb_function		*f;
+	enum usb_device_speed speed = USB_SPEED_UNKNOWN;
+
+	char *buf = debug_buffer;
+	unsigned long flags;
+	int cfg_count = 0, i = 0;
+
+	if (!cdev)
+		return 0;
+
+	desc = &cdev->desc;
+	speed = cdev->gadget->speed;
+
+	spin_lock_irqsave(&cdev->lock, flags);
+	i += snprintf(buf + i, PAGE_SIZE - i,
+			"Device Descriptor Infomation:\n");
+	i += snprintf(buf + i, PAGE_SIZE - i,
+			"\tVendor: %08x, Product: %08x\n",
+			desc->idVendor, desc->idProduct);
+	i += snprintf(buf + i, PAGE_SIZE - i,
+			"\tClass: %08x, SubClass: %08x, Protocol: %08x\n",
+			desc->bDeviceClass, desc->bDeviceSubClass, desc->bDeviceProtocol);
+	i += snprintf(buf + i, PAGE_SIZE - i,
+			"USB speed is %s\n", (speed == USB_SPEED_HIGH ? "HIGH" : "FULL"));
+
+	if (list_empty(&cdev->configs)) {
+		i += snprintf(buf + i, PAGE_SIZE - i,
+			"USB is not configured. It may be disabled....\n");
+		goto empty_list;
+	}
+
+	list_for_each_entry(config, &cdev->configs, list) {
+		i += snprintf(buf + i, PAGE_SIZE - i,
+				"USB Configuration #%d:\n", cfg_count++);
+
+		list_for_each_entry(f, &config->functions, list) {
+			struct usb_descriptor_header **descriptors;
+			struct usb_descriptor_header *descriptor;
+
+			if (speed == USB_SPEED_HIGH)
+				descriptors = f->hs_descriptors;
+			else
+				descriptors = f->descriptors;
+
+			if (!descriptors || descriptors[0] == NULL)
+				continue;
+
+			i += snprintf(buf + i, PAGE_SIZE - i,
+					"\tFunction descriptor: %s\n", f->name);
+
+			while ((descriptor = *descriptors++) != NULL) {
+				struct usb_interface_descriptor *intf;
+				struct usb_interface_assoc_descriptor *iad;
+				struct usb_cdc_header_desc *cdc_header;
+				struct usb_cdc_union_desc *union_desc;
+				struct usb_cdc_call_mgmt_descriptor *call_mgmt;
+				struct usb_endpoint_descriptor *ep;
+
+				intf = (struct usb_interface_descriptor *)descriptor;
+				switch (intf->bDescriptorType) {
+				case USB_DT_INTERFACE:
+					i += snprintf(buf + i, PAGE_SIZE - i,
+							"\t\tInterface descriptor\n");
+					i += snprintf(buf + i, PAGE_SIZE - i,
+							"\t\tbNumEndpoints: %d\n"
+							"\t\tbInterfaceNumber: %d\n"
+							"\t\tbInterfaceClass: %d\n"
+							"\t\tbInterfaceSubClass: %d\n"
+							"\t\tbInterfaceProtocol: %d\n\n",
+							intf->bNumEndpoints,
+							intf->bInterfaceNumber,
+							intf->bInterfaceClass,
+							intf->bInterfaceSubClass,
+							intf->bInterfaceProtocol);
+					break;
+				case USB_DT_INTERFACE_ASSOCIATION:
+					iad = (struct usb_interface_assoc_descriptor *)
+						descriptor;
+					i += snprintf(buf + i, PAGE_SIZE - i,
+							"\t\tIAD Interface descriptor\n");
+					i += snprintf(buf + i, PAGE_SIZE - i,
+							"\t\tbFirstInterface: %d\n"
+							"\t\tbInterfaceCount: %d\n"
+							"\t\tbFunctionClass: %d\n"
+							"\t\tbFunctionSubClass: %d\n"
+							"\t\tbFunctionProtocol: %d\n\n",
+							iad->bFirstInterface,
+							iad->bInterfaceCount,
+							iad->bFunctionClass,
+							iad->bFunctionSubClass,
+							iad->bFunctionProtocol);
+					break;
+				case USB_DT_CS_INTERFACE:
+					cdc_header = (struct usb_cdc_header_desc *)
+						descriptor;
+					if (cdc_header->bDescriptorSubType ==
+							USB_CDC_CALL_MANAGEMENT_TYPE) {
+						call_mgmt = (struct usb_cdc_call_mgmt_descriptor *)
+							descriptor;
+						i += snprintf(buf + i, PAGE_SIZE - i,
+								"\t\tCDC CALL MGMT Interface descriptor\n");
+						i += snprintf(buf + i, PAGE_SIZE - i,
+								"\t\tbDataInterface: %d\n\n",
+								call_mgmt->bDataInterface);
+					} else if (cdc_header->bDescriptorSubType ==
+							USB_CDC_UNION_TYPE) {
+						union_desc = (struct usb_cdc_union_desc *)
+							descriptor;
+						i += snprintf(buf + i, PAGE_SIZE - i,
+								"\t\tCDC UNION Interface descriptor\n");
+						i += snprintf(buf + i, PAGE_SIZE - i,
+								"\t\tbMasterInterface0: %d\n"
+								"\t\tbSlaveInterface0: %d\n\n",
+								union_desc->bMasterInterface0,
+								union_desc->bSlaveInterface0);
+					}
+					break;
+				case USB_DT_ENDPOINT:
+					ep = (struct usb_endpoint_descriptor *)
+						descriptor;
+					i += snprintf(buf + i, PAGE_SIZE - i,
+							"\t\t\tEndpoint descriptor\n");
+					i += snprintf(buf + i, PAGE_SIZE - i,
+							"\t\t\tbEndpointAddress: 0x%x(%s)\n"
+							"\t\t\tbmAttributes: %s\n"
+							"\t\t\twMaxPacketSize: %d\n"
+							"\t\t\tbInterval: %d\n\n",
+							ep->bEndpointAddress,
+							(ep->bEndpointAddress & USB_DIR_IN ? "IN" : "OUT"),
+							(ep->bmAttributes == USB_ENDPOINT_XFER_INT ? "INT" : "BULK"),
+							ep->wMaxPacketSize,
+							ep->bInterval);
+					break;
+				default:
+					/* do nothing */
+					break;
+				}
+
+			}
+		}
+	}
+
+empty_list:
+	spin_unlock_irqrestore(&cdev->lock, flags);
+
+	return simple_read_from_buffer(ubuf, count, ppos, buf, i);
+}
+
+static int debug_desc_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+const struct file_operations debug_desc_ops = {
+	.open = debug_desc_open,
+	.read = debug_desc_read,
+};
+
+static void composite_debugfs_init(struct usb_composite_dev	*cdev)
+{
+	struct dentry *dent;
+	dent = debugfs_create_dir("usb_composite", 0);
+	if (IS_ERR(dent))
+		return;
+
+	debugfs_create_file("desc", 0444, dent, cdev, &debug_desc_ops);
+}
+#endif /*                                             */
 
 static int composite_bind(struct usb_gadget *gadget)
 {
@@ -1569,6 +1780,10 @@ static int composite_bind(struct usb_gadget *gadget)
 	if (status)
 		goto fail;
 
+#if defined CONFIG_DEBUG_FS && defined CONFIG_USB_G_LGE_ANDROID
+	composite_debugfs_init(cdev);
+#endif
+
 	INFO(cdev, "%s ready\n", composite->name);
 	return 0;
 
@@ -1600,7 +1815,9 @@ composite_suspend(struct usb_gadget *gadget)
 
 	cdev->suspended = 1;
 
+#ifndef CONFIG_LGE_PM
 	usb_gadget_vbus_draw(gadget, 2);
+#endif
 }
 
 static void

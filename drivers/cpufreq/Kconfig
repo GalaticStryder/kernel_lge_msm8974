@@ -182,7 +182,10 @@ config CPU_FREQ_GOV_INTERACTIVE
 	  For details, take a look at linux/Documentation/cpu-freq.
 
 	  If in doubt, say N.
-
+config LGE_LOW_BATT_LIMIT
+	tristate "to prevent UVLO at low voltage"
+	depends on CPU_FREQ
+	default n
 config CPU_FREQ_GOV_CONSERVATIVE
 	tristate "'conservative' cpufreq governor"
 	depends on CPU_FREQ

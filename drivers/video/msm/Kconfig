@@ -976,4 +976,30 @@ config FB_MSM_QPIC_PANEL_DETECT
 if FB_MSM_MDSS
 	source "drivers/video/msm/mdss/Kconfig"
 endif
+
+config Z_LGD_OLED_PANEL
+	bool "LGD HD OLED Panel"
+	default n
+       ---help---
+         Support for LG Display POLED panel 
+
+config G2_LGD_PANEL
+	bool "G2 FHD LGD panel"
+	---help---
+	  Support for LGD panel (1080x1920)
+
+config B1_LGD_PANEL
+        bool "B1 FHD LGD panel"
+        ---help---
+          Support for LGD panel (1080x1920)
+
+config VU3_LGD_PANEL
+        bool "VU3 UVGA LGD panel"
+        ---help---
+          Support for LGD panel (1280x960)
+
+config TIGERS_LGD_PANEL
+        bool "TIGERS FHD LGD panel"
+        ---help---
+          Support for LGD panel (1080x1920)
 endif

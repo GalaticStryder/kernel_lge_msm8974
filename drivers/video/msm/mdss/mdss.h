@@ -30,6 +30,11 @@
 
 #define MAX_DRV_SUP_MMB_BLKS	44
 
+#if defined(CONFIG_MACH_MSM8974_G3) || defined(CONFIG_MACH_MSM8974_DZNY)
+#define MDP_BW_LIMIT_AB
+#define BW_CHECK_AGAIN_FOR_UNDERRUN
+#endif
+
 enum mdss_mdp_clk_type {
 	MDSS_CLK_AHB,
 	MDSS_CLK_AXI,
@@ -161,6 +166,10 @@ struct mdss_data_type {
 	struct mdss_fudge_factor ib_factor_overlap;
 	struct mdss_fudge_factor clk_factor;
 
+#ifdef MDP_BW_LIMIT_AB
+	struct mdss_fudge_factor ab_factor_limit;
+#endif
+
 	u32 *clock_levels;
 	u32 nclk_lvl;
 
@@ -208,7 +217,15 @@ struct mdss_data_type {
 	struct mdss_prefill_data prefill_data;
 	bool ulps;
 	int iommu_ref_cnt;
-
+#ifdef CONFIG_LGE_VSYNC_SKIP
+	char enable_skip_vsync;
+	ulong skip_value;
+	ulong weight;
+	ulong bucket;
+	ulong skip_count;
+	int skip_ratio;
+	bool skip_first;
+#endif
 	u64 ab[MDSS_MAX_HW_BLK];
 	u64 ib[MDSS_MAX_HW_BLK];
 };

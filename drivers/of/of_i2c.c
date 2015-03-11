@@ -29,13 +29,25 @@ void of_i2c_register_devices(struct i2c_adapter *adap)
 
 	dev_dbg(&adap->dev, "of_i2c: walking child nodes\n");
 
-	for_each_child_of_node(adap->dev.of_node, node) {
+	//for_each_child_of_node(adap->dev.of_node, node) {
+	for_each_available_child_of_node(adap->dev.of_node, node) {
 		struct i2c_board_info info = {};
 		struct dev_archdata dev_ad = {};
 		const __be32 *addr;
 		int len;
 
 		dev_dbg(&adap->dev, "of_i2c: register %s\n", node->full_name);
+
+#ifdef CONFIG_MACH_LGE
+		/*                                                 
+                                    
+   */
+		if (!of_device_is_available(node))
+			continue;
+
+		if (!of_device_is_available_revision(node))
+			continue;
+#endif
 
 		if (of_modalias_node(node, info.type, sizeof(info.type)) < 0) {
 			dev_err(&adap->dev, "of_i2c: modalias failure on %s\n",

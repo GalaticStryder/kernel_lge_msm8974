@@ -509,7 +509,7 @@ config MMC_MSM_SDC2_8_BIT_SUPPORT
 config MMC_MSM_SDC3_SUPPORT
 	boolean "Qualcomm SDC3 support"
 	depends on MMC_MSM
-	default n
+	default y
 	help
 	  Select Y to enable Slot 3.
 
@@ -565,6 +565,11 @@ config MMC_MSM_SPS_SUPPORT
 	default n
 	help
 	  Select Y to use SPS BAM as data mover
+
+config MMC_MSM_DEBUGFS
+    bool "MSM debugfs"
+    depends on MMC_MSM && DEBUG_FS
+    default n
 
 config MMC_TMIO
 	tristate "Toshiba Mobile IO Controller (TMIO) MMC/SD function support"

@@ -20,9 +20,31 @@
 #include <linux/power_supply.h>
 
 #include <linux/usb/otg.h>
+#if defined(CONFIG_LGE_PM) && defined(CONFIG_BQ24192_CHARGER)
+#include "../../base/power/power.h"
+#elif defined(CONFIG_LGE_PM) && defined(CONFIG_SMB349_CHARGER)
+#include "../../base/power/power.h"
+#elif defined(CONFIG_LGE_PM) && defined(CONFIG_CHARGER_MAX77819)
+#include "../../base/power/power.h"
+#elif defined(CONFIG_LGE_PM) && defined(CONFIG_BQ24296_CHARGER)
+#include "../../base/power/power.h"
+#else
 #include "power.h"
+#endif
 
 #define DWC3_IDEV_CHG_MAX 1500
+
+#ifdef CONFIG_LGE_PM
+#define DWC3_IDEV_CHG_PROPRIETARY_MAX 1000
+#define DWC3_USB30_CHG_CURRENT 900
+#endif
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+enum usb_config_state {
+	VZW_USB_STATE_UNDEFINED = 0,
+	VZW_USB_STATE_CONNECTED,
+	VZW_USB_STATE_CONFIGURED,
+};
+#endif
 
 struct dwc3_charger;
 
@@ -41,6 +63,11 @@ struct dwc3_otg {
 	struct dwc3		*dwc;
 	void __iomem		*regs;
 	struct regulator	*vbus_otg;
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)
+#if defined (CONFIG_TOUCHSCREEN_SYNAPTICS_G2) || defined (CONFIG_MACH_MSM8974_TIGERS)
+	struct work_struct		touch_work;
+#endif
+#endif
 	struct delayed_work	sm_work;
 	struct dwc3_charger	*charger;
 	struct dwc3_ext_xceiv	*ext_xceiv;
@@ -89,6 +116,10 @@ struct dwc3_charger {
 	/* to notify OTG about charger detection completion, provided by OTG */
 	void	(*notify_detection_complete)(struct usb_otg *otg,
 						struct dwc3_charger *charger);
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+	struct delayed_work	*drv_check_state_wq;
+	enum usb_config_state vzw_usb_config_state;
+#endif
 };
 
 /* for external charger driver */

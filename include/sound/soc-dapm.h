@@ -243,7 +243,13 @@
 {	.id = snd_soc_dapm_supply, .name = wname, .reg = wreg,	\
 	.shift = wshift, .invert = winvert, .event = wevent, \
 	.event_flags = wflags}
-
+#ifdef CONFIG_SND_SOC_WM5110
+/*                                                           */
+#define SND_SOC_DAPM_REGULATOR_SUPPLY(wname, wdelay) \
+{       .id = snd_soc_dapm_regulator_supply, .name = wname, \
+        .reg = SND_SOC_NOPM, .shift = wdelay, .event = dapm_regulator_event, \
+        .event_flags = SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD }
+#endif
 /* dapm kcontrol types */
 #define SOC_DAPM_SINGLE(xname, reg, shift, max, invert) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
@@ -329,7 +335,11 @@ struct snd_soc_dapm_widget_list;
 
 int dapm_reg_event(struct snd_soc_dapm_widget *w,
 		   struct snd_kcontrol *kcontrol, int event);
-
+#ifdef CONFIG_SND_SOC_WM5110
+/*                                                           */
+int dapm_regulator_event(struct snd_soc_dapm_widget *w,
+                         struct snd_kcontrol *kcontrol, int event);
+#endif
 /* dapm controls */
 int snd_soc_dapm_put_volsw(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
@@ -364,6 +374,10 @@ int snd_soc_dapm_new_widgets(struct snd_soc_dapm_context *dapm);
 void snd_soc_dapm_free(struct snd_soc_dapm_context *dapm);
 int snd_soc_dapm_add_routes(struct snd_soc_dapm_context *dapm,
 			    const struct snd_soc_dapm_route *route, int num);
+#ifdef CONFIG_SND_SOC_WM5110
+int snd_soc_dapm_del_routes(struct snd_soc_dapm_context *dapm,
+			    const struct snd_soc_dapm_route *route, int num);
+#endif
 int snd_soc_dapm_weak_routes(struct snd_soc_dapm_context *dapm,
 			     const struct snd_soc_dapm_route *route, int num);
 
@@ -436,6 +450,10 @@ enum snd_soc_dapm_type {
 	snd_soc_dapm_vmid,			/* codec bias/vmid - to minimise pops */
 	snd_soc_dapm_pre,			/* machine specific pre widget - exec first */
 	snd_soc_dapm_post,			/* machine specific post widget - exec last */
+#ifdef 	CONFIG_SND_SOC_WM5110
+	/*                                                           */
+	snd_soc_dapm_regulator_supply,  /* external regulator */
+#endif
 	snd_soc_dapm_supply,		/* power/clock supply */
 	snd_soc_dapm_aif_in,		/* audio interface input */
 	snd_soc_dapm_aif_out,		/* audio interface output */
@@ -465,9 +483,13 @@ struct snd_soc_dapm_route {
 
 /* dapm audio path between two widgets */
 struct snd_soc_dapm_path {
+#ifdef 	CONFIG_SND_SOC_WM5110
+	const char *name;
+	const char *long_name;
+#else
 	char *name;
 	char *long_name;
-
+#endif
 	/* source (input) and sink (output) widgets */
 	struct snd_soc_dapm_widget *source;
 	struct snd_soc_dapm_widget *sink;
@@ -476,6 +498,9 @@ struct snd_soc_dapm_path {
 	/* status */
 	u32 connect:1;	/* source and sink widgets are connected */
 	u32 walked:1;	/* path has been walked */
+#ifdef CONFIG_SND_SOC_WM5110
+	u32 walking:1;  /* path is in the process of being walked */
+#endif
 	u32 weak:1;	/* path ignored for power management */
 
 	int (*connected)(struct snd_soc_dapm_widget *source,
@@ -489,14 +514,20 @@ struct snd_soc_dapm_path {
 /* dapm widget */
 struct snd_soc_dapm_widget {
 	enum snd_soc_dapm_type id;
-	char *name;		/* widget name */
+#ifdef CONFIG_SND_SOC_WM5110
+	const char *name;		/* widget name */
+#else
+	char *name;
+#endif
 	const char *sname;	/* stream name */
 	struct snd_soc_codec *codec;
 	struct snd_soc_platform *platform;
 	struct snd_soc_dai *dai;
 	struct list_head list;
 	struct snd_soc_dapm_context *dapm;
-
+#ifdef CONFIG_SND_SOC_WM5110
+	void *priv;				/* widget specific data */
+#endif
 	/* dapm control */
 	short reg;						/* negative reg = no direct dapm */
 	unsigned char shift;			/* bits to shift */

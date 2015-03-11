@@ -33,6 +33,7 @@ obj-$(CONFIG_USB_CI13XXX_MSM_HSIC)	+= ci13xxx_msm_hsic.o
 obj-$(CONFIG_USB_CI13XXX_MSM)	+= ci13xxx_msm.o
 obj-$(CONFIG_USB_FUSB300)	+= fusb300_udc.o
 obj-$(CONFIG_USB_MSM_72K)	+= msm72k_udc.o
+obj-$(CONFIG_USB_G_LGE_ANDROID)	+= u_lgeusb.o
 
 #
 # USB gadget drivers

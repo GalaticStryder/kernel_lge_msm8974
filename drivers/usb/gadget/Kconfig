@@ -1081,4 +1081,198 @@ config RMNET_SDIO_SMD_DATA_CHANNEL
        help
 	  Data SMD channel for transferring network data
 
+config USB_G_LGE_ANDROID
+	boolean "LGE Android Gadget for LG PC host Driver"
+	depends on USB_G_ANDROID
+	help
+	  Customized Android Gadget USB framework for
+	  LGE United PC host USB driver.
+
+	default n
+
+config USB_G_LGE_ANDROID_PFSC
+	boolean "Force full speed support if pif is connected in LGE Android"
+	depends on USB_G_LGE_ANDROID
+	help
+	   This feature is that USB set forcely full speed if pif cable is
+	   connected. It is only for PIF cable, not normal USB cable.
+
+	   Say y if this must be needed.
+
+	default n
+
+config USB_G_LGE_ANDROID_STORAGE_NAME
+	string "USB mass & cdrom storage device name for LGE Android"
+	depends on USB_G_LGE_ANDROID_AUTORUN
+	default "Android Platform"
+	help
+	   Name for USB mass & cdrom device name used in LGE Andoird Autorun.
+
+	   NOTE: default name is "Android Platform", need to change your
+	   board config to use other device name(e.g. in VZW devices)
+
+config USB_G_LGE_ANDROID_AUTORUN
+	boolean "Common autorun support in LGE Android"
+	depends on USB_G_LGE_ANDROID
+	help
+	  Autorun is LGE specific feature which is able to install PC host
+	  USB driver automatically on Autorun-enabled OS(Ex. Windows). For this,
+	  virtual-cdrom device is provided on LGE Android powered device.
+
+	default n
+
+config USB_G_LGE_ANDROID_AUTORUN_VZW
+	boolean "VZW specific autorun support in LGE Android"
+	depends on USB_G_LGE_ANDROID_AUTORUN
+	help
+	  It supports VZW specific autorun feature. note that this
+	  must be used in VZW devices.
+
+	  Say y if this must be needed.
+
+	default n
+config USB_G_LGE_ANDROID_AUTORUN_LGE
+	boolean "LGE specific autorun support in LGE Android"
+	depends on USB_G_LGE_ANDROID_AUTORUN
+	help
+	  It supports LGE specific autorun feature. note that this
+	  must be used in LGE(with non-VZW) devices.
+
+	  Say y if this must be needed.
+
+	default n
+config USB_G_LGE_ANDROID_VZWLAN
+	boolean "VZW USB LAN support in LGE Android"
+	depends on USB_G_LGE_ANDROID
+	help
+	  VZW's Mobile UC Application communicate with docking station
+	  via USB LAN. When device connect with docking station, it must
+	  configure usb mode to USB LAN only. This feature can configure
+	  USB LAN only mode when a device connect with docking station.
+
+	  Say y if this feature must be used.
+
+	default n
+
+config USB_G_LGE_ANDROID_CDROM_MAC_SUPPORT
+	boolean "USB CDROM support patch of LGE Android on Mac OS-X"
+	depends on USB_G_LGE_ANDROID
+	help
+	  This feature is based on Roger Quadros' patch as following;
+
+	  - usb:gadget:storage: Make CD-ROM emulation work with Mac OS-X
+	  - usb:gadget:f_mass_storage: Make CD-ROM emulation work with Mac OS-X
+
+	  ref: https://lkml.org/lkml/2011/4/5/190
+
+	  - Here is comment of committer:
+
+	  Mac OS-X expects CD-ROM TOC in raw format (i.e. format:2). It also
+	  sends the READ_TOC CDB in old style SFF8020i format. i.e. 2 format bits
+	  are encoded in MSBs of CDB byte 9.
+
+	  The first patch introduces a fsg_get_toc() helper which builds the
+	  Table of Contents (TOC) that can be used for the READ_TOC command.
+	  The remaining two patches simply make file_storage gadget and mass_storage
+	  gadget use the new helper function.
+
+	  Say y if this feature must be used.
+
+	default n
+
+config USB_G_LGE_ANDROID_NCM
+	boolean "LGE specific mirror link support in LGE Android"
+	depends on USB_G_LGE_ANDROID
+	help
+	 It supports LGE specific mirror link feature.
+
+	 Say y if this must be needed.
+
+	default n
+
+config USB_G_LGE_ANDROID_DIAG_OSP_SUPPORT
+	boolean "On Screen Phone patch for reducing packet loss on Diag"
+	depends on USB_G_LGE_ANDROID
+	help
+	 LG OSP(On Screen Phone) communicate by diag port in Qualcomm based model.
+	 But Diag port can't fully transmit OSP's packets, it often discard OSP packets
+	 when diagchar_read is operated continuously.
+	 This problem occur for only OSP packets, because OSP is implemented that
+	 OSP server and client can simultaneously transfer request/reply each other.
+	 Finally, this is read timing issue between usb and diag layer.
+
+	 Fix the issue using synchronization of read operation between usb and diag.
+	 This feature will be used in only Qualcomm based OSP supporting model.
+
+	 Say y if this must be needed.
+
+	default n
+
+#CONFIG_USB_DWC3_MSM_VZW_SUPPORT
+config USB_DWC3_MSM_VZW_SUPPORT
+	bool "VZW specific DWC3_MSM support in LGE Android"
+	depends on USB_DWC3_MSM
+	help
+	  It supports VZW specific DWC3_MSM feature for USB BC 1.2 event.
+	  note that this must be used in VZW devices.
+
+	  Say y if this must be needed.
+
+	default n
+
+#B2-BSP-USB@lge.com
+config DWC3_MSM_CDP_SUPPORT
+	bool "CDP support in LGE Android"
+	depends on USB_G_LGE_ANDROID
+	help
+	  To support BC 1.2 scenario, high current draw for CDP.
+
+	  Say y if this must be needed.
+
+	default n
+
+#B2-BSP-USB@lge.com
+config DWC3_MSM_BC_12_VZW_SUPPORT
+	bool "Specific BC 1.2 Scenario for VZW"
+	depends on USB_G_LGE_ANDROID
+	help
+	  VZW wants that don't charging for open dcd and not configured situation.
+
+	  Say y if this must be needed.
+
+	default n
+
+#B2-BSP-USB@lge.com
+config USB_G_LGE_MULTIPLE_CONFIGURATION
+	boolean "LGE Multiple Configuration"
+	help
+	  Support multiple mtp functions in multiple configuration.
+	  Add another descriptor for 2nd mtp function.
+
+	  Say y if this must be needed.
+
+	default n
+
+config USB_G_LGE_MULTICONFIG_ATF_WA
+	boolean "LGE Multiple Configuration"
+	depends on USB_G_LGE_MULTIPLE_CONFIGURATION
+	help
+	  If USB multiple configuration applied, AFT can't recognize device.
+	  Thus, change ACM interfaceclass by OS type.
+	  You need to change host driver if this config enabled.
+	  Just workaround until AFT update.
+
+	  Say y if this must be needed.
+
+	default y
+
+config USB_G_LGE_SERIALNO_REDIRECTION
+	boolean "LGE specific serial number support in LGE Android"
+	help
+	  if ro.serialno is not available, use sys device node 
+
+	  Say y if this must be needed.
+
+	default n
+
 endif # USB_GADGET

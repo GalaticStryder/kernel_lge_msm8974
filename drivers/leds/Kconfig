@@ -310,6 +310,16 @@ config LEDS_MSM_GPIO_FLASH
 	  To compile this driver as a module, choose M here: the module will
 	  be called leds-gpio-flash.
 
+config LEDS_PM8941_EMOTIONAL
+	tristate "Support for EMOTIONAL LEDs using pm8941"
+	help
+	  This enables support for emotional LED using pm8941.
+
+config LEDS_KEY_REAR
+	tristate "Support for REAR KEY LEDs for G2"
+	help
+	  This enables support for REAR KEY LED for G2.
+
 config LEDS_WM831X_STATUS
 	tristate "LED support for status LEDs on WM831x PMICs"
 	depends on LEDS_CLASS
@@ -501,6 +511,12 @@ config LEDS_OT200
 	help
 	  This option enables support for the LEDs on the Bachmann OT200.
 	  Say Y to enable LEDs on the Bachmann OT200.
+
+config LEDS_WINDOW_COLOR
+	tristate "LED support for adjusting led brightness according to window color"
+	help
+	  This enables support for adjusting led brightness according to window color.
+	  Say Y to adjust led brightness according to window color.
 
 config LEDS_TRIGGERS
 	bool "LED Trigger support"

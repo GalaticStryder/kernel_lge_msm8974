@@ -207,6 +207,33 @@ static ssize_t backlight_show_actual_brightness(struct device *dev,
 
 static struct class *backlight_class;
 
+#if defined(CONFIG_MACH_LGE_BACKLIGHT_SUPPORT)
+struct backlight_device *get_backlight_device()
+{
+	struct class_dev_iter iter;
+	struct backlight_device *bd = NULL;
+	struct device *dev = NULL;
+
+	if (!backlight_class)
+		return NULL;
+	if (!backlight_class->p) {
+		WARN(1, "%s called for class '%s' before it was initialized",
+						__func__, backlight_class->name);
+		return NULL;
+	}
+
+	class_dev_iter_init(&iter, backlight_class, NULL, NULL);
+	dev = class_dev_iter_next(&iter);
+	if (dev) {
+		bd = to_backlight_device(dev);
+		pr_info("%s: backlight device name is %s", __func__,
+						(bd) ? bd->dev.kobj.name : "NULL");
+	}
+	class_dev_iter_exit(&iter);
+	return bd;
+}
+#endif
+
 static int backlight_suspend(struct device *dev, pm_message_t state)
 {
 	struct backlight_device *bd = to_backlight_device(dev);

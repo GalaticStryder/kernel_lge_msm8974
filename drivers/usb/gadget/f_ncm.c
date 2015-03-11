@@ -845,6 +845,9 @@ static int ncm_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 			 */
 			ncm->port.is_zlp_ok = !(
 				gadget_is_musbhdrc(cdev->gadget)
+#ifdef CONFIG_USB_G_LGE_ANDROID_NCM
+				|| gadget_is_dwc3(cdev->gadget)
+#endif
 				);
 			ncm->port.cdc_filter = DEFAULT_FILTER;
 			DBG(cdev, "activate ncm\n");
@@ -1371,7 +1374,11 @@ int ncm_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN])
 	ncm_reset_values(ncm);
 	ncm->port.is_fixed = true;
 
+#ifdef	CONFIG_USB_G_LGE_ANDROID_NCM
 	ncm->port.func.name = "cdc_network";
+#else
+	ncm->port.func.name = "ncm";
+#endif
 	ncm->port.func.strings = ncm_strings;
 	/* descriptors are per-instance copies */
 	ncm->port.func.bind = ncm_bind;
@@ -1391,3 +1398,84 @@ int ncm_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN])
 	}
 	return status;
 }
+
+#ifdef CONFIG_USB_G_LGE_ANDROID_NCM
+static struct delayed_work start_work;
+
+static const struct file_operations ncm_fops = {
+	.owner = THIS_MODULE,
+};
+
+static struct miscdevice ncm_device = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "usb_ncm",
+	.fops = &ncm_fops,
+};
+
+static int ncm_ctrlrequest(struct usb_composite_dev *cdev,
+		const struct usb_ctrlrequest *ctrl)
+{
+	int value = -EOPNOTSUPP;
+	u8 b_requestType = ctrl->bRequestType;
+	u8 b_request = ctrl->bRequest;
+	u16 w_index = le16_to_cpu(ctrl->wIndex);
+	u16 w_value = le16_to_cpu(ctrl->wValue);
+	u16 w_length = le16_to_cpu(ctrl->wLength);
+
+	if (b_requestType == (USB_DIR_OUT | USB_TYPE_VENDOR)) {
+		if (ctrl->bRequest == 0xf0) {
+			printk(KERN_INFO "ncm_ctrlrequest "
+					"%02x.%02x v%04x i%04x l%u\n",
+					b_requestType, b_request,
+					w_value, w_index, w_length);
+			value = 0;
+			schedule_delayed_work(&start_work, msecs_to_jiffies(10));
+		}
+	}
+
+	if (value >= 0) {
+		cdev->req->zero = 0;
+		cdev->req->length = value;
+		value = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
+		if (value < 0)
+			ERROR(cdev, "%s setup response queue error\n",
+					__func__);
+	}
+
+	if (value == -EOPNOTSUPP)
+		VDBG(cdev,
+			"unknown class-specific control req "
+			"%02x.%02x v%04x i%04x l%u\n",
+			ctrl->bRequestType, ctrl->bRequest,
+			w_value, w_index, w_length);
+	return value;
+}
+
+static void ncm_start_work(struct work_struct *data)
+{
+	char *envp[2] = { "NCM=START", NULL };
+	kobject_uevent_env(&ncm_device.this_device->kobj, KOBJ_CHANGE, envp);
+}
+
+static int ncm_init(void)
+{
+	int ret;
+
+	INIT_DELAYED_WORK(&start_work, ncm_start_work);
+
+	ret = misc_register(&ncm_device);
+	if (ret)
+		goto err;
+
+	return 0;
+
+err:
+	pr_err("USB ncm gadget driver failed to initialize\n");
+	return ret;
+}
+
+static void ncm_cleanup(void)
+{
+	misc_deregister(&ncm_device);
+}
+#endif

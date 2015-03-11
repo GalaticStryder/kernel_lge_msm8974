@@ -90,6 +90,9 @@ struct rtc_pll_info {
 
 #define RTC_PLL_GET	_IOR('p', 0x11, struct rtc_pll_info)  /* Get PLL correction */
 #define RTC_PLL_SET	_IOW('p', 0x12, struct rtc_pll_info)  /* Set PLL correction */
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+#define RTC_DEVICE_UP	_IOW('p', 0x13, struct rtc_wkalrm)  /* Set Power Off alarm */
+#endif
 
 /* interrupt flags */
 #define RTC_IRQF 0x80	/* Any of the following is active */
@@ -152,6 +155,9 @@ struct rtc_class_ops {
 	int (*set_mmss)(struct device *, unsigned long secs);
 	int (*read_callback)(struct device *, int data);
 	int (*alarm_irq_enable)(struct device *, unsigned int enabled);
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+	int (*set_po_alarm)(struct device *, struct rtc_wkalrm *);
+#endif
 };
 
 #define RTC_DEVICE_NAME_SIZE 20
@@ -267,6 +273,20 @@ int rtc_timer_start(struct rtc_device *rtc, struct rtc_timer* timer,
 			ktime_t expires, ktime_t period);
 int rtc_timer_cancel(struct rtc_device *rtc, struct rtc_timer* timer);
 void rtc_timer_do_work(struct work_struct *work);
+
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+/*
+enum RTC_PWR_TYPE {
+	LG_RTC_POWER_ON_ENABLE,
+	LG_RTC_POWER_ON_TIME,
+	LG_RTC_POWER_ON_MAX,
+};
+*/
+
+extern int rtc_set_po_alarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm);
+/*extern void write_rtc_pwron_in_misc(struct rtc_wkalrm *alarm, enum RTC_PWR_TYPE type);*/
+/*extern unsigned long read_rtc_pwron_in_misc(struct rtc_wkalrm *alarm, enum RTC_PWR_TYPE type);*/
+#endif
 
 static inline bool is_leap_year(unsigned int year)
 {

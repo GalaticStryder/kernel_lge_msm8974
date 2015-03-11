@@ -34,6 +34,9 @@
 #include "mdss_fb.h"
 #include "mdss_mdp.h"
 #include "mdss_mdp_rotator.h"
+#ifdef CONFIG_MACH_LGE
+#include <mach/board_lge.h>
+#endif
 
 #define VSYNC_PERIOD 16
 #define BORDERFILL_NDX	0x0BF000BF
@@ -556,26 +559,26 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 
 	if (req->id == MSMFB_NEW_REQUEST) {
 		switch (req->pipe_type) {
-                case PIPE_TYPE_VIG:
-                        pipe_type = MDSS_MDP_PIPE_TYPE_VIG;
-                        break;
-                case PIPE_TYPE_RGB:
-                        pipe_type = MDSS_MDP_PIPE_TYPE_RGB;
-                        break;
-                case PIPE_TYPE_DMA:
-                        pipe_type = MDSS_MDP_PIPE_TYPE_DMA;
-                        break;
-                case PIPE_TYPE_AUTO:
-                default:
-                        if (req->flags & MDP_OV_PIPE_FORCE_DMA)
-                                pipe_type = MDSS_MDP_PIPE_TYPE_DMA;
-                        else if (fmt->is_yuv ||
-                                (req->flags & MDP_OV_PIPE_SHARE))
-                                pipe_type = MDSS_MDP_PIPE_TYPE_VIG;
-                        else
-                                pipe_type = MDSS_MDP_PIPE_TYPE_RGB;
-                        break;
-                }
+		case PIPE_TYPE_VIG:
+			pipe_type = MDSS_MDP_PIPE_TYPE_VIG;
+			break;
+		case PIPE_TYPE_RGB:
+			pipe_type = MDSS_MDP_PIPE_TYPE_RGB;
+			break;
+		case PIPE_TYPE_DMA:
+			pipe_type = MDSS_MDP_PIPE_TYPE_DMA;
+			break;
+		case PIPE_TYPE_AUTO:
+		default:
+			if (req->flags & MDP_OV_PIPE_FORCE_DMA)
+				pipe_type = MDSS_MDP_PIPE_TYPE_DMA;
+			else if (fmt->is_yuv ||
+					(req->flags & MDP_OV_PIPE_SHARE))
+				pipe_type = MDSS_MDP_PIPE_TYPE_VIG;
+			else
+				pipe_type = MDSS_MDP_PIPE_TYPE_RGB;
+			break;
+		}
 
 		pipe = mdss_mdp_pipe_alloc(mixer, pipe_type);
 
@@ -1747,7 +1750,6 @@ static void mdss_mdp_overlay_pan_display(struct msm_fb_data_type *mfd)
 
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
 
-
 	bpp = fbi->var.bits_per_pixel / 8;
 	offset = fbi->var.xoffset * bpp +
 		 fbi->var.yoffset * fbi->fix.line_length;
@@ -1976,9 +1978,16 @@ static ssize_t dynamic_fps_sysfs_wta_dfps(struct device *dev,
 	}
 
 	mutex_lock(&mdp5_data->dfps_lock);
+
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+	if (dfps < 38) {
+		pr_err("Unsupported FPS. Configuring to min_fps = 38\n");
+		dfps = 38;
+#else
 	if (dfps < 30) {
 		pr_err("Unsupported FPS. Configuring to min_fps = 30\n");
 		dfps = 30;
+#endif
 		rc = mdss_mdp_ctl_update_fps(mdp5_data->ctl, dfps);
 	} else if (dfps > 60) {
 		pr_err("Unsupported FPS. Configuring to max_fps = 60\n");
@@ -2554,6 +2563,10 @@ static int __handle_overlay_prepare(struct msm_fb_data_type *mfd,
 	u32 new_reqs = 0;
 	u32 left_lm_w = left_lm_w_from_mfd(mfd);
 
+#ifdef MDP_BW_LIMIT_AB
+	bool bw_limit = false;
+#endif
+
 	ret = mutex_lock_interruptible(&mdp5_data->ov_lock);
 	if (ret)
 		return ret;
@@ -2569,6 +2582,13 @@ static int __handle_overlay_prepare(struct msm_fb_data_type *mfd,
 	for (i = 0; i < ovlist->num_overlays; i++) {
 		req = overlays + i;
 
+#ifdef MDP_BW_LIMIT_AB
+		/* MDP_BLUR is used only MDP3 so we can use it on MDSS to check bw limit */
+		if (req->flags & MDP_BLUR) {
+			pr_debug("[QC] B/W limit flag detected !!!\n");
+			bw_limit = true;
+		}
+#endif
 		req->z_order += MDSS_MDP_STAGE_0;
 		ret = mdss_mdp_overlay_pipe_setup(mfd, req, &pipe);
 		req->z_order -= MDSS_MDP_STAGE_0;
@@ -2605,6 +2625,10 @@ static int __handle_overlay_prepare(struct msm_fb_data_type *mfd,
 validate_exit:
 	if (IS_ERR_VALUE(ret))
 		mdss_mdp_overlay_release(mfd, new_reqs);
+#ifdef MDP_BW_LIMIT_AB
+	else
+		mdp5_data->bw_limit = bw_limit;
+#endif
 	mutex_unlock(&mdp5_data->ov_lock);
 
 	ovlist->processed_overlays = i;
@@ -2635,7 +2659,7 @@ static int __handle_ioctl_overlay_prepare(struct msm_fb_data_type *mfd,
 	}
 
 	if (copy_from_user(req_list, ovlist.overlay_list,
-				sizeof(struct mdp_overlay*) * ovlist.num_overlays)) {
+				sizeof(struct mdp_overlay *) * ovlist.num_overlays)) {
 		ret = -EFAULT;
 		goto validate_exit;
 	}
@@ -2888,6 +2912,7 @@ static int mdss_mdp_overlay_on(struct msm_fb_data_type *mfd)
 		mdp5_data->ctl = ctl;
 	}
 
+	pr_info("fb%d UNBLANK +", mfd->index);
 	if (!mfd->panel_info->cont_splash_enabled &&
 		(mfd->panel_info->type != DTV_PANEL)) {
 		rc = mdss_mdp_overlay_start(mfd);
@@ -2906,6 +2931,7 @@ static int mdss_mdp_overlay_on(struct msm_fb_data_type *mfd)
 		pr_err("Failed to turn on fb%d\n", mfd->index);
 		mdss_mdp_overlay_off(mfd);
 	}
+	pr_info("fb%d UNBLANK -", mfd->index);
 	return rc;
 }
 
@@ -2951,6 +2977,8 @@ static int mdss_mdp_overlay_off(struct msm_fb_data_type *mfd)
 		mdss_mdp_overlay_kickoff(mfd, NULL);
 	}
 
+	pr_info("fb%d BLANK +", mfd->index);
+
 	/*
 	 * If retire fences are still active wait for a vsync time
 	 * for retire fence to be updated.
@@ -2985,6 +3013,7 @@ static int mdss_mdp_overlay_off(struct msm_fb_data_type *mfd)
 			pr_err("unable to suspend w/pm_runtime_put (%d)\n", rc);
 	}
 
+	pr_info("fb%d BLANK -", mfd->index);
 	return rc;
 }
 

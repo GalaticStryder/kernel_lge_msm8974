@@ -986,6 +986,8 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 				/* Add the current time stamp */
 				char tbuf[50], *tp;
 				unsigned tlen;
+				/* change kernel timestamp format from cpu time to cpu time / local time */
+#ifdef CONFIG_LGE_USE_CPU_CLOCK_TIMESTAMP
 				unsigned long long t;
 				unsigned long nanosec_rem;
 
@@ -994,7 +996,28 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 				tlen = sprintf(tbuf, "[%5lu.%06lu] ",
 						(unsigned long) t,
 						nanosec_rem / 1000);
+#else
+				unsigned long long t;
+				unsigned long nanosec_rem;
 
+				struct timespec time;
+				struct tm tmresult;
+
+				t = cpu_clock(printk_cpu);
+				nanosec_rem = do_div(t, 1000000000);
+
+				time = __current_kernel_time();
+				time_to_tm(time.tv_sec,sys_tz.tz_minuteswest * 60* (-1),&tmresult);
+				tlen = sprintf(tbuf, "[%5lu.%06lu / %02d-%02d %02d:%02d:%02d.%03lu] ",
+						(unsigned long) t,
+						nanosec_rem / 1000,
+						tmresult.tm_mon+1,
+						tmresult.tm_mday,
+						tmresult.tm_hour,
+						tmresult.tm_min,
+						tmresult.tm_sec,
+						(unsigned long) time.tv_nsec/1000000);
+#endif
 				for (tp = tbuf; tp < tbuf + tlen; tp++)
 					emit_log_char(*tp);
 				printed_len += tlen;
@@ -1387,8 +1410,10 @@ again:
 		retry = 1;
 	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
 
-	if (retry && console_trylock())
+	if (retry && console_trylock()) {
+		retry = 0;
 		goto again;
+	}
 
 	if (wake_klogd)
 		wake_up_klogd();

@@ -31,6 +31,7 @@ int reservenum;		/* Number of memory reservation slots */
 int minsize;		/* Minimum blob size */
 int padsize;		/* Additional padding to blob */
 int phandle_format = PHANDLE_BOTH;	/* Use linux,phandle or phandle properties */
+int show_deleted_list;
 
 static void fill_fullpaths(struct node *tree, const char *prefix)
 {
@@ -93,9 +94,13 @@ static void  __attribute__ ((noreturn)) usage(void)
 	fprintf(stderr, "\t\t\tlegacy - \"linux,phandle\" properties only\n");
 	fprintf(stderr, "\t\t\tepapr - \"phandle\" properties only\n");
 	fprintf(stderr, "\t\t\tboth - Both \"linux,phandle\" and \"phandle\" properties\n");
+	fprintf(stderr, "\t\t\tspecific - '&phandle' appears instead \n\t\t\tof phandle id to distinguish between cell data and\n\t\t\tphandle. It is just for only comparing trees. \n\t\t\tSo, do not use output as runtime dts.\n");
+	fprintf(stderr, "\t\t\tspecific2 - '&phandle(id)' instead of\n\t\t\t'&phandle'\n");
 	fprintf(stderr, "\t-W [no-]<checkname>\n");
 	fprintf(stderr, "\t-E [no-]<checkname>\n");
 	fprintf(stderr, "\t\t\tenable or disable warnings and errors\n");
+	fprintf(stderr, "\t-D\n");
+	fprintf(stderr, "\t\tshow list of deleted nodes and properties at end of dts(dts to dts only)\n");
 	exit(3);
 }
 
@@ -118,7 +123,7 @@ int main(int argc, char *argv[])
 	minsize    = 0;
 	padsize    = 0;
 
-	while ((opt = getopt(argc, argv, "hI:O:o:V:d:R:S:p:fqb:i:vH:sW:E:"))
+	while ((opt = getopt(argc, argv, "hI:O:o:V:d:R:S:p:fqb:i:vH:sW:E:D"))
 			!= EOF) {
 		switch (opt) {
 		case 'I':
@@ -167,6 +172,10 @@ int main(int argc, char *argv[])
 				phandle_format = PHANDLE_EPAPR;
 			else if (streq(optarg, "both"))
 				phandle_format = PHANDLE_BOTH;
+			else if (streq(optarg, "specific"))
+				phandle_format = PHANDLE_SPECIFIC;
+			else if (streq(optarg, "specific2"))
+				phandle_format = PHANDLE_SPECIFIC2;
 			else
 				die("Invalid argument \"%s\" to -H option\n",
 				    optarg);
@@ -182,6 +191,10 @@ int main(int argc, char *argv[])
 
 		case 'E':
 			parse_checks_option(false, true, optarg);
+			break;
+
+		case 'D':
+			show_deleted_list = 1;
 			break;
 
 		case 'h':

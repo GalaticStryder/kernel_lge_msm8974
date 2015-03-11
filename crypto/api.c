@@ -354,6 +354,9 @@ void crypto_shoot_alg(struct crypto_alg *alg)
 }
 EXPORT_SYMBOL_GPL(crypto_shoot_alg);
 
+#if FIPS_CRYPTO_TEST == 5
+int g_tfm_sz = 0;
+#endif
 struct crypto_tfm *__crypto_alloc_tfm(struct crypto_alg *alg, u32 type,
 				      u32 mask)
 {
@@ -366,6 +369,9 @@ struct crypto_tfm *__crypto_alloc_tfm(struct crypto_alg *alg, u32 type,
 	if (tfm == NULL)
 		goto out_err;
 
+#if FIPS_CRYPTO_TEST == 5
+    g_tfm_sz = tfm_size;
+#endif
 	tfm->__crt_alg = alg;
 
 	err = crypto_init_ops(tfm, type, mask);
@@ -584,7 +590,19 @@ void crypto_destroy_tfm(void *mem, struct crypto_tfm *tfm)
 		alg->cra_exit(tfm);
 	crypto_exit_ops(tfm);
 	crypto_mod_put(alg);
+#if FIPS_CRYPTO_TEST == 5
+    {
+        extern void hexdump(unsigned char *, unsigned int);
+        int t = ksize(mem);
+        printk(KERN_ERR "FIPS: Before zeroize crypto tfm size:%d\n", t);
+        hexdump(mem, t);
+#endif
 	kzfree(mem);
+#if FIPS_CRYPTO_TEST == 5
+        printk(KERN_ERR "FIPS: After zeroize crypto tfm\n");
+        hexdump(mem, t);
+    }
+#endif
 }
 EXPORT_SYMBOL_GPL(crypto_destroy_tfm);
 

@@ -28,7 +28,13 @@
 #include <linux/atomic.h>
 
 #define UEVENT_HELPER_PATH_LEN		256
+
+#ifdef CONFIG_LGE_PM_BATTERY_ID_CHECKER
+#define UEVENT_NUM_ENVP			33	/* number of env pointers */
+#else
 #define UEVENT_NUM_ENVP			32	/* number of env pointers */
+#endif
+
 #define UEVENT_BUFFER_SIZE		2048	/* buffer for the variables */
 
 /* path to the userspace helper executed on an event */

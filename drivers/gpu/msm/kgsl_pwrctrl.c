@@ -774,6 +774,43 @@ static ssize_t kgsl_pwrctrl_bus_split_store(struct device *dev,
 	return count;
 }
 
+#ifdef CONFIG_LGE_PM
+static int kgsl_pwrctrl_gpu_pwr_state_show(struct device *dev,
+                                        struct device_attribute *attr,
+                                        char *buf)
+{
+	int enabled;
+	int ret;
+	struct kgsl_device *device = kgsl_device_from_dev(dev);
+	if (device == NULL) return 0;
+
+	if (device->state > KGSL_STATE_SLEEP ) enabled = 0;
+	else enabled = 1;
+
+	ret = snprintf(buf, PAGE_SIZE, "%d\n",enabled);
+	return ret;
+}
+static int kgsl_pwrctrl_gpu_converted_working_time_show(struct device *dev,
+                                        struct device_attribute *attr,
+                                        char *buf)
+{
+	int ret;
+	struct kgsl_device *device = kgsl_device_from_dev(dev);
+	struct kgsl_clk_stats *clkstats;
+
+	if (device == NULL)
+		return 0;
+	clkstats = &device->pwrctrl.clk_stats;
+	ret = snprintf(buf, PAGE_SIZE, "%7d %7d\n",
+			clkstats->converted_on_time_old, clkstats->elapsed_old);
+	if (!test_bit(KGSL_PWRFLAGS_AXI_ON, &device->pwrctrl.power_flags)) {
+		clkstats->converted_on_time_old = 0;
+		clkstats->elapsed_old = 0;
+	}
+	return ret;
+}
+#endif
+
 DEVICE_ATTR(gpuclk, 0644, kgsl_pwrctrl_gpuclk_show, kgsl_pwrctrl_gpuclk_store);
 DEVICE_ATTR(max_gpuclk, 0644, kgsl_pwrctrl_max_gpuclk_show,
 	kgsl_pwrctrl_max_gpuclk_store);
@@ -816,6 +853,14 @@ DEVICE_ATTR(force_rail_on, 0644,
 DEVICE_ATTR(bus_split, 0644,
 	kgsl_pwrctrl_bus_split_show,
 	kgsl_pwrctrl_bus_split_store);
+#ifdef CONFIG_LGE_PM
+DEVICE_ATTR(gpu_pwr_state, 0444,
+	kgsl_pwrctrl_gpu_pwr_state_show,
+	NULL);
+DEVICE_ATTR(gpu_converted_working_time, 0444,
+	kgsl_pwrctrl_gpu_converted_working_time_show,
+	NULL);
+#endif
 
 static const struct device_attribute *pwrctrl_attr_list[] = {
 	&dev_attr_gpuclk,
@@ -834,6 +879,10 @@ static const struct device_attribute *pwrctrl_attr_list[] = {
 	&dev_attr_force_bus_on,
 	&dev_attr_force_rail_on,
 	&dev_attr_bus_split,
+#ifdef CONFIG_LGE_PM
+	&dev_attr_gpu_converted_working_time,
+	&dev_attr_gpu_pwr_state,
+#endif
 	NULL
 };
 
@@ -847,22 +896,38 @@ void kgsl_pwrctrl_uninit_sysfs(struct kgsl_device *device)
 	kgsl_remove_device_sysfs_files(device->dev, pwrctrl_attr_list);
 }
 
+#ifdef CONFIG_LGE_PM
+#define GPU_MHZ 1000000
+#endif
 static void update_statistics(struct kgsl_device *device)
 {
 	struct kgsl_clk_stats *clkstats = &device->pwrctrl.clk_stats;
 	unsigned int on_time = 0;
+#ifdef CONFIG_LGE_PM
+	struct kgsl_pwrctrl *pwr;
+	unsigned int on_time_converted = 0;
+#endif
 	int i;
 	int num_pwrlevels = device->pwrctrl.num_pwrlevels - 1;
 	/*PER CLK TIME*/
+#ifdef CONFIG_LGE_PM
+	pwr = &device->pwrctrl;
+#endif
 	for (i = 0; i < num_pwrlevels; i++) {
 		clkstats->old_clock_time[i] = clkstats->clock_time[i];
 		on_time += clkstats->clock_time[i];
+#ifdef CONFIG_LGE_PM
+		on_time_converted += clkstats->clock_time[i]*(pwr->pwrlevels[i].gpu_freq/GPU_MHZ);
+#endif
 		clkstats->clock_time[i] = 0;
 	}
 	clkstats->old_clock_time[num_pwrlevels] =
 				clkstats->clock_time[num_pwrlevels];
 	clkstats->clock_time[num_pwrlevels] = 0;
 	clkstats->on_time_old = on_time;
+#ifdef CONFIG_LGE_PM
+	clkstats->converted_on_time_old = on_time_converted/(pwr->pwrlevels[pwr->thermal_pwrlevel].gpu_freq/GPU_MHZ);
+#endif
 	clkstats->elapsed_old = clkstats->elapsed;
 	clkstats->elapsed = 0;
 

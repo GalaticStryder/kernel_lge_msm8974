@@ -290,6 +290,10 @@ EXPORT_SYMBOL_GPL(tcp_orphan_count);
 
 int sysctl_tcp_wmem[3] __read_mostly;
 int sysctl_tcp_rmem[3] __read_mostly;
+/*                                                                   */
+int sysctl_ds_enable __read_mostly;
+EXPORT_SYMBOL(sysctl_ds_enable);
+/*                                                                 */
 
 EXPORT_SYMBOL(sysctl_tcp_rmem);
 EXPORT_SYMBOL(sysctl_tcp_wmem);
@@ -3441,7 +3445,9 @@ restart:
 
 			sock_hold(sk);
 			spin_unlock_bh(lock);
-
+/*                                                                              */
+			lock_sock(sk);
+/*                                                                            */
 			local_bh_disable();
 			bh_lock_sock(sk);
 			sk->sk_err = ETIMEDOUT;
@@ -3450,6 +3456,9 @@ restart:
 			tcp_done(sk);
 			bh_unlock_sock(sk);
 			local_bh_enable();
+/*                                                                              */
+			release_sock(sk);
+/*                                                                            */
 			sock_put(sk);
 
 			goto restart;

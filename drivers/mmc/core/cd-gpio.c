@@ -17,13 +17,25 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 
+#if defined(CONFIG_LGE_MMC_DYNAMIC_LOG)
+#include <linux/mmc/debug_log.h>
+#endif
+
 struct mmc_cd_gpio {
 	unsigned int gpio;
 	bool status;
 	char label[0];
 };
 
+#ifdef CONFIG_MACH_LGE
+/*           
+                                                   
+                                
+ */
+int mmc_cd_get_status(struct mmc_host *host)
+#else
 static int mmc_cd_get_status(struct mmc_host *host)
+#endif
 {
 	int ret = -ENOSYS;
 	struct mmc_cd_gpio *cd = host->hotplug.handler_priv;
@@ -55,7 +67,15 @@ static irqreturn_t mmc_cd_gpio_irqt(int irq, void *dev_id)
 		cd->status = status;
 
 		/* Schedule a card detection after a debounce timeout */
+		#ifdef CONFIG_MACH_LGE
+		/*           
+                                                   
+                                  
+   */
+		mmc_detect_change(host, 0);
+		#else
 		mmc_detect_change(host, msecs_to_jiffies(100));
+		#endif
 	}
 out:
 	return IRQ_HANDLED;

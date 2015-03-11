@@ -262,6 +262,12 @@ static void of_spmi_walk_dev_container(struct of_spmi_dev_info *d_info,
 	if (!of_device_is_available(container))
 		return;
 
+#ifdef CONFIG_MACH_LGE
+	if (!of_device_is_available_revision(container))
+		return;
+#endif
+
+
 	/*
 	 * Count the total number of device_nodes so we know how much
 	 * device_store to allocate.
@@ -269,6 +275,10 @@ static void of_spmi_walk_dev_container(struct of_spmi_dev_info *d_info,
 	for_each_child_of_node(container, node) {
 		if (!of_device_is_available(node))
 			continue;
+#ifdef CONFIG_MACH_LGE
+		if (!of_device_is_available_revision(node))
+			continue;
+#endif
 		num_dev_node++;
 	}
 
@@ -283,6 +293,10 @@ static void of_spmi_walk_dev_container(struct of_spmi_dev_info *d_info,
 	for_each_child_of_node(container, node) {
 		if (!of_device_is_available(node))
 			continue;
+#ifdef CONFIG_MACH_LGE
+		if (!of_device_is_available_revision(node))
+			continue;
+#endif
 		of_spmi_init_resource(&r_info, node);
 		of_spmi_sum_resources(&r_info, true);
 		rc = of_spmi_allocate_devnode_resources(d_info, &r_info, i);
@@ -335,6 +349,11 @@ static void of_spmi_walk_slave_container(struct of_spmi_dev_info *d_info,
 
 		if (!of_device_is_available(node))
 			continue;
+
+#ifdef CONFIG_MACH_LGE
+		if (!of_device_is_available_revision(node))
+			continue;
+#endif
 
 		/**
 		 * Check to see if this node contains children which
@@ -431,6 +450,11 @@ int of_spmi_register_devices(struct spmi_controller *ctrl)
 
 			if (!of_device_is_available(node))
 				continue;
+
+#ifdef CONFIG_MACH_LGE
+			if (!of_device_is_available_revision(node))
+				continue;
+#endif
 
 			of_spmi_init_resource(&r_info, node);
 			of_spmi_sum_resources(&r_info, false);

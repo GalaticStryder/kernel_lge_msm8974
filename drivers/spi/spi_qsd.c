@@ -2210,7 +2210,7 @@ static int msm_spi_transfer_one_message(struct spi_master *master,
 	spin_unlock_irqrestore(&dd->queue_lock, flags);
 
 	if (status_error)
-			dd->cur_msg->status = -EIO;
+		dd->cur_msg->status = -EIO;
 	else
 		msm_spi_process_message(dd);
 
@@ -2887,6 +2887,8 @@ struct msm_spi_platform_data * __init msm_spi_dt_to_pdata(
 			&pdata->bam_consumer_pipe_index, DT_OPT,  DT_U32,   0},
 		{"qcom,bam-producer-pipe-index",
 			&pdata->bam_producer_pipe_index, DT_OPT,  DT_U32,   0},
+		{"lge,do-not-create-sysfs-file",
+			&pdata->do_not_create_sysfs_file,DT_OPT,  DT_BOOL,  0},
 		{"qcom,gpio-clk",
 			&dd->spi_gpios[0],               DT_OPT,  DT_GPIO, -1},
 		{"qcom,gpio-miso",
@@ -3240,6 +3242,9 @@ skip_dma_resources:
 	rc = spi_register_master(master);
 	if (rc)
 		goto err_probe_reg_master;
+
+	if (pdata->do_not_create_sysfs_file)
+		return 0;
 
 	rc = sysfs_create_group(&(dd->dev->kobj), &dev_attr_grp);
 	if (rc) {

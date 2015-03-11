@@ -62,6 +62,10 @@ void diag_smd_queue_read(struct diag_smd_info *smd_info);
 int diagfwd_connect(void);
 int diagfwd_disconnect(void);
 #endif
+#ifdef CONFIG_LGE_DIAG_BYPASS
+int diag_bypass_request(const unsigned char *buf, int count);
+int diag_bypass_response(struct diag_request *write_ptr, int data_type);
+#endif
 extern int diag_debug_buf_idx;
 extern unsigned char diag_debug_buf[1024];
 extern struct platform_driver msm_diag_dci_driver;

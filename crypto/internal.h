@@ -27,6 +27,16 @@
 #include <linux/slab.h>
 #include <linux/fips.h>
 
+/*
+ * FIPS_CRYPTO_TEST 1 : aes-cbc self-test failure
+ * FIPS_CRYPTO_TEST 2 : hmac-sha256 self-test failure
+ * FIPS_CRYPTO_TEST 3 : continous PRNG test fail
+ * FIPS_CRYPTO_TEST 4 : Add log for algorithm self-test
+ * FIPS_CRYPTO_TEST 5 : zeroization test.
+*/
+//set number what you want test
+#define FIPS_CRYPTO_TEST 0
+
 /* Crypto notification events. */
 enum {
 	CRYPTO_MSG_ALG_REQUEST,
@@ -50,8 +60,17 @@ extern struct list_head crypto_alg_list;
 extern struct rw_semaphore crypto_alg_sem;
 extern struct blocking_notifier_head crypto_chain;
 
+#ifdef CONFIG_CRYPTO_FIPS
+void set_fips_error(void);
+#endif
+
 #ifdef CONFIG_PROC_FS
+#ifdef CONFIG_CRYPTO_FIPS
+void fips_init_proc(void);
+void crypto_init_proc(int * fips_error, int * cc_mode);
+#else
 void __init crypto_init_proc(void);
+#endif
 void __exit crypto_exit_proc(void);
 #else
 static inline void crypto_init_proc(void)

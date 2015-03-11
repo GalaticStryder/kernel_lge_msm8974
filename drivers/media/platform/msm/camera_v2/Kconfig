@@ -7,6 +7,18 @@ config MSM_CAMERA_SENSOR
           data for camera support. The driver support V4L2
           subdev APIs.
 
+config LG_OIS
+	bool "Qualcomm MSM camera ois support"
+	depends on MSMB_CAMERA
+	---help---
+	Enable support for ois for msm camera.
+
+config LG_PROXY
+        bool "Qualcomm MSM camera proxy support"
+        depends on MSMB_CAMERA
+        ---help---
+        Enable support for proxy sensor for msm camera.
+
 config MSM_CPP
         bool "Qualcomm MSM Camera Post Processing Engine support"
         depends on MSMB_CAMERA
@@ -100,6 +112,44 @@ config MSM_ISPIF_V1
           This module acts as a crossbar between CSID and VFE. Output
           of any CID of MSM_CSI22_HEADER can be routed to of pixel
           or raw data interface in VFE.
+
+config S5K3L2
+    bool "Sensor S5K3L2XX (Samsung 13MP)"
+    depends on MSMB_CAMERA
+    ---help---
+        Support for S5K3L2XX sensor driver.
+        This is a Samsung 13MP Bayer Sensor with autofocus.
+        Say Y if the platform uses S5K3L2 sensor.
+
+config IMX135
+	bool "Sensor IMX135 (BAYER 12M)"
+	depends on MSMB_CAMERA
+	---help---
+		Sony 12 MP Bayer Sensor with auto focus, uses
+		4 mipi lanes, preview config = 2104 x 1560 at 49 fps,
+		snapshot config = 4208 x 3120 at 24 fps,
+		Video HDR support.
+
+
+config IMX132
+        bool "Sensor IMX132 2.4MP MIPI (Bayer 2.4M)"
+	depends on MSMB_CAMERA
+	---help---
+	  SONY 2.4M BAYER MIPI Sensor without Autofocus
+
+config IMX208
+        bool "Sensor IMX208 2.1MP MIPI (Bayer 2.1M)"
+	depends on MSMB_CAMERA
+	---help---
+	  SONY 2.1M BAYER MIPI Sensor without Autofocus
+
+
+config IMX119
+        bool "Sensor IMX119 1.3MP MIPI (Bayer 1.3M)"
+	depends on MSMB_CAMERA
+	---help---
+		SONY 1.3M BAYER MIPI Sensor without Autofocus, uses
+		1 mipi lane.
 
 config IMX134
 	bool "Sensor IMX134 (BAYER 8M)"
@@ -222,3 +272,12 @@ config MSM_GEMINI
 	depends on MSMB_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60 || ARCH_MSM8960)
 	---help---
 	  Enables support for the Gemini JPEG encoder engine for 8x60.
+
+config ZEE_CAMERA
+        bool "LGE camera definition for Zee device"
+	depends on MSMB_CAMERA
+	---help---
+	  config for all zee devices.
+
+config LGE_DUAL_LED
+	bool "LGE dual led support"

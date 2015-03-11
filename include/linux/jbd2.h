@@ -369,34 +369,17 @@ struct jbd2_journal_handle
 	int			h_err;
 
 	/* Flags [no locking] */
-	unsigned int	h_sync:1;	/* sync-on-close */
-	unsigned int	h_jdata:1;	/* force data journaling */
-	unsigned int	h_aborted:1;	/* fatal error on handle */
-	unsigned int	h_cowing:1;	/* COWing block to snapshot */
+	unsigned int	h_sync:		1;	/* sync-on-close */
+	unsigned int	h_jdata:	1;	/* force data journaling */
+	unsigned int	h_aborted:	1;	/* fatal error on handle */
+	unsigned int	h_type:		8;	/* for handle statistics */
+	unsigned int	h_line_no:	16;	/* for handle statistics */
 
-	/* Number of buffers requested by user:
-	 * (before adding the COW credits factor) */
-	unsigned int	h_base_credits:14;
-
-	/* Number of buffers the user is allowed to dirty:
-	 * (counts only buffers dirtied when !h_cowing) */
-	unsigned int	h_user_credits:14;
-
+	unsigned long		h_start_jiffies;
+	unsigned int		h_requested_credits;
 
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 	struct lockdep_map	h_lockdep_map;
-#endif
-
-#ifdef CONFIG_JBD2_DEBUG
-	/* COW debugging counters: */
-	unsigned int h_cow_moved; /* blocks moved to snapshot */
-	unsigned int h_cow_copied; /* blocks copied to snapshot */
-	unsigned int h_cow_ok_jh; /* blocks already COWed during current
-				     transaction */
-	unsigned int h_cow_ok_bitmap; /* blocks not set in COW bitmap */
-	unsigned int h_cow_ok_mapped;/* blocks already mapped in snapshot */
-	unsigned int h_cow_bitmaps; /* COW bitmaps created */
-	unsigned int h_cow_excluded; /* blocks set in exclude bitmap */
 #endif
 };
 
@@ -1053,7 +1036,8 @@ static inline handle_t *journal_current_handle(void)
  */
 
 extern handle_t *jbd2_journal_start(journal_t *, int nblocks);
-extern handle_t *jbd2__journal_start(journal_t *, int nblocks, gfp_t gfp_mask);
+extern handle_t *jbd2__journal_start(journal_t *, int nblocks, gfp_t gfp_mask,
+				     unsigned int type, unsigned int line_no);
 extern int	 jbd2_journal_restart(handle_t *, int nblocks);
 extern int	 jbd2__journal_restart(handle_t *, int nblocks, gfp_t gfp_mask);
 extern int	 jbd2_journal_extend (handle_t *, int nblocks);

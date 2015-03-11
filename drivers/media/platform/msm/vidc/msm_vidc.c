@@ -788,12 +788,28 @@ int msm_vidc_release_buffers(void *instance, int buffer_type)
 		if (inst->session_type == MSM_VIDC_ENCODER)
 			rc = msm_venc_release_buf(instance,
 				&buffer_info);
+#ifdef CONFIG_MACH_LGE
+		/*
+              
+                                                                                     
+                                  
+  */
+		if (rc) {
+			dprintk(VIDC_ERR,
+			"Failed Release buffer: %d, %d, %d\n",
+			buffer_info.m.planes[0].reserved[0],
+			buffer_info.m.planes[0].reserved[1],
+			buffer_info.m.planes[0].length);
+			return rc;
+		}
+#else /* qualcomm or google */
 		if (rc)
 			dprintk(VIDC_ERR,
 				"Failed Release buffer: %d, %d, %d\n",
 				buffer_info.m.planes[0].reserved[0],
 				buffer_info.m.planes[0].reserved[1],
 				buffer_info.m.planes[0].length);
+#endif
 	}
 
 free_and_unmap:

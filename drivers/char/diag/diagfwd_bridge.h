@@ -26,6 +26,9 @@ int diagfwd_disconnect_bridge(int);
 void diagfwd_bridge_init(int index);
 void diagfwd_bridge_exit(void);
 int diagfwd_read_complete_bridge(struct diag_request *diag_read_ptr);
+#ifdef CONFIG_LGE_DIAG_BYPASS
+int diag_bypass_request_bridge(const unsigned char *buf, int count);
+#endif
 
 /* Diag-Bridge structure, n bridges can be used at same time
  * for instance SMUX, HSIC working at same time

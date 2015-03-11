@@ -39,7 +39,9 @@
 #include <linux/sched.h>
 #include <linux/init.h>
 #include <linux/miscdevice.h>
+#include <linux/kthread.h>
 #include <linux/delay.h>
+#include <linux/slab.h>
 #include <asm/uaccess.h>
 
 
@@ -49,17 +51,38 @@
 
 
 static struct hwrng *current_rng;
+static struct task_struct *hwrng_fill;
 static LIST_HEAD(rng_list);
 static DEFINE_MUTEX(rng_mutex);
 static int data_avail;
-static u8 rng_buffer[SMP_CACHE_BYTES < 32 ? 32 : SMP_CACHE_BYTES]
-	__cacheline_aligned;
+static u8 *rng_buffer, *rng_fillbuf;
+static unsigned short current_quality = 700; /* an arbitrary 70% */
+
+module_param(current_quality, ushort, 0644);
+MODULE_PARM_DESC(current_quality,
+		 "current hwrng entropy estimation per mill");
+
+static void start_khwrngd(void);
+
+static size_t rng_buffer_size(void)
+{
+	return SMP_CACHE_BYTES < 32 ? 32 : SMP_CACHE_BYTES;
+}
 
 static inline int hwrng_init(struct hwrng *rng)
 {
-	if (!rng->init)
-		return 0;
-	return rng->init(rng);
+	int err;
+
+	if (rng->init) {
+		err = rng->init(rng);
+		if (err)
+			return err;
+	}
+
+	if (current_quality > 0 && !hwrng_fill)
+		start_khwrngd();
+
+	return 0;
 }
 
 static inline void hwrng_cleanup(struct hwrng *rng)
@@ -116,7 +139,7 @@ static ssize_t rng_dev_read(struct file *filp, char __user *buf,
 
 		if (!data_avail) {
 			bytes_read = rng_get_data(current_rng, rng_buffer,
-				sizeof(rng_buffer),
+				rng_buffer_size(),
 				!(filp->f_flags & O_NONBLOCK));
 			if (bytes_read < 0) {
 				err = bytes_read;
@@ -295,6 +318,36 @@ err_misc_dereg:
 	goto out;
 }
 
+static int hwrng_fillfn(void *unused)
+{
+	long rc;
+
+	while (!kthread_should_stop()) {
+		if (!current_rng)
+			break;
+		rc = rng_get_data(current_rng, rng_fillbuf,
+				  rng_buffer_size(), 1);
+		if (rc <= 0) {
+			pr_warn("hwrng: no data available\n");
+			msleep_interruptible(10000);
+			continue;
+		}
+		add_hwgenerator_randomness((void *)rng_fillbuf, rc,
+					   rc * current_quality * 8 >> 10);
+	}
+	hwrng_fill = 0;
+	return 0;
+}
+
+static void start_khwrngd(void)
+{
+	hwrng_fill = kthread_run(hwrng_fillfn, NULL, "hwrng");
+	if (hwrng_fill == ERR_PTR(-ENOMEM)) {
+		pr_err("hwrng_fill thread creation failed");
+		hwrng_fill = NULL;
+	}
+}
+
 int hwrng_register(struct hwrng *rng)
 {
 	int must_register_misc;
@@ -306,6 +359,21 @@ int hwrng_register(struct hwrng *rng)
 		goto out;
 
 	mutex_lock(&rng_mutex);
+
+	/* kmalloc makes this safe for virt_to_page() in virtio_rng.c */
+	err = -ENOMEM;
+	if (!rng_buffer) {
+		rng_buffer = kmalloc(rng_buffer_size(), GFP_KERNEL);
+		if (!rng_buffer)
+			goto out_unlock;
+	}
+	if (!rng_fillbuf) {
+		rng_fillbuf = kmalloc(rng_buffer_size(), GFP_KERNEL);
+		if (!rng_fillbuf) {
+			kfree(rng_buffer);
+			goto out_unlock;
+		}
+	}
 
 	/* Must not register two RNGs with the same name. */
 	err = -EEXIST;
@@ -360,13 +428,26 @@ void hwrng_unregister(struct hwrng *rng)
 				current_rng = NULL;
 		}
 	}
-	if (list_empty(&rng_list))
+	if (list_empty(&rng_list)) {
 		unregister_miscdev();
+		if (hwrng_fill)
+			kthread_stop(hwrng_fill);
+	}
 
 	mutex_unlock(&rng_mutex);
 }
 EXPORT_SYMBOL_GPL(hwrng_unregister);
 
+static void __exit hwrng_exit(void)
+{
+	mutex_lock(&rng_mutex);
+	BUG_ON(current_rng);
+	kfree(rng_buffer);
+	kfree(rng_fillbuf);
+	mutex_unlock(&rng_mutex);
+}
+
+module_exit(hwrng_exit);
 
 MODULE_DESCRIPTION("H/W Random Number Generator (RNG) driver");
 MODULE_LICENSE("GPL");

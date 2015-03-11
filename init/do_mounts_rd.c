@@ -79,6 +79,10 @@ identify_ramdisk_image(int fd, int start_block, decompress_fn *decompressor)
 	sys_read(fd, buf, size);
 
 	*decompressor = decompress_method(buf, size, &compress_name);
+	printk(KERN_ERR
+		   "RAMDISK: decompressor name is %s!\n",
+		   compress_name);
+
 	if (compress_name) {
 		printk(KERN_NOTICE "RAMDISK: %s image found at block %d\n",
 		       compress_name, start_block);

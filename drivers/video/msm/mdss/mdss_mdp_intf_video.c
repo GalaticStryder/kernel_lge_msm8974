@@ -23,6 +23,9 @@
 #include "mdss_panel.h"
 #include "mdss_debug.h"
 #include "mdss_mdp_trace.h"
+#ifdef CONFIG_MACH_LGE
+#include <mach/board_lge.h>
+#endif
 
 /* wait for at least 2 vsyncs for lowest refresh rate (24hz) */
 #define VSYNC_TIMEOUT_US 100000
@@ -63,6 +66,9 @@ struct mdss_mdp_video_ctx {
 
 	atomic_t vsync_ref;
 	spinlock_t vsync_lock;
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+	spinlock_t dfps_lock;
+#endif
 	struct mutex vsync_mtx;
 	struct list_head vsync_handlers;
 };
@@ -86,9 +92,13 @@ static inline u32 mdss_mdp_video_line_count(struct mdss_mdp_ctl *ctl)
 	if (!ctl || !ctl->priv_data)
 		goto line_count_exit;
 	ctx = ctl->priv_data;
+#ifndef CONFIG_LGE_DEVFREQ_DFPS
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
+#endif
 	line_cnt = mdp_video_read(ctx, MDSS_MDP_REG_INTF_LINE_COUNT);
+#ifndef CONFIG_LGE_DEVFREQ_DFPS
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+#endif
 line_count_exit:
 	return line_cnt;
 }
@@ -189,6 +199,15 @@ static int mdss_mdp_video_timegen_setup(struct mdss_mdp_ctl *ctl,
 		       (vsync_polarity << 1) | /* VSYNC Polarity */
 		       (hsync_polarity << 0);  /* HSYNC Polarity */
 
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+	if (lge_get_boot_mode() == LGE_BOOT_MODE_FACTORY) {
+		if (MDSS_INTF_HDMI == ctx->intf_type) {
+			pr_info("[minios] Enable HDMI Grayscale Ramp pattern");
+			mdp_video_write(ctx, MDSS_MDP_REG_INTF_TPG_ENABLE, 0x1);
+			mdp_video_write(ctx, MDSS_MDP_REG_INTF_TPG_MAIN_CONTROL, 0x40);
+		}
+	}
+#endif
 	mdp_video_write(ctx, MDSS_MDP_REG_INTF_HSYNC_CTL, hsync_ctl);
 	mdp_video_write(ctx, MDSS_MDP_REG_INTF_VSYNC_PERIOD_F0,
 			vsync_period * hsync_period);
@@ -499,7 +518,7 @@ static void mdss_mdp_video_underrun_intr_done(void *arg)
 	MDSS_XLOG(ctl->num, ctl->underrun_cnt);
 	MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0", "dsi1", "edp", "hdmi", "panic");
 	trace_mdp_video_underrun_done(ctl->num, ctl->underrun_cnt);
-	pr_debug("display underrun detected for ctl=%d count=%d\n", ctl->num,
+	pr_err("display underrun detected for ctl=%d count=%d\n", ctl->num,
 			ctl->underrun_cnt);
 
 	if (ctl->opmode & MDSS_MDP_CTL_OP_PACK_3D_ENABLE)
@@ -627,6 +646,12 @@ static int mdss_mdp_video_config_fps(struct mdss_mdp_ctl *ctl,
 			mdss_mdp_display_wait4comp(ctl);
 		} else if (pdata->panel_info.dfps_update
 				== DFPS_IMMEDIATE_PORCH_UPDATE_MODE){
+
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+			u32 line_cnt;
+			unsigned long flags;
+#endif
+
 			if (!ctx->timegen_en) {
 				pr_err("TG is OFF. DFPS mode invalid\n");
 				return -EINVAL;
@@ -644,6 +669,20 @@ static int mdss_mdp_video_config_fps(struct mdss_mdp_ctl *ctl,
 			if (rc <= 0)
 				return rc;
 
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+			mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
+			spin_lock_irqsave(&ctx->dfps_lock, flags);
+
+			line_cnt = mdss_mdp_video_line_count(ctl);
+			if (line_cnt >= pdata->panel_info.yres/2) {
+				pr_err("Too few lines left line_cnt=%d yres/2=%d",
+						line_cnt,
+						pdata->panel_info.yres/2);
+				spin_unlock_irqrestore(&ctx->dfps_lock, flags);
+				mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+				return -EPERM;
+			}
+#else
 			if (mdss_mdp_video_line_count(ctl) >=
 					pdata->panel_info.yres/2) {
 				pr_err("Too few lines left line_cnt = %d y_res/2 = %d\n",
@@ -651,9 +690,14 @@ static int mdss_mdp_video_config_fps(struct mdss_mdp_ctl *ctl,
 					pdata->panel_info.yres/2);
 				return -EPERM;
 			}
+#endif
 			rc = mdss_mdp_video_vfp_fps_update(ctl, new_fps);
 			if (rc < 0) {
 				pr_err("%s: Error during DFPS\n", __func__);
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+				spin_unlock_irqrestore(&ctx->dfps_lock, flags);
+				mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+#endif
 				return rc;
 			}
 			if (sctl) {
@@ -661,6 +705,10 @@ static int mdss_mdp_video_config_fps(struct mdss_mdp_ctl *ctl,
 								new_fps);
 				if (rc < 0) {
 					pr_err("%s: DFPS error\n", __func__);
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+					spin_unlock_irqrestore(&ctx->dfps_lock, flags);
+					mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+#endif
 					return rc;
 				}
 			}
@@ -669,6 +717,10 @@ static int mdss_mdp_video_config_fps(struct mdss_mdp_ctl *ctl,
 						(void *)new_fps);
 			WARN(rc, "intf %d panel fps update error (%d)\n",
 							ctl->intf_num, rc);
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+			spin_unlock_irqrestore(&ctx->dfps_lock, flags);
+			mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+#endif
 		} else {
 			pr_err("intf %d panel, unknown FPS mode\n",
 							ctl->intf_num);
@@ -842,6 +894,9 @@ int mdss_mdp_video_start(struct mdss_mdp_ctl *ctl)
 	ctx->intf_type = ctl->intf_type;
 	init_completion(&ctx->vsync_comp);
 	spin_lock_init(&ctx->vsync_lock);
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+	spin_lock_init(&ctx->dfps_lock);
+#endif
 	mutex_init(&ctx->vsync_mtx);
 	atomic_set(&ctx->vsync_ref, 0);
 	INIT_WORK(&ctl->recover_work, recover_underrun_work);

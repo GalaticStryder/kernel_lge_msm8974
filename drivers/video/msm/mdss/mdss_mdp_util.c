@@ -186,8 +186,28 @@ irqreturn_t mdss_mdp_isr(int irq, void *ptr)
 	}
 
 	if (isr & MDSS_MDP_INTR_INTF_1_VSYNC) {
+#ifndef CONFIG_LGE_VSYNC_SKIP
 		mdss_mdp_intr_done(MDP_INTR_VSYNC_INTF_1);
 		mdss_misr_crc_collect(mdata, DISPLAY_MISR_DSI0);
+#else
+		if (mdata->enable_skip_vsync) {
+			mdata->bucket += mdata->weight;
+			if (mdata->skip_first == false) {
+				mdata->skip_first = true;
+				mdss_mdp_intr_done(MDP_INTR_VSYNC_INTF_1);
+				mdss_misr_crc_collect(mdata, DISPLAY_MISR_DSI0);
+			} else if (mdata->skip_value <= mdata->bucket) {
+				mdss_mdp_intr_done(MDP_INTR_VSYNC_INTF_1);
+				mdss_misr_crc_collect(mdata, DISPLAY_MISR_DSI0);
+				mdata->bucket -= mdata->skip_value;
+			} else {
+				mdata->skip_count++;
+			}
+		} else {
+			mdss_mdp_intr_done(MDP_INTR_VSYNC_INTF_1);
+			mdss_misr_crc_collect(mdata, DISPLAY_MISR_DSI0);
+		}
+#endif
 	}
 
 	if (isr & MDSS_MDP_INTR_INTF_2_VSYNC) {

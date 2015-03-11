@@ -200,6 +200,7 @@ static void close_delayed_work(struct work_struct *work)
 
 static int soc_compr_free(struct snd_compr_stream *cstream)
 {
+#ifdef CONFIG_SND_SOC_WM5110
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
 	struct snd_soc_platform *platform = rtd->platform;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
@@ -254,6 +255,7 @@ static int soc_compr_free(struct snd_compr_stream *cstream)
 	}
 
 	mutex_unlock(&rtd->pcm_mutex);
+#endif
 	return 0;
 }
 
@@ -696,7 +698,16 @@ int soc_new_compress(struct snd_soc_pcm_runtime *rtd, int num)
 	/* check client and interface hw capabilities */
 	snprintf(new_name, sizeof(new_name), "%s %s-%d",
 			rtd->dai_link->stream_name, codec_dai->name, num);
+#ifdef CONFIG_SND_SOC_WM5110
+	if (codec_dai->driver->playback.channels_min)
+		direction = SND_COMPRESS_PLAYBACK;
+	else if (codec_dai->driver->capture.channels_min)
+		direction = SND_COMPRESS_CAPTURE;
+	else
+		return -EINVAL;
+#else
 	direction = SND_COMPRESS_PLAYBACK;
+#endif
 	compr = kzalloc(sizeof(*compr), GFP_KERNEL);
 	if (compr == NULL) {
 		snd_printk(KERN_ERR "Cannot allocate compr\n");

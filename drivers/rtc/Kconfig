@@ -17,6 +17,12 @@ menuconfig RTC_CLASS
 
 if RTC_CLASS
 
+config LGE_PM_RTC_PWROFF_ALARM
+	bool "RTC pwroff alarm set"
+	default n
+	help
+	  provide RTC power off alarm
+
 config RTC_HCTOSYS
 	bool "Set system time from RTC on startup and resume"
 	depends on RTC_CLASS = y

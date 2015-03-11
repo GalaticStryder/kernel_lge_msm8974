@@ -126,7 +126,11 @@ struct alg_test_desc {
 
 static unsigned int IDX[8] = { IDX1, IDX2, IDX3, IDX4, IDX5, IDX6, IDX7, IDX8 };
 
+#if FIPS_CRYPTO_TEST == 5
+void hexdump(unsigned char *buf, unsigned int len)
+#else
 static void hexdump(unsigned char *buf, unsigned int len)
+#endif
 {
 	print_hex_dump(KERN_CONT, "", DUMP_PREFIX_OFFSET,
 			16, 1,
@@ -2755,7 +2759,7 @@ int alg_test(const char *driver, const char *alg, u32 type, u32 mask)
 {
 	int i;
 	int j;
-	int rc;
+	int rc = 0;
 
 	if ((type & CRYPTO_ALG_TYPE_MASK) == CRYPTO_ALG_TYPE_CIPHER) {
 		char nalg[CRYPTO_MAX_ALG_NAME];
@@ -2780,6 +2784,11 @@ int alg_test(const char *driver, const char *alg, u32 type, u32 mask)
 	if (i < 0 && j < 0)
 		goto notest;
 
+#if FIPS_CRYPTO_TEST == 4
+    if (fips_enabled)
+        printk(KERN_INFO "alg: Start self-tests for %s (%s)\n", driver, alg);
+#endif
+
 	if (fips_enabled && ((i >= 0 && !alg_test_descs[i].fips_allowed) ||
 			     (j >= 0 && !alg_test_descs[j].fips_allowed)))
 		goto non_fips_alg;
@@ -2793,8 +2802,14 @@ int alg_test(const char *driver, const char *alg, u32 type, u32 mask)
 					     type, mask);
 
 test_done:
-	if (fips_enabled && rc)
+	if (fips_enabled && rc) {
+		printk(KERN_INFO "alg: %s (%s) self-test failed\n", driver, alg);
+#ifdef CONFIG_CRYPTO_FIPS
+		set_fips_error();
+#else
 		panic("%s: %s alg self test failed in fips mode!\n", driver, alg);
+#endif
+	}
 
 	if (fips_enabled && !rc)
 		printk(KERN_INFO "alg: self-tests for %s (%s) passed\n",
@@ -2806,7 +2821,15 @@ notest:
 	printk(KERN_INFO "alg: No test for %s (%s)\n", alg, driver);
 	return 0;
 non_fips_alg:
+#ifdef CONFIG_CRYPTO_FIPS
+	if (!rc)
+		printk(KERN_INFO "alg(non-FIPS): self-tests for %s (%s) passed\n", driver, alg);
+	else
+		printk(KERN_INFO "alg(non-FIPS): self-tests for %s (%s) failed\n", driver, alg);
+	return rc;
+#else
 	return -EINVAL;
+#endif
 }
 
 #endif /* CONFIG_CRYPTO_MANAGER_DISABLE_TESTS */

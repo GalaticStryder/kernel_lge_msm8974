@@ -28,6 +28,10 @@ static struct persistent_ram_zone *ram_console_zone;
 static const char *bootinfo;
 static size_t bootinfo_size;
 
+/*                                                                    
+                                                                       
+  */
+#define USE_RAM_CONSOLE_ECC	false
 static void
 ram_console_write(struct console *console, const char *s, unsigned int count)
 {
@@ -55,7 +59,7 @@ static int __devinit ram_console_probe(struct platform_device *pdev)
 	struct ram_console_platform_data *pdata = pdev->dev.platform_data;
 	struct persistent_ram_zone *prz;
 
-	prz = persistent_ram_init_ringbuffer(&pdev->dev, true);
+	prz = persistent_ram_init_ringbuffer(&pdev->dev, USE_RAM_CONSOLE_ECC);
 	if (IS_ERR(prz))
 		return PTR_ERR(prz);
 

@@ -1040,6 +1040,29 @@ struct afe_loopback_cfg_v1 {
 
 } __packed;
 
+#ifdef CONFIG_SND_SOC_CS35L32
+#define AFE_MODULE_RTIP_ENABLE         	0x000101FF
+#define AFE_PARAM_RTIP_ENABLE          	0x000102FF
+#define AFE_PARAM_RTIP_DEBUG		0x00010300
+#define AFE_PARAM_RTIP_PERF		0x00010301
+
+/*  Payload of the #AFE_PARAM_ID_LOOPBACK_CONFIG ,
+ * which enables/disables one AFE loopback.
+ */
+struct afe_param_rtip_enable {
+       u16 enable;
+       u16 reserved;
+} __attribute__ ((packed));
+
+
+struct afe_rtip_v1 {
+	struct apr_hdr	hdr;
+	struct afe_port_cmd_set_param_v2 param;
+	struct afe_port_param_data_v2    pdata;
+	struct afe_param_rtip_enable	 rtip_t;
+} __packed;
+#endif
+
 #define AFE_MODULE_SPEAKER_PROTECTION	0x00010209
 #define AFE_PARAM_ID_SPKR_PROT_CONFIG	0x0001020a
 #define AFE_API_VERSION_SPKR_PROT_CONFIG	0x1
@@ -2501,6 +2524,10 @@ struct asm_softvolume_params {
 #define ASM_STREAM_POSTPROC_TOPO_ID_DEFAULT 0x00010BE4
 
 #define ASM_STREAM_POSTPROC_TOPO_ID_NONE 0x00010C68
+
+#if defined(CONFIG_SND_LGE_EFFECT) || defined(CONFIG_SND_LGE_NORMALIZER) || defined(CONFIG_SND_LGE_MABL)
+#define ASM_STREAM_POSTPROC_TOPO_ID_DEFAULT_LGE 0x10009009
+#endif
 
 #define ASM_MEDIA_FMT_EVRCB_FS 0x00010BEF
 

@@ -68,6 +68,7 @@ static struct mdss_dsi_event dsi_event;
 
 static int dsi_event_thread(void *data);
 
+
 void mdss_dsi_ctrl_init(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	if (ctrl->panel_data.panel_info.pdest == DISPLAY_1) {
@@ -360,6 +361,10 @@ void mdss_dsi_host_init(struct mdss_panel_data *pdata)
 	/* DSI_ERR_INT_MASK0 */
 	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x010c, 0x13ff3fe0);
 
+#ifdef CONFIG_MACH_LGE
+	/* disable force_mipi_clk_hs until panel initializing */
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0xac, 0x0);
+#endif
 	intr_ctrl |= DSI_INTR_ERROR_MASK;
 	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x0110,
 				intr_ctrl); /* DSI_INTL_CTRL */
@@ -877,8 +882,15 @@ int mdss_dsi_cmds_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 		if (!mctrl)
 			pr_warn("%s: Unable to get master control\n",
 				__func__);
+#ifdef CONFIG_MACH_LGE
+		else{
+			mdelay(5);
+			mctrl_restore = __mdss_dsi_cmd_mode_config(mctrl, 1);
+		}
+#else
 		else
 			mctrl_restore = __mdss_dsi_cmd_mode_config(mctrl, 1);
+#endif
 	}
 
 	ctrl_restore = __mdss_dsi_cmd_mode_config(ctrl, 1);
@@ -1438,7 +1450,15 @@ static int dsi_event_thread(void *data)
 	struct sched_param param;
 	u32 todo = 0;
 	int ret;
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+	struct mdss_dsi_ctrl_pdata *mctrl = NULL;
 
+	if (mdss_dsi_broadcast_mode_enabled()) {
+		mctrl = mdss_dsi_get_master_ctrl();
+		if (!mctrl)
+			pr_err("%s: unable to get master control\n", __func__);
+	}
+#endif
 	param.sched_priority = 16;
 	ret = sched_setscheduler_nocheck(current, SCHED_FIFO, &param);
 	if (ret)
@@ -1475,9 +1495,17 @@ static int dsi_event_thread(void *data)
 			mutex_unlock(&ctrl->mutex);
 		}
 
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+		if (todo & DSI_EV_DSI_FIFO_EMPTY) {
+			mdss_dsi_sw_reset_restore(ctrl);
+			if (mctrl)
+				mdss_dsi_sw_reset_restore(mctrl);
+		}
+#else
 		if (todo & DSI_EV_DSI_FIFO_EMPTY)
 			mdss_dsi_sw_reset_restore(ctrl);
 
+#endif
 		if (todo & DSI_EV_MDP_BUSY_RELEASE) {
 			spin_lock_irqsave(&ctrl->mdp_lock, flag);
 			ctrl->mdp_busy = false;
@@ -1558,10 +1586,10 @@ void mdss_dsi_fifo_status(struct mdss_dsi_ctrl_pdata *ctrl)
 		pr_err("%s: status=%x\n", __func__, status);
 		if (status & 0x0080)  /* CMD_DMA_FIFO_UNDERFLOW */
 			dsi_send_events(ctrl, DSI_EV_MDP_FIFO_UNDERFLOW);
-			MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0", "dsi1",
-						"edp", "hdmi", "panic");
 		if (status & 0x11110000) /* DLN_FIFO_EMPTY */
 			dsi_send_events(ctrl, DSI_EV_DSI_FIFO_EMPTY);
+		MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0", "dsi1",
+					"edp", "hdmi", "panic");
 	}
 }
 

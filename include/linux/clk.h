@@ -230,7 +230,7 @@ void clk_put(struct clk *clk);
  * Returns rounded clock rate in Hz, or negative errno.
  */
 long clk_round_rate(struct clk *clk, unsigned long rate);
- 
+
 /**
  * clk_set_rate - set the clock rate for a clock source
  * @clk: clock source
@@ -239,7 +239,7 @@ long clk_round_rate(struct clk *clk, unsigned long rate);
  * Returns success (0) or negative errno.
  */
 int clk_set_rate(struct clk *clk, unsigned long rate);
- 
+
 /**
  * clk_set_parent - set the parent clock source for this clock
  * @clk: clock source
@@ -247,7 +247,20 @@ int clk_set_rate(struct clk *clk, unsigned long rate);
  *
  * Returns success (0) or negative errno.
  */
+
 int clk_set_parent(struct clk *clk, struct clk *parent);
+
+#ifdef CONFIG_ANDROID_SW_IRRC
+/**
+ * get_clk_count - get count of clock source for this clock
+ * @clk: clock source
+ *
+ * Returns success clk's count.
+ */
+
+unsigned int get_clk_count(struct clk *clk);
+#endif  // CONFIG_ANDROID_SW_IRRC
+
 
 /**
  * clk_get_parent - get the parent clock source for this clock

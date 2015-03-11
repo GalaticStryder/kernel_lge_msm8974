@@ -18,6 +18,8 @@
 #include "msm_cci.h"
 #include "msm_eeprom.h"
 
+/*#define MSM_EEPROM_DEBUG*/
+
 #undef CDBG
 #ifdef MSM_EEPROM_DEBUG
 #define CDBG(fmt, args...) pr_err(fmt, ##args)
@@ -446,7 +448,7 @@ static struct msm_cam_clk_info cam_8960_clk_info[] = {
 };
 
 static struct msm_cam_clk_info cam_8974_clk_info[] = {
-	[SENSOR_CAM_MCLK] = {"cam_src_clk", 19200000},
+	[SENSOR_CAM_MCLK] = {"cam_src_clk", 24000000},
 	[SENSOR_CAM_CLK] = {"cam_clk", 0},
 };
 
@@ -904,6 +906,57 @@ static int msm_eeprom_spi_remove(struct spi_device *sdev)
 	return 0;
 }
 
+#if defined(CONFIG_MACH_LGE)
+static int verify_eeprom_data(struct msm_eeprom_ctrl_t *e_ctrl)
+{
+	int k, r_g, b_g, g_g;
+	int awb_checksum, lsc_checksum_5k, lsc_checksum_4k;
+	int lsc_datasum_5k, lsc_datasum_4k, lsc_cal_5k, lsc_cal_4k;
+	int rc = -1;
+
+	lsc_datasum_5k = 0;
+	lsc_datasum_4k = 0;
+	lsc_cal_5k = 0;
+	lsc_cal_4k = 0;
+
+	if(e_ctrl->cal_data.mapdata[0x0700] == 0x03) { /* FUJI module */
+		r_g =  (e_ctrl->cal_data.mapdata[0x0000]*256) + e_ctrl->cal_data.mapdata[0x0001];
+		b_g = (e_ctrl->cal_data.mapdata[0x0002]*256) + e_ctrl->cal_data.mapdata[0x0003];
+		g_g = (e_ctrl->cal_data.mapdata[0x0004]*256) + e_ctrl->cal_data.mapdata[0x0005];
+		awb_checksum = (e_ctrl->cal_data.mapdata[0x0006]*256) + e_ctrl->cal_data.mapdata[0x0007];
+	} else {
+		r_g =  (e_ctrl->cal_data.mapdata[0x0001]*256) + e_ctrl->cal_data.mapdata[0x0000];
+		b_g = (e_ctrl->cal_data.mapdata[0x0003]*256) + e_ctrl->cal_data.mapdata[0x0002];
+		g_g = (e_ctrl->cal_data.mapdata[0x0005]*256) + e_ctrl->cal_data.mapdata[0x0004];
+		awb_checksum = (e_ctrl->cal_data.mapdata[0x0006]*256) + e_ctrl->cal_data.mapdata[0x0007];
+	}
+
+	for (k = 0; k < (17 * 13 * 4); k++) {
+		lsc_datasum_5k += e_ctrl->cal_data.mapdata[0x000C+k];
+		lsc_cal_5k = lsc_datasum_5k & 0xffff;
+	}
+
+	for (k = 0; k < (17 * 13 * 4); k++) {
+		lsc_datasum_4k += (e_ctrl->cal_data.mapdata[0x038A+k]);
+		lsc_cal_4k = lsc_datasum_4k & 0xffff;
+	}
+
+	lsc_checksum_5k = (e_ctrl->cal_data.mapdata[0x0380]*256) + e_ctrl->cal_data.mapdata[0x0381];
+	lsc_checksum_4k = (e_ctrl->cal_data.mapdata[0x06FE]*256) + e_ctrl->cal_data.mapdata[0x06FF];
+
+	if(((r_g + b_g + g_g) == awb_checksum)
+	   && (lsc_cal_5k == lsc_checksum_5k) && (lsc_cal_4k == lsc_checksum_4k)){
+		rc = 0;
+	} else {
+		pr_err("r_g = %d, b_g = %d, g_g = %d, awb_checksum = %d\n", r_g, b_g, g_g, awb_checksum);
+		pr_err("lsc_cal_5k = %d, lsc_checksum_5k = %d\n", lsc_cal_5k, lsc_checksum_5k);
+		pr_err("lsc_cal_4k = %d, lsc_checksum_4k = %d\n", lsc_cal_4k, lsc_checksum_4k);
+	}
+
+	return rc;
+}
+#endif
+
 static int msm_eeprom_platform_probe(struct platform_device *pdev)
 {
 	int rc = 0;
@@ -1022,11 +1075,32 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 		pr_err("failed rc %d\n", rc);
 		goto memdata_free;
 	}
+
+#if !defined(CONFIG_MACH_LGE)
 	rc = read_eeprom_memory(e_ctrl, &e_ctrl->cal_data);
 	if (rc < 0) {
 		pr_err("%s read_eeprom_memory failed\n", __func__);
 		goto power_down;
 	}
+
+#else
+	j = 3; //Retry cnt
+	do {
+		rc = read_eeprom_memory(e_ctrl, &e_ctrl->cal_data);
+		if (rc < 0) {
+			pr_err("%s read_eeprom_memory failed\n", __func__);
+			goto power_down;
+		}
+
+		if(!verify_eeprom_data(e_ctrl)) {
+			pr_info("%s: eeprom data checksum success!\n", __func__);
+			break;
+		} else {
+			pr_err("%s: eeprom data checksum failed!, retry_cnt = %d\n", __func__, j--);
+		}
+	} while(j);
+#endif
+
 	for (j = 0; j < e_ctrl->cal_data.num_data; j++)
 		CDBG("memory_data[%d] = 0x%X\n", j,
 		     e_ctrl->cal_data.mapdata[j]);

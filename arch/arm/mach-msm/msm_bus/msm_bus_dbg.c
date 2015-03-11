@@ -29,6 +29,19 @@
 #define MAX_BUFF_SIZE 4096
 #define FILL_LIMIT 128
 
+#ifdef CONFIG_LGE_SYSTRACE_EXT
+#define msm_bus_dbg_systrace_begin(tag)\
+do {trace_printk("tracing_mark_write: B|%d|%s\n", current->pid, tag);}while (0)
+#define  msm_bus_dbg_systrace_end()\
+do {trace_printk("tracing_mark_write: E\n");}while (0)
+#define  msm_bus_dbg_systrace_clock_state_change(pid, tag, value) \
+do {trace_printk("clock_set_rate: %s state=%llu cpu_id=%d\n", tag, value, pid);}while(0)
+#define  msm_bus_dbg_systrace_state_change(pid, tag, value) \
+do {trace_printk("tracing_mark_write: C|%d|%s|%llu\n", pid, tag, value);}while(0)
+
+#define MSM_BUS_DEBUG_LOG_PID -1
+#endif
+
 static struct dentry *clients;
 static struct dentry *dir;
 static DEFINE_MUTEX(msm_bus_dbg_fablist_lock);
@@ -342,6 +355,33 @@ static void msm_bus_dbg_free_client(uint32_t clid)
 	}
 }
 
+#ifdef CONFIG_LGE_SYSTRACE_EXT
+#define BUS_CLIENT_SKIP 0
+#define BUS_CLIENT_GPU 1
+#define BUS_CLIENT_KRAIT 2
+#define BUS_CLIENT_MDP 4
+
+static void msm_bus_dbg_systrace(const struct msm_bus_scale_pdata *pdata,
+		int  use_case_index)
+{
+	const char* name = (const char *)pdata->name;
+	int path_num = 0;
+
+	uint64_t ab =  pdata->usecase[use_case_index].vectors[path_num].ab;
+	uint64_t ib =  pdata->usecase[use_case_index].vectors[path_num].ib;
+	char tag_buf_ab[100] = {0, };
+	char tag_buf_ib[100] = {0, };
+
+	sprintf(tag_buf_ab, "%s_ab", name);
+	sprintf(tag_buf_ib, "%s_ib", name);
+
+	msm_bus_dbg_systrace_state_change(MSM_BUS_DEBUG_LOG_PID, tag_buf_ab, ab);
+	msm_bus_dbg_systrace_state_change(MSM_BUS_DEBUG_LOG_PID, tag_buf_ib, ib);
+
+	return;
+}
+#endif
+
 static int msm_bus_dbg_fill_cl_buffer(const struct msm_bus_scale_pdata *pdata,
 	int index, uint32_t clid)
 {
@@ -393,6 +433,9 @@ static int msm_bus_dbg_fill_cl_buffer(const struct msm_bus_scale_pdata *pdata,
 			pdata->usecase[index].vectors[j].ib);
 	i += scnprintf(buf + i, MAX_BUFF_SIZE - i, "\n");
 
+#ifdef CONFIG_LGE_SYSTRACE_EXT
+	msm_bus_dbg_systrace(pdata, index);
+#endif
 	cldata->size = i;
 	return i;
 }

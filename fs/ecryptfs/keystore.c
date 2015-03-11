@@ -1148,8 +1148,8 @@ decrypt_pki_encrypted_session_key(struct ecryptfs_auth_tok *auth_tok,
 	u8 cipher_code = 0;
 	struct ecryptfs_msg_ctx *msg_ctx;
 	struct ecryptfs_message *msg = NULL;
-	char *auth_tok_sig;
-	char *payload;
+	char *auth_tok_sig = NULL;
+	char *payload = NULL;
 	size_t payload_len;
 	int rc;
 
@@ -1204,6 +1204,10 @@ decrypt_pki_encrypted_session_key(struct ecryptfs_auth_tok *auth_tok,
 out:
 	if (msg)
 		kfree(msg);
+	if (auth_tok_sig)
+        kfree(auth_tok_sig);
+	if (payload)
+        kfree(payload);
 	return rc;
 }
 
@@ -1672,6 +1676,7 @@ decrypt_passphrase_encrypted_session_key(struct ecryptfs_auth_tok *auth_tok,
 		.flags = CRYPTO_TFM_REQ_MAY_SLEEP
 	};
 	int rc = 0;
+	char iv[ECRYPTFS_DEFAULT_IV_BYTES];
 
 	if (unlikely(ecryptfs_verbosity > 0)) {
 		ecryptfs_printk(
@@ -1721,8 +1726,10 @@ decrypt_passphrase_encrypted_session_key(struct ecryptfs_auth_tok *auth_tok,
 		rc = -EINVAL;
 		goto out;
 	}
+	crypto_blkcipher_get_iv(desc.tfm, iv, ECRYPTFS_DEFAULT_IV_BYTES);
 	rc = crypto_blkcipher_decrypt(&desc, dst_sg, src_sg,
 				      auth_tok->session_key.encrypted_key_size);
+	crypto_blkcipher_set_iv(desc.tfm, iv, ECRYPTFS_DEFAULT_IV_BYTES);
 	mutex_unlock(tfm_mutex);
 	if (unlikely(rc)) {
 		printk(KERN_ERR "Error decrypting; rc = [%d]\n", rc);
@@ -1774,6 +1781,11 @@ int ecryptfs_parse_packet_set(struct ecryptfs_crypt_stat *crypt_stat,
 	size_t tag_11_packet_size;
 	struct key *auth_tok_key = NULL;
 	int rc = 0;
+#if 1 /* FEATURE_SDCARD_ENCRYPTION DEBUG */
+struct ecryptfs_mount_crypt_stat *mount_crypt_stat =
+                &ecryptfs_superblock_to_private(
+                        ecryptfs_dentry->d_sb)->mount_crypt_stat;
+#endif
 
 	INIT_LIST_HEAD(&auth_tok_list);
 	/* Parse the header to find as many packets as we can; these will be
@@ -1826,6 +1838,12 @@ int ecryptfs_parse_packet_set(struct ecryptfs_crypt_stat *crypt_stat,
 			new_auth_tok->token.password.signature[
 				ECRYPTFS_PASSWORD_SIG_SIZE] = '\0';
 			crypt_stat->flags |= ECRYPTFS_ENCRYPTED;
+#if 1 /* FEATURE_SDCARD_ENCRYPTION DEBUG */
+if (mount_crypt_stat && (mount_crypt_stat->flags
+                        & ECRYPTFS_DECRYPTION_ONLY)) {
+ecryptfs_printk(KERN_ERR, "%s:%d:: Error decryption_only set : ENCRYPTION DISABLED\n", __FUNCTION__, __LINE__);
+}
+#endif
 			break;
 		case ECRYPTFS_TAG_1_PACKET_TYPE:
 			rc = parse_tag_1_packet(crypt_stat,
@@ -1840,6 +1858,12 @@ int ecryptfs_parse_packet_set(struct ecryptfs_crypt_stat *crypt_stat,
 			}
 			i += packet_size;
 			crypt_stat->flags |= ECRYPTFS_ENCRYPTED;
+#if 1 /* FEATURE_SDCARD_ENCRYPTION DEBUG */
+if (mount_crypt_stat && (mount_crypt_stat->flags
+                        & ECRYPTFS_DECRYPTION_ONLY)) {
+ecryptfs_printk(KERN_ERR, "%s:%d:: Error decryption_only set : ENCRYPTION DISABLED\n", __FUNCTION__, __LINE__);
+}
+#endif
 			break;
 		case ECRYPTFS_TAG_11_PACKET_TYPE:
 			ecryptfs_printk(KERN_WARNING, "Invalid packet set "
@@ -2198,6 +2222,7 @@ write_tag_3_packet(char *dest, size_t *remaining_bytes,
 		.flags = CRYPTO_TFM_REQ_MAY_SLEEP
 	};
 	int rc = 0;
+	char iv[ECRYPTFS_DEFAULT_IV_BYTES];
 
 	(*packet_size) = 0;
 	ecryptfs_from_hex(key_rec->sig, auth_tok->token.password.signature,
@@ -2297,8 +2322,10 @@ write_tag_3_packet(char *dest, size_t *remaining_bytes,
 	rc = 0;
 	ecryptfs_printk(KERN_DEBUG, "Encrypting [%zd] bytes of the key\n",
 			crypt_stat->key_size);
+	crypto_blkcipher_get_iv(desc.tfm, iv, ECRYPTFS_DEFAULT_IV_BYTES);
 	rc = crypto_blkcipher_encrypt(&desc, dst_sg, src_sg,
 				      (*key_rec).enc_key_size);
+	crypto_blkcipher_set_iv(desc.tfm, iv, ECRYPTFS_DEFAULT_IV_BYTES);
 	mutex_unlock(tfm_mutex);
 	if (rc) {
 		printk(KERN_ERR "Error encrypting; rc = [%d]\n", rc);

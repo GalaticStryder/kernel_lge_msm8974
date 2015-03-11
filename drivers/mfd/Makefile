@@ -23,6 +23,12 @@ obj-$(CONFIG_MFD_T7L66XB)	+= t7l66xb.o tmio_core.o
 obj-$(CONFIG_MFD_TC6387XB)	+= tc6387xb.o tmio_core.o
 obj-$(CONFIG_MFD_TC6393XB)	+= tc6393xb.o tmio_core.o
 
+obj-$(CONFIG_MFD_ARIZONA)	+= arizona-core.o
+obj-$(CONFIG_MFD_ARIZONA)	+= arizona-irq.o
+obj-$(CONFIG_MFD_ARIZONA_I2C)	+= arizona-i2c.o
+obj-$(CONFIG_MFD_ARIZONA_SPI)	+= arizona-spi.o
+obj-$(CONFIG_MFD_ARIZONA)	+= wm5102-tables.o
+obj-$(CONFIG_MFD_ARIZONA)	+= wm5110-tables.o
 obj-$(CONFIG_MFD_WM8400)	+= wm8400-core.o
 wm831x-objs			:= wm831x-core.o wm831x-irq.o wm831x-otp.o
 wm831x-objs			+= wm831x-auxadc.o
@@ -95,6 +101,7 @@ obj-$(CONFIG_PMIC_DA9052)	+= da9052-core.o
 obj-$(CONFIG_MFD_DA9052_SPI)	+= da9052-spi.o
 obj-$(CONFIG_MFD_DA9052_I2C)	+= da9052-i2c.o
 
+obj-$(CONFIG_MFD_LM3631)	+= lm3631.o
 max8925-objs			:= max8925-core.o max8925-i2c.o
 obj-$(CONFIG_MFD_MAX8925)	+= max8925.o
 obj-$(CONFIG_MFD_MAX8997)	+= max8997.o max8997-irq.o
@@ -147,3 +154,6 @@ obj-$(CONFIG_MFD_PM8XXX_MISC) 	+= pm8xxx-misc.o
 obj-$(CONFIG_MFD_PM8XXX_SPK) 	+= pm8xxx-spk.o
 obj-$(CONFIG_MFD_PM8XXX_BATT_ALARM) 	+= pm8xxx-batt-alarm.o
 obj-$(CONFIG_MFD_ANATOP)	+= anatop-mfd.o
+obj-$(CONFIG_MFD_MAX77819) += max77819.o
+obj-$(CONFIG_MFD_TPS65132)	+= tps65132.o
+obj-$(CONFIG_LGE_LION_DSV)	+= lion_dsv.o

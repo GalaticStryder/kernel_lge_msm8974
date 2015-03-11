@@ -288,9 +288,9 @@
 	rpm-regulator-ldoa11 {
 		status = "okay";
 		pm8941_l11: regulator-l11 {
-			regulator-min-microvolt = <1225000>;
+			regulator-min-microvolt = <1050000>;
 			regulator-max-microvolt = <1350000>;
-			qcom,init-voltage = <1300000>;
+			qcom,init-voltage = <1050000>;
 			status = "okay";
 		};
 	};
@@ -365,9 +365,9 @@
 	rpm-regulator-ldoa18 {
 		status = "okay";
 		pm8941_l18: regulator-l18 {
-			regulator-min-microvolt = <2850000>;
+			regulator-min-microvolt = <2700000>;
 			regulator-max-microvolt = <2850000>;
-			qcom,init-voltage = <2850000>;
+			qcom,init-voltage = <2700000>;
 			status = "okay";
 		};
 	};

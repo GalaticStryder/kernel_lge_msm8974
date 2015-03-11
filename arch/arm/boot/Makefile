@@ -34,6 +34,7 @@ else
 DTB_LIST := $(dtb-y)
 endif
 DTB_OBJS := $(addprefix $(obj)/,$(DTB_LIST))
+DTS_TARGET := $(patsubst "%",%,$(call CONFIG_DTS_TARGET,$(1)))
 
 ifeq ($(CONFIG_XIP_KERNEL),y)
 
@@ -72,7 +73,7 @@ endif
 targets += $(DTB_LIST)
 
 # Rule to build device tree blobs
-$(obj)/%.dtb: $(src)/dts/%.dts FORCE
+$(obj)/%.dtb: $(src)/dts/$(DTS_TARGET)/%.dts FORCE
 	$(call if_changed_dep,dtc)
 
 $(obj)/dtbs: $(DTB_OBJS)

@@ -15,6 +15,15 @@
 #include <mach/board.h>
 #include "mdss_hdmi_edid.h"
 
+/* enable log */
+#ifdef DEV_DBG
+#undef DEV_DBG
+#define DEV_DBG(fmt, args...) pr_err(fmt, ##args)
+#endif
+
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+extern int slimport_read_edid_block(int block, uint8_t *edid_buf);
+#endif
 #define DBC_START_OFFSET 4
 
 /*
@@ -410,10 +419,15 @@ static int hdmi_edid_read_block(struct hdmi_edid_ctrl *edid_ctrl, int block,
 {
 	const u8 *b = NULL;
 	u32 ndx, check_sum, print_len;
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+	int status;
+	int retry_cnt = 0;
+#else /* QCT Original */
 	int block_size;
 	int i, status;
 	int retry_cnt = 0;
 	struct hdmi_tx_ddc_data ddc_data;
+#endif
 	b = edid_buf;
 
 	if (!edid_ctrl) {
@@ -422,6 +436,9 @@ static int hdmi_edid_read_block(struct hdmi_edid_ctrl *edid_ctrl, int block,
 	}
 
 read_retry:
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+	status = slimport_read_edid_block(block, edid_buf);
+#else /* QCT Original */
 	block_size = 0x80;
 	status = 0;
 	do {
@@ -453,7 +470,7 @@ read_retry:
 
 		block_size /= 2;
 	} while (status && (block_size >= 16));
-
+#endif
 	if (status)
 		goto error;
 
@@ -902,12 +919,48 @@ static void hdmi_edid_add_sink_3d_format(struct hdmi_edid_sink_data *sink_data,
 		string, added ? "added" : "NOT added");
 } /* hdmi_edid_add_sink_3d_format */
 
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+extern unchar sp_get_link_bw(void);
+void limit_supported_video_format(u32 *video_format)
+{
+	switch (sp_get_link_bw()) {
+	case 0x0a:
+		if ((*video_format == HDMI_VFRMT_1920x1080p60_16_9) ||
+			(*video_format == HDMI_VFRMT_2880x480p60_4_3) ||
+			(*video_format == HDMI_VFRMT_2880x480p60_16_9) ||
+			(*video_format == HDMI_VFRMT_1280x720p120_16_9))
+			*video_format = HDMI_VFRMT_1280x720p60_16_9;
+		else if ((*video_format == HDMI_VFRMT_1920x1080p50_16_9) ||
+			(*video_format == HDMI_VFRMT_2880x576p50_4_3) ||
+			(*video_format == HDMI_VFRMT_2880x576p50_16_9) ||
+			(*video_format == HDMI_VFRMT_1280x720p100_16_9))
+			*video_format = HDMI_VFRMT_1280x720p50_16_9;
+		else if (*video_format == HDMI_VFRMT_1920x1080i100_16_9)
+			*video_format = HDMI_VFRMT_1920x1080i50_16_9;
+		else if (*video_format == HDMI_VFRMT_1920x1080i120_16_9)
+			*video_format = HDMI_VFRMT_1920x1080i60_16_9;
+		else if (*video_format == HDMI_VFRMT_1280x1024p60_5_4)
+			*video_format = HDMI_VFRMT_1024x768p60_4_3;
+		break;
+	case 0x06:
+		if (*video_format != HDMI_VFRMT_640x480p60_4_3)
+			*video_format = HDMI_VFRMT_640x480p60_4_3;
+		break;
+	case 0x14:
+	default:
+		break;
+	}
+}
+#endif
 static void hdmi_edid_add_sink_video_format(
 	struct hdmi_edid_sink_data *sink_data, u32 video_format)
 {
 	const struct msm_hdmi_mode_timing_info *timing =
 		hdmi_get_supported_mode(video_format);
 	u32 supported = timing != NULL;
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+	limit_supported_video_format(&video_format);
+#endif
 
 	if (video_format >= HDMI_VFRMT_MAX) {
 		DEV_ERR("%s: video format: %s is not supported\n", __func__,
@@ -1139,12 +1192,17 @@ static void hdmi_edid_get_display_mode(struct hdmi_edid_ctrl *edid_ctrl,
 	svd = num_of_cea_blocks ?
 		hdmi_edid_find_block(data_buf+0x80, DBC_START_OFFSET,
 			VIDEO_DATA_BLOCK, &len) : NULL;
-
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+	if (edid_ctrl->sink_mode) {
+#endif
 	if (num_of_cea_blocks && (len == 0 || len > MAX_DATA_BLOCK_SIZE)) {
 		DEV_DBG("%s: No/Invalid Video Data Block\n",
 			__func__);
 		return;
 	}
+#if defined (CONFIG_SLIMPORT_ANX7816) || defined(CONFIG_SLIMPORT_ANX7808)
+	}
+#endif
 
 	sink_data = &edid_ctrl->sink_data;
 

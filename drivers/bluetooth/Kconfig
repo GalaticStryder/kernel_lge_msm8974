@@ -239,7 +239,8 @@ config BT_MRVL_SDIO
 config MSM_BT_POWER
 	tristate "MSM Bluetooth Power Control"
 	depends on ARCH_MSM && RFKILL
-	default m
+#	default m
+	default n
 	help
 	  Provides a parameter to switch on/off power from PMIC
 	  to Bluetooth device.
@@ -266,4 +267,22 @@ config BT_WILINK
 
 	  Say Y here to compile support for Texas Instrument's WiLink7 driver
 	  into the kernel or say M to compile it as module.
+
+# LGE_CHANGE_S, [BT][younghyun.kwon@lge.com], 2013-01-29
+config LGE_BLUETOOTH
+	bool "LGE Bluetooth driver"
+	depends on BT
+	default n
+	help
+	  LGE Bluetooth driver.
+	  This driver provides support for LGE BT.
+
+config LGE_BLUESLEEP
+	bool "LGE Bluetooth sleep driver"
+	depends on LGE_BLUETOOTH
+	default n
+	help
+	  LGE Bluetooth sleep driver.
+	  This driver provides support for LGE BT Sleep.
+# LGE_CHANGE_E, [BT][younghyun.kwon@lge.com], 2013-01-29
 endmenu

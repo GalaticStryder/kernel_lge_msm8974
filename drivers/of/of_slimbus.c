@@ -33,6 +33,12 @@ int of_register_slim_devices(struct slim_controller *ctrl)
 		struct property *prop;
 		struct slim_device *slim;
 		char *name;
+#ifdef CONFIG_MACH_LGE
+		if (!of_device_is_available(node))
+			continue;
+		if (!of_device_is_available_revision(node))
+			continue;
+#endif
 		prop = of_find_property(node, "elemental-addr", NULL);
 		if (!prop || prop->length != 6) {
 			dev_err(&ctrl->dev, "of_slim: invalid E-addr");

@@ -11,6 +11,12 @@ menuconfig INPUT_TOUCHSCREEN
 
 if INPUT_TOUCHSCREEN
 
+if TOUCHSCREEN_SYNAPTICS_G3
+
+source "drivers/input/touchscreen/g3/synaptics_dsx/Kconfig"
+
+endif
+
 config TOUCHSCREEN_88PM860X
 	tristate "Marvell 88PM860x touchscreen"
 	depends on MFD_88PM860X
@@ -109,6 +115,18 @@ config TOUCHSCREEN_ATMEL_MXT
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called atmel_mxt_ts.
+
+config TOUCHSCREEN_ATMEL_S540
+	tristate "Atmel mXT S540 I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have Atmel mXT series I2C touchscreen,
+	  such as AT42QT602240/ATMXT224, connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called atmel_s540.
 
 config TOUCHSCREEN_ATMEL_MAXTOUCH_TS
 	tristate "Atmel Maxtouch Touchscreen Family"
@@ -501,6 +519,11 @@ config SYNA_MULTI_TOUCH
 	tristate "Synaptics i2c touchscreen(ClearPad 3000) MutilTouch support"
 	depends on TOUCHSCREEN_SYNAPTICS_RMI4_I2C
 	default y
+
+config TOUCHSCREEN_SYNAPTICS_3404S
+	tristate "Synaptics 3404S chip(G2)"
+	help
+	  This enables support for Synaptics 3404S chip for Touch Dirver.
 
 config TOUCHSCREEN_TOUCHRIGHT
 	tristate "Touchright serial touchscreen"
@@ -981,6 +1004,30 @@ config TOUCHSCREEN_SYNAPTICS_I2C_RMI4
 	  To compile this driver as a module, choose M here: the
 	  module will be called synaptics_i2c_rmi4.
 
+config TOUCHSCREEN_SYNAPTICS_I2C_RMI4_EVB
+	tristate "Synaptics DSX I2C touchscreen for EVB"
+	depends on I2C
+	help
+	  Say Y here if you have a Synaptics DSX I2C EVB for LGU touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_i2c_rmi4_evb.
+
+config TOUCHSCREEN_SYNAPTICS_I2C_VU3EVB
+	tristate "Synaptics DSX I2C touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have a Synaptics DSX I2C touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_i2c_rmi4.
+
 config TOUCHSCREEN_SYNAPTICS_DSX_RMI4_DEV
 	tristate "Synaptics I2C touchscreen rmi device"
 	depends on TOUCHSCREEN_SYNAPTICS_I2C_RMI4
@@ -1030,6 +1077,48 @@ config TOUCHSCREEN_GT9XX
 
           If unsure, say N.
 
-source "drivers/input/touchscreen/gt9xx/Kconfig"
+config TOUCHSCREEN_SYNAPTICS_DISNEY
+	bool "LGE CORE with Synaptics for Disney"
+	help
+	  This enables lge core with synaptics driver for disney
+
+if TOUCHSCREEN_SYNAPTICS_DISNEY
+
+source "drivers/input/touchscreen/disney/Kconfig"
+
+endif
+
+config TOUCHSCREEN_SYNAPTICS_G3
+	bool "LGE CORE with Synaptics for G3"
+	help
+	  This enables lge core with synaptics driver for g3
+
+if TOUCHSCREEN_SYNAPTICS_G3
+
+source "drivers/input/touchscreen/g3/Kconfig"
+
+endif
+
+config TOUCHSCREEN_SYNAPTICS_G2
+	bool "LGE CORE with Synaptics for G2"
+	help
+	  This enables lge core with synaptics driver for g2
+
+if TOUCHSCREEN_SYNAPTICS_G2
+
+source "drivers/input/touchscreen/g2/Kconfig"
+
+endif
+
+config TOUCHSCREEN_SYNAPTICS_TIGERS
+	bool "LGE CORE with Synaptics for TIGERS"
+	help
+	  This enables lge core with synaptics driver for TIGERS
+
+if TOUCHSCREEN_SYNAPTICS_TIGERS
+
+source "drivers/input/touchscreen/g2/Kconfig"
+
+endif
 
 endif

@@ -938,7 +938,9 @@ struct input_keymap_entry {
  */
 #define MT_TOOL_FINGER		0
 #define MT_TOOL_PEN		1
-#define MT_TOOL_MAX		1
+#define MT_TOOL_PALM		2
+#define MT_TOOL_LARGEPALM	3
+#define MT_TOOL_MAX		3
 
 /*
  * Values describing the status of a force-feedback effect

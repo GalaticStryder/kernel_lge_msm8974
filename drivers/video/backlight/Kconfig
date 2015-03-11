@@ -361,6 +361,33 @@ config BACKLIGHT_PANDORA
 	  If you have a Pandora console, say Y to enable the
 	  backlight driver.
 
+config BACKLIGHT_LM3630
+     tristate "Backlight Driver for LM3630 using WLED"
+     depends on BACKLIGHT_CLASS_DEVICE && I2C
+     help
+     If you have a LM3630 backlight on the device, enable this feature
+
+config BACKLIGHT_LM3697
+	tristate "Backlight driver for TI LM3697"
+	depends on BACKLIGHT_CLASS_DEVICE && I2C
+	help
+	  Say Y to enable the backlight driver for TI LM3697.
+	  Up to 3 backlight strings and 11 bit dimming is supported.
+	  PWM brightness control is also supported.
+
+config BACKLIGHT_LM3631
+     tristate "Backlight Driver for LM3631 using WLED"
+     depends on BACKLIGHT_CLASS_DEVICE && I2C
+     help
+     If you have a LM3631 backlight on the device, enable this feature
+
+config MACH_LGE_BACKLIGHT_SUPPORT
+	tristate "SUPPORT Backlight Driver Abstraction"
+	depends on BACKLIGHT_CLASS_DEVICE && I2C
+	help
+	  If you have a backlight on the device and support backlight device abstraction,
+	  enable this feature.
+
 endif # BACKLIGHT_CLASS_DEVICE
 
 endif # BACKLIGHT_LCD_SUPPORT

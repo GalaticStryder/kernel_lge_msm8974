@@ -176,6 +176,28 @@
 		vdd-supply = <&gdsc_vfe>;
 	};
 
+	led_flash0: qcom,camera-led-flash {
+		cell-index = <0>;
+		compatible = "qcom,camera-led-flash";
+		qcom,flash-type = <1>;
+		qcom,flash-source = <&pm8941_flash0 &pm8941_flash1>;
+		qcom,torch-source = <&pm8941_torch>;
+	};
+
+	qcom,ois@48 {
+		cell-index = <998>;
+		reg = <0x48 0x0>;
+		compatible = "qcom,ois";
+		qcom,cci-master = <0>;
+	};
+
+	qcom,proxy@29 {
+		cell-index = <998>;
+		reg = <0x29 0x0>;
+		compatible = "qcom,proxy";
+		qcom,cci-master = <0>;
+	};
+
 	cci: qcom,cci@fda0C000 {
 		cell-index = <0>;
 		compatible = "qcom,cci";
@@ -205,29 +227,29 @@
 };
 
 &master0 {
-	qcom,hw-thigh = <78>;
-	qcom,hw-tlow = <114>;
-	qcom,hw-tsu-sto = <28>;
-	qcom,hw-tsu-sta = <28>;
-	qcom,hw-thd-dat = <10>;
-	qcom,hw-thd-sta = <77>;
-	qcom,hw-tbuf = <118>;
+	qcom,hw-thigh = <21>;
+	qcom,hw-tlow = <28>;
+	qcom,hw-tsu-sto = <6>;
+	qcom,hw-tsu-sta = <7>;
+	qcom,hw-thd-dat = <13>;
+	qcom,hw-thd-sta = <11>;
+	qcom,hw-tbuf = <25>;
 	qcom,hw-scl-stretch-en = <0>;
 	qcom,hw-trdhld = <6>;
-	qcom,hw-tsp = <1>;
+	qcom,hw-tsp = <3>;
 	status = "ok";
 };
 
 &master1 {
-	qcom,hw-thigh = <78>;
-	qcom,hw-tlow = <114>;
-	qcom,hw-tsu-sto = <28>;
-	qcom,hw-tsu-sta = <28>;
-	qcom,hw-thd-dat = <10>;
-	qcom,hw-thd-sta = <77>;
-	qcom,hw-tbuf = <118>;
+	qcom,hw-thigh = <21>;
+	qcom,hw-tlow = <28>;
+	qcom,hw-tsu-sto = <6>;
+	qcom,hw-tsu-sta = <7>;
+	qcom,hw-thd-dat = <13>;
+	qcom,hw-thd-sta = <11>;
+	qcom,hw-tbuf = <25>;
 	qcom,hw-scl-stretch-en = <0>;
 	qcom,hw-trdhld = <6>;
-	qcom,hw-tsp = <1>;
+	qcom,hw-tsp = <3>;
 	status = "ok";
 };

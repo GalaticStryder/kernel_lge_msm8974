@@ -478,8 +478,15 @@ __acquires(&port->port_lock)
 
 		/* no more rx if closed */
 		tty = port->port_tty;
+#ifdef CONFIG_USB_G_LGE_ANDROID
+		if (!tty) {
+			started = 0;
+			break;
+		}
+#else
 		if (!tty)
 			break;
+#endif
 
 		if (port->read_started >= RX_QUEUE_SIZE)
 			break;
@@ -755,7 +762,12 @@ static int gs_start_io(struct gs_port *port)
 		return -EIO;
 	/* unblock any pending writes into our circular buffer */
 	if (started) {
+#ifdef CONFIG_USB_G_LGE_ANDROID
+		if (port->port_tty)
+			tty_wakeup(port->port_tty);
+#else
 		tty_wakeup(port->port_tty);
+#endif
 	} else {
 		gs_free_requests(ep, head, &port->read_allocated);
 		gs_free_requests(port->port_usb->in, &port->write_pool,

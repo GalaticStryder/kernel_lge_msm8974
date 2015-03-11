@@ -60,6 +60,9 @@
 #include <mach/mpm.h>
 #include <mach/msm_bus.h>
 
+#include <mach/board_lge.h> //to use lge_get_board_revno()
+
+
 #include "msm_sdcc.h"
 #include "msm_sdcc_dml.h"
 
@@ -201,6 +204,16 @@ static void msmsdcc_pm_qos_update_latency(struct msmsdcc_host *host, int vote)
 	else
 		pm_qos_update_request(&host->pm_qos_req_dma,
 					PM_QOS_DEFAULT_VALUE);
+	/*                                                                      */
+	#if defined(CONFIG_BCMDHD) || defined (CONFIG_BCMDHD_MODULE)
+	{
+		extern void bcm_wifi_req_dma_qos(int vote);
+		if (host->mmc && host->mmc->card && mmc_card_sdio(host->mmc->card)) {
+			bcm_wifi_req_dma_qos(vote);
+		}
+	}
+	#endif
+	/*                                                                      */
 }
 
 #ifdef CONFIG_MMC_MSM_SPS_SUPPORT
@@ -1700,6 +1713,18 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 		if (!msmsdcc_sg_next(host, &buffer, &remain))
 			break;
 
+	#ifdef CONFIG_MACH_LGE
+		/*          
+                                                           
+                                                                                                     
+                                             
+                                             
+                             
+  */
+		if (!host->curr.data)
+			break;
+	#endif
+
 		len = 0;
 		if (status & MCI_RXACTIVE)
 			len = msmsdcc_pio_read(host, buffer, remain);
@@ -2286,7 +2311,15 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	if ((mmc->card) && (mmc->card->quirks & MMC_QUIRK_INAND_DATA_TIMEOUT))
 		host->curr.req_tout_ms = 20000;
 	else
+		#ifdef CONFIG_MACH_LGE
+		/*           
+                                                                                       
+                                  
+   */
+		host->curr.req_tout_ms = 15000;
+		#else
 		host->curr.req_tout_ms = MSM_MMC_REQ_TIMEOUT;
+		#endif
 	/*
 	 * Kick the software request timeout timer here with the timeout
 	 * value identified above
@@ -3772,6 +3805,12 @@ static int msmsdcc_switch_io_voltage(struct mmc_host *mmc,
 		goto out;
 	default:
 		/* invalid selection. don't do anything */
+		#ifdef CONFIG_MACH_LGE
+		/*                                      
+                                                
+  */
+		pr_err("%s: %s: ios->signal_voltage = 0x%x\n", mmc_hostname(mmc), __func__, ios->signal_voltage);
+		#endif
 		rc = -EINVAL;
 		goto out;
 	}
@@ -4302,6 +4341,31 @@ retry:
 			mmc_hostname(mmc), __func__);
 		msmsdcc_dump_sdcc_state(host);
 		rc = -EAGAIN;
+
+	#if defined(CONFIG_BCMDHD) || defined (CONFIG_BCMDHD_MODULE)
+		/*           
+                                    
+                                       
+   */
+		{
+			int bcmdhd_id = MMC_SDCC_CONTROLLER_INDEX_SDCC2;
+			#if defined (CONFIG_MACH_MSM8974_G2_KR) || defined(CONFIG_MACH_MSM8974_G2_KDDI) \
+				|| defined(CONFIG_MACH_MSM8974_VU3_KR) || defined(CONFIG_MACH_MSM8974_TIGERS_KR)
+			bcmdhd_id = MMC_SDCC_CONTROLLER_INDEX_SDCC3; /* sdcc 3 */
+			#elif defined(CONFIG_MACH_MSM8974_B1_KR) || defined(CONFIG_MACH_MSM8974_B1W)
+				if (HW_REV_B <= lge_get_board_revno() && HW_REV_D >= lge_get_board_revno()) {
+					bcmdhd_id = MMC_SDCC_CONTROLLER_INDEX_SDCC2; /* sdcc 2 */
+				} else {
+					bcmdhd_id = MMC_SDCC_CONTROLLER_INDEX_SDCC3;  /* sdcc 3 */
+				}
+			#endif
+
+			if (host->pdev->id == bcmdhd_id) {
+				rc = 0;
+				/*                                                              */
+			}
+		}
+	#endif
 	}
 
 kfree:
@@ -5849,6 +5913,12 @@ err:
 	return NULL;
 }
 
+/*                                                                    */
+#if defined(CONFIG_BCMDHD) || defined (CONFIG_BCMDHD_MODULE) /* joon For device tree. */
+extern int wcf_status_register(void (*cb)(int card_present, void *dev), void *dev);
+extern unsigned int wcf_status(struct device *);
+#endif
+/*                                                                    */
 static int
 msmsdcc_probe(struct platform_device *pdev)
 {
@@ -6142,6 +6212,17 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 	mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 
+	#ifdef CONFIG_MACH_LGE
+	#if defined (CONFIG_LGE_MMC_BKOPS_ENABLE) && !defined(CONFIG_MMC_SDHCI_MSM)
+	/*           
+                                                               
+                                                                                               
+                                 
+  */
+	mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
+	#endif
+	#endif
+
 	if (plat->nonremovable)
 		mmc->caps |= MMC_CAP_NONREMOVABLE;
 	mmc->caps |= MMC_CAP_SDIO_IRQ;
@@ -6222,6 +6303,33 @@ msmsdcc_probe(struct platform_device *pdev)
 	/*
 	 * Setup card detect change
 	 */
+
+	#if defined(CONFIG_BCMDHD) || defined (CONFIG_BCMDHD_MODULE)
+	/*           
+                 
+                                      
+  */
+	{
+		int bcmdhd_id = MMC_SDCC_CONTROLLER_INDEX_SDCC2;
+	
+		#if defined (CONFIG_MACH_MSM8974_G2_KR) || defined(CONFIG_MACH_MSM8974_G2_KDDI) \
+		|| defined(CONFIG_MACH_MSM8974_VU3_KR) || defined(CONFIG_MACH_MSM8974_TIGERS_KR)
+		bcmdhd_id = MMC_SDCC_CONTROLLER_INDEX_SDCC3; /* sdcc 3 */
+		#elif defined(CONFIG_MACH_MSM8974_B1_KR) || defined(CONFIG_MACH_MSM8974_B1W)
+			if (HW_REV_B <= lge_get_board_revno() && HW_REV_D >= lge_get_board_revno()) {
+				bcmdhd_id = MMC_SDCC_CONTROLLER_INDEX_SDCC2; /* sdcc 2 */
+			} else {
+				bcmdhd_id = MMC_SDCC_CONTROLLER_INDEX_SDCC3;  /* sdcc 3 */
+			}
+		#endif
+
+		printk("jaewoo :%s-%d> plat->nonremovable = %d\n", __FUNCTION__, host->pdev->id, plat->nonremovable );
+		if( host->pdev->id == bcmdhd_id ) {
+			plat->register_status_notify = wcf_status_register;
+			plat->status = wcf_status;
+		}
+	}
+	#endif
 
 	if (!plat->status_gpio)
 		plat->status_gpio = -ENOENT;

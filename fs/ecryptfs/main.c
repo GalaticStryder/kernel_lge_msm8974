@@ -176,6 +176,7 @@ enum { ecryptfs_opt_sig, ecryptfs_opt_ecryptfs_sig,
        ecryptfs_opt_fn_cipher, ecryptfs_opt_fn_cipher_key_bytes,
        ecryptfs_opt_unlink_sigs, ecryptfs_opt_mount_auth_tok_only,
        ecryptfs_opt_check_dev_ruid,
+       ecryptfs_opt_decryption_only, // FEATURE_SDCARD_ENCRYPTION
        ecryptfs_opt_err };
 
 static const match_table_t tokens = {
@@ -193,6 +194,7 @@ static const match_table_t tokens = {
 	{ecryptfs_opt_unlink_sigs, "ecryptfs_unlink_sigs"},
 	{ecryptfs_opt_mount_auth_tok_only, "ecryptfs_mount_auth_tok_only"},
 	{ecryptfs_opt_check_dev_ruid, "ecryptfs_check_dev_ruid"},
+	{ecryptfs_opt_decryption_only, "decryption_only"}, // FEATURE_SDCARD_ENCRYPTION
 	{ecryptfs_opt_err, NULL}
 };
 
@@ -385,6 +387,9 @@ static int ecryptfs_parse_options(struct ecryptfs_sb_info *sbi, char *options,
 		case ecryptfs_opt_mount_auth_tok_only:
 			mount_crypt_stat->flags |=
 				ECRYPTFS_GLOBAL_MOUNT_AUTH_TOK_ONLY;
+			break;
+		case ecryptfs_opt_decryption_only: // FEATURE_SDCARD_ENCRYPTION
+			mount_crypt_stat->flags |= ECRYPTFS_DECRYPTION_ONLY;
 			break;
 		case ecryptfs_opt_check_dev_ruid:
 			*check_ruid = 1;
@@ -687,11 +692,29 @@ static struct ecryptfs_cache_info {
 		.name = "ecryptfs_open_req_cache",
 		.size = sizeof(struct ecryptfs_open_req),
 	},
+#ifdef CONFIG_CRYPTO_DEV_KFIPS
+	{
+		.cache = &ecryptfs_page_crypt_req_cache,
+		.name = "ecryptfs_page_crypt_req_cache",
+		.size = sizeof(struct ecryptfs_page_crypt_req),
+	},
+	{
+		.cache = &ecryptfs_extent_crypt_req_cache,
+		.name = "ecryptfs_extent_crypt_req_cache",
+		.size = sizeof(struct ecryptfs_extent_crypt_req),
+	},
+#endif
 };
 
 static void ecryptfs_free_kmem_caches(void)
 {
 	int i;
+
+	/*
+	 * Make sure all delayed rcu free inodes are flushed before we
+	 * destroy cache.
+	 */
+	rcu_barrier();
 
 	for (i = 0; i < ARRAY_SIZE(ecryptfs_cache_infos); i++) {
 		struct ecryptfs_cache_info *info;

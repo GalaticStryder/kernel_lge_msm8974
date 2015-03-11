@@ -807,7 +807,11 @@ int diag_process_apps_masks(unsigned char *buf, int len)
 
 			}
 			encode_rsp_and_send(8 + ssid_range - 1);
+#ifndef CONFIG_LGE_SLATE
 			return 0;
+#else
+			printk(KERN_INFO "[SLATE] KEY Logging mask received. Propagate this msg to APPS..");
+#endif
 		}
 #endif
 	} /* Set ALL runtime message mask  */

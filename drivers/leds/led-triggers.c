@@ -211,6 +211,31 @@ EXPORT_SYMBOL_GPL(led_trigger_unregister);
 
 /* Simple LED Tigger Interface */
 
+#if defined(CONFIG_LGE_DUAL_LED)
+/*           
+                 
+                               
+ */
+void led_trigger_event2(struct led_trigger *trigger,
+			enum led_brightness brightness, enum led_brightness brightness2)
+{
+	struct list_head *entry;
+
+	if (!trigger)
+		return;
+
+	read_lock(&trigger->leddev_list_lock);
+	list_for_each(entry, &trigger->led_cdevs) {
+		struct led_classdev *led_cdev;
+
+		led_cdev = list_entry(entry, struct led_classdev, trig_list);
+		led_set_brightness2(led_cdev, brightness, brightness2);
+	}
+	read_unlock(&trigger->leddev_list_lock);
+}
+EXPORT_SYMBOL_GPL(led_trigger_event2);
+#endif
+
 void led_trigger_event(struct led_trigger *trigger,
 			enum led_brightness brightness)
 {

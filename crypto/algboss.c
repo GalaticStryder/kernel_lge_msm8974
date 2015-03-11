@@ -215,7 +215,10 @@ static int cryptomgr_test(void *data)
 #ifdef CONFIG_CRYPTO_MANAGER_DISABLE_TESTS
 	goto skiptest;
 #endif
-
+#ifdef CONFIG_CRYPTO_FIPS
+	if (!get_cc_mode_state())
+		goto skiptest;
+#endif
 	if (type & CRYPTO_ALG_TESTED)
 		goto skiptest;
 

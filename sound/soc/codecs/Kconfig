@@ -28,6 +28,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_ALC5623 if I2C
 	select SND_SOC_ALC5632 if I2C
 	select SND_SOC_CQ0093VC if MFD_DAVINCI_VOICECODEC
+	select SND_SOC_CS35L32 if I2C
 	select SND_SOC_CS42L51 if I2C
 	select SND_SOC_CS42L73 if I2C
 	select SND_SOC_CS4270 if I2C
@@ -63,6 +64,8 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_WM1250_EV1 if I2C
 	select SND_SOC_WM2000 if I2C
 	select SND_SOC_WM5100 if I2C
+	select SND_SOC_WM5102 if MFD_WM5102
+	select SND_SOC_WM5110 if MFD_WM5110
 	select SND_SOC_WM8350 if MFD_WM8350
 	select SND_SOC_WM8400 if MFD_WM8400
 	select SND_SOC_WM8510 if SND_SOC_I2C_AND_SPI
@@ -106,6 +109,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_WM9712 if SND_SOC_AC97_BUS
 	select SND_SOC_WM9713 if SND_SOC_AC97_BUS
 	select SND_SOC_TIMPANI if MARIMBA_CORE
+	select SND_SOC_TPA2015D if MACH_LGE
         help
           Normally ASoC codec drivers are only built if a machine driver which
           uses them is also built since they are only usable with a machine
@@ -119,6 +123,22 @@ config SND_SOC_ALL_CODECS
 
 config SND_SOC_88PM860X
 	tristate
+
+config SND_SOC_ARIZONA
+	tristate
+	default y if SND_SOC_WM5102=y
+	default y if SND_SOC_WM5110=y
+	default m if SND_SOC_WM5102=m
+	default m if SND_SOC_WM5110=m
+	default n
+
+config SND_SOC_WM_ADSP
+	tristate
+	default y if SND_SOC_WM5102=y
+	default y if SND_SOC_WM5110=y
+	default m if SND_SOC_WM5102=m
+	default m if SND_SOC_WM5110=m
+	default n
 
 config SND_SOC_WM_HUBS
 	tristate
@@ -316,6 +336,12 @@ config SND_SOC_WM2200
 config SND_SOC_WM5100
 	tristate
 
+config SND_SOC_WM5102
+	tristate
+
+config SND_SOC_WM5110
+	tristate
+
 config SND_SOC_WM8350
 	tristate
 
@@ -455,9 +481,30 @@ config SND_SOC_TPA6130A2
 config SND_SOC_MSM_STUB
 	tristate
 
+config SND_SOC_TPA2015D
+	tristate "external amp"
+	depends on MACH_LGE
+	default n
+	help
+	 Say Y here to enable
+
+config SND_SOC_CS35L32
+	tristate "cs35l32 amp"
+	depends on MACH_LGE
+	default n
+	help
+	 Say Y here to enable
+
 config SND_SOC_MSM_HDMI_CODEC_RX
 	bool "HDMI Audio Playback"
 	depends on FB_MSM_MDSS_HDMI_PANEL && SND_SOC_MSM8974
 	help
 	HDMI audio drivers should be built only if the platform
         supports hdmi panel.
+
+# LGE_BSP_AUDIO, jeremy.pi@lge.com, Audience eS325 ALSA SoC Audio driver
+config SND_SOC_ES325_SLIM
+	bool "Audience es325 SLIMBus"
+	default n
+	help
+		Audience es325 Dual Mic Noise Reduction

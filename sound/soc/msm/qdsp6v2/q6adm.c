@@ -27,6 +27,12 @@
 #include "audio_acdb.h"
 
 
+#define LVVE
+#if defined(LVVE)
+#define VPM_TX_SM_LVVEFQ    (0x1000BFF0)  // 268484592
+#define VPM_TX_DM_LVVEFQ    (0x1000BFF1)  // 268484593
+#endif
+
 #define TIMEOUT_MS 1000
 
 #define RESET_COPP_ID 99
@@ -1126,8 +1132,9 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 	int index;
 	int tmp_port = q6audio_get_port_id(port_id);
 
-	pr_debug("%s: port %#x path:%d rate:%d mode:%d perf_mode:%d\n",
-		 __func__, port_id, path, rate, channel_mode, perf_mode);
+	pr_debug("%s: port %#x path:%d rate:%d mode:%d perf_mode:%d bps: %d\n",
+		 __func__, port_id, path, rate, channel_mode,\
+		 perf_mode, bits_per_sample);
 
 	port_id = q6audio_convert_virtual_to_portid(port_id);
 
@@ -1194,6 +1201,10 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 
 		open.topology_id = topology;
 		if ((open.topology_id == VPM_TX_SM_ECNS_COPP_TOPOLOGY) ||
+#if defined(LVVE)
+			(open.topology_id == VPM_TX_SM_LVVEFQ) ||
+			(open.topology_id == VPM_TX_DM_LVVEFQ) ||
+#endif
 			(open.topology_id == VPM_TX_DM_FLUENCE_COPP_TOPOLOGY) ||
 			(open.topology_id == VPM_TX_DM_RFECNS_COPP_TOPOLOGY))
 				rate = 16000;
@@ -1201,6 +1212,9 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 		if (perf_mode == ULTRA_LOW_LATENCY_PCM_MODE) {
 			open.topology_id = NULL_COPP_TOPOLOGY;
 			rate = ULL_SUPPORTED_SAMPLE_RATE;
+#ifdef CONFIG_HIFI_SOUND
+			bits_per_sample = 16;
+#endif
 			if(channel_mode > ULL_MAX_SUPPORTED_CHANNEL)
 				channel_mode = ULL_MAX_SUPPORTED_CHANNEL;
 		} else if (perf_mode == LOW_LATENCY_PCM_MODE) {

@@ -99,6 +99,34 @@ static int voc_enable_cvp(uint32_t session_id);
 
 static struct voice_data *voice_get_session_by_idx(int idx);
 
+
+//                                      
+static uint32_t audio_start = 0;
+//static String audio_start = "/sys/module/q6voice/parameters/audio_start";
+static int set_start_call(const char *buf, struct kernel_param *kp)
+{
+	audio_start = buf[0] - '0';
+	pr_info("%s: LG audio bsp: set  %d \n", __func__, audio_start);
+
+	return 1;
+}
+
+
+
+static int get_start_call(char *buf, struct kernel_param *kp)
+{
+	int ret = 0;
+
+	ret = sprintf(buf, "%d\n", audio_start);
+	pr_info("%s:LG audio bsp: get  %d \n", __func__, audio_start);
+
+	return ret;
+}
+module_param_call(audio_start,set_start_call, get_start_call, NULL, 0664);
+//                                    
+
+
+
 static void voice_itr_init(struct voice_session_itr *itr,
 			   u32 session_id)
 {
@@ -3753,6 +3781,56 @@ fail:
 	return -EINVAL;
 }
 
+//                                                              
+static int voice_send_phonememo_mute_cmd(struct voice_data *v)
+{
+	struct cvp_set_mute_cmd cvp_mute_cmd;
+	int ret = 0;
+
+	if (v == NULL) {
+		pr_err("%s: v is NULL\n", __func__);
+		goto fail;
+	}
+
+	if (!common.apr_q6_cvp) {
+		pr_err("%s: apr_cvp is NULL.\n", __func__);
+		goto fail;
+	}
+
+	cvp_mute_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+						APR_HDR_LEN(APR_HDR_SIZE),
+						APR_PKT_VER);
+	cvp_mute_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+					sizeof(cvp_mute_cmd) - APR_HDR_SIZE);
+	cvp_mute_cmd.hdr.src_port = v->session_id;
+	cvp_mute_cmd.hdr.dest_port = voice_get_cvp_handle(v);
+	cvp_mute_cmd.hdr.token = 0;
+	cvp_mute_cmd.hdr.opcode = VSS_IVOLUME_CMD_MUTE_V2;
+	cvp_mute_cmd.cvp_set_mute.direction = VSS_IVOLUME_DIRECTION_TX;
+	cvp_mute_cmd.cvp_set_mute.mute_flag = v->stream_tx.stream_mute;
+	cvp_mute_cmd.cvp_set_mute.ramp_duration_ms = DEFAULT_MUTE_RAMP_DURATION;
+
+	v->cvp_state = CMD_STATUS_FAIL;
+	ret = apr_send_pkt(common.apr_q6_cvp, (uint32_t *) &cvp_mute_cmd);
+	if (ret < 0) {
+		pr_err("%s: Error %d sending rx device cmd\n", __func__, ret);
+		goto fail;
+	}
+	ret = wait_event_timeout(v->cvp_wait,
+				(v->cvp_state == CMD_STATUS_SUCCESS),
+				msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: Command timeout\n", __func__);
+		goto fail;
+	}
+
+	return 0;
+
+fail:
+	return -EINVAL;
+}
+//                                                            
+
 static int voice_send_stream_mute_cmd(struct voice_data *v, uint16_t direction,
 				     uint16_t mute_flag, uint32_t ramp_duration)
 {
@@ -4571,6 +4649,33 @@ int voc_set_tx_mute(uint32_t session_id, uint32_t dir, uint32_t mute,
 	return ret;
 }
 
+//                                                              
+int voc_set_phonememo_tx_mute(uint32_t session_id, uint32_t dir, uint32_t mute)
+{
+        struct voice_data *v = voice_get_session(session_id);
+        int ret = 0;
+
+        if (v == NULL) {
+                pr_err("%s: invalid session_id 0x%x\n", __func__, session_id);
+
+                return -EINVAL;
+        }
+
+        mutex_lock(&v->lock);
+
+        v->stream_tx.stream_mute = mute;
+
+        if ((v->voc_state == VOC_RUN) ||
+            (v->voc_state == VOC_CHANGE) ||
+            (v->voc_state == VOC_STANDBY))
+                ret = voice_send_phonememo_mute_cmd(v);
+
+        mutex_unlock(&v->lock);
+
+        return ret;
+}
+//                                                            
+
 int voc_set_device_mute(uint32_t session_id, uint32_t dir, uint32_t mute,
 			uint32_t ramp_duration)
 {
@@ -4833,6 +4938,10 @@ int voc_end_voice_call(uint32_t session_id)
 {
 	struct voice_data *v = voice_get_session(session_id);
 	int ret = 0;
+  //                                      
+	char temp_buf[2] = "0";
+	set_start_call(temp_buf,NULL);
+  //                                    
 
 	if (v == NULL) {
 		pr_err("%s: invalid session_id 0x%x\n", __func__, session_id);
@@ -5081,6 +5190,7 @@ int voc_start_voice_call(uint32_t session_id)
 {
 	struct voice_data *v = voice_get_session(session_id);
 	int ret = 0;
+	char temp_buf[2] = "1";  //                                      
 
 	if (v == NULL) {
 		pr_err("%s: invalid session_id 0x%x\n", __func__, session_id);
@@ -5147,6 +5257,12 @@ int voc_start_voice_call(uint32_t session_id)
 			goto fail;
 		}
 		ret = voice_setup_vocproc(v);
+		//                                      
+		if(ret == 0){
+			set_start_call(temp_buf,NULL);
+			pr_info("LG audio bsp - stated voice call \n");
+		}
+		//                                    
 		if (ret < 0) {
 			pr_err("setup voice failed\n");
 			goto fail;

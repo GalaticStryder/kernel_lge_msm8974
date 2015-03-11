@@ -37,10 +37,18 @@ obj-$(CONFIG_FB_MSM_MDSS_HDMI_MHL_SII8334) += mhl_sii8334.o mhl_msc.o
 
 obj-$(CONFIG_FB_MSM_MDSS_WRITEBACK) += mdss_wb.o
 
+# LGE_CHANGE_S
+obj-$(CONFIG_LGE_LCD_TUNING)+=lge_lcd_misc_ctrl.o
+# LGE_CHANGE_E
 mdss-qpic-objs := mdss_qpic.o mdss_fb.o mdss_qpic_panel.o
 obj-$(CONFIG_FB_MSM_QPIC) += mdss-qpic.o
 obj-$(CONFIG_FB_MSM_QPIC_ILI_QVGA_PANEL) += qpic_panel_ili_qvga.o
 
 obj-$(CONFIG_FB_MSM_MDSS) += mdss_fb.o
+obj-$(CONFIG_MACH_LGE) += lcd_notify.o
 
+ifeq ($(CONFIG_FB_MSM_MDSS_MDP3),y)
+obj-$(CONFIG_FB_MSM_MDSS_DSI_CTRL_STATUS) += dsi_status_v2.o
+else
 obj-$(CONFIG_FB_MSM_MDSS_DSI_CTRL_STATUS) += mdss_dsi_status.o
+endif

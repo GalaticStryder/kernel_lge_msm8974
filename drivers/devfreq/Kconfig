@@ -92,6 +92,13 @@ config DEVFREQ_GOV_MSM_CPUBW_HWMON
 
 comment "DEVFREQ Drivers"
 
+config LGE_DEVFREQ_DFPS
+    bool "LG G3 Dynamic LCD Refresh Driver"
+    select ARCH_HAS_OPP
+    select DEVFREQ_GOV_SIMPLE_ONDEMAND
+    help
+      This adds the DEVFREQ driver for LG G3 display
+
 config ARM_EXYNOS4_BUS_DEVFREQ
 	bool "ARM Exynos4210/4212/4412 Memory Bus DEVFREQ Driver"
 	depends on CPU_EXYNOS4210 || CPU_EXYNOS4212 || CPU_EXYNOS4412

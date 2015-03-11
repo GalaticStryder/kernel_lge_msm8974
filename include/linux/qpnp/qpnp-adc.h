@@ -1040,6 +1040,19 @@ int32_t qpnp_vadc_read(struct qpnp_vadc_chip *dev,
 				enum qpnp_vadc_channels channel,
 				struct qpnp_vadc_result *result);
 
+#ifdef CONFIG_LGE_PM
+/**
+ * qpnp_vadc_read_lge() - Performs ADC read on the channel.
+ *                        lge api for avoid qct api changed.
+ * @dev:	Structure device for qpnp vadc
+ * @channel:	Input channel to perform the ADC read.
+ * @result:	Structure pointer of type adc_chan_result
+ *		in which the ADC read results are stored.
+ */
+int32_t qpnp_vadc_read_lge(enum qpnp_vadc_channels channel,
+				struct qpnp_vadc_result *result);
+#endif
+
 /**
  * qpnp_vadc_conv_seq_request() - Performs ADC read on the conversion
  *				sequencer channel.
@@ -1239,6 +1252,17 @@ int32_t qpnp_adc_scale_therm_pu2(struct qpnp_vadc_chip *dev, int32_t adc_code,
 			const struct qpnp_adc_properties *adc_prop,
 			const struct qpnp_vadc_chan_properties *chan_prop,
 			struct qpnp_vadc_result *chan_rslt);
+
+#ifdef CONFIG_LGE_PM
+/**
+ * qpnp_vadc_is_ready() - Clients can use this API to check if the
+ *			  device is ready to use.
+ * @result:	0 on success and -EPROBE_DEFER when probe for the device
+ *		has not occured.
+ */
+int32_t qpnp_vadc_is_ready(void);
+#endif
+
 /**
  * qpnp_get_vadc() - Clients need to register with the vadc using the
  *		corresponding device instance it wants to read the channels

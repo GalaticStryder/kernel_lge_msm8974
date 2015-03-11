@@ -90,6 +90,24 @@ MODULE_PARM_DESC(
 	removable,
 	"MMC/SD cards are removable and may be removed during suspend");
 
+/*
+               
+                     
+                                
+                             
+                                                                                                       
+ */
+#if defined(CONFIG_LGE_MMC_DYNAMIC_LOG)
+
+uint32_t mmc_debug_level = 6;                   // show pr_info.
+
+module_param_named(debug_level, mmc_debug_level, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(
+    debug_level,
+    "MMC/SD cards debug_level");
+
+#endif	/*                     */
+
 #define MMC_UPDATE_BKOPS_STATS_HPI(stats)	\
 	do {					\
 		spin_lock(&stats.lock);		\
@@ -1125,6 +1143,14 @@ int mmc_interrupt_hpi(struct mmc_card *card)
 	} while (!err);
 
 out:
+#ifdef CONFIG_MACH_LGE
+	/*           
+                  
+                                 
+  */
+	if (err)
+		pr_err("%s: mmc_interrupt_hpi() failed. err: (%d)\n",	mmc_hostname(card->host), err);
+#endif
 	mmc_release_host(card->host);
 	return err;
 }
@@ -1308,7 +1334,17 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 			 */
 			limit_us = 3000000;
 		else
+			#ifdef CONFIG_MACH_LGE
+			/*           
+                                              
+                                                                         
+                                        
+                                   
+    */
+			limit_us = 300000;
+			#else
 			limit_us = 100000;
+			#endif
 
 		/*
 		 * SDHC cards always use these fixed values.
@@ -1938,7 +1974,15 @@ void mmc_power_up(struct mmc_host *host)
 	 * This delay should be sufficient to allow the power supply
 	 * to reach the minimum voltage.
 	 */
+#ifdef CONFIG_MACH_LGE
+	/*           
+                                               
+                                 
+  */
+	mmc_delay(20);
+#else
 	mmc_delay(10);
+#endif
 
 	host->ios.clock = host->f_init;
 
@@ -1949,13 +1993,32 @@ void mmc_power_up(struct mmc_host *host)
 	 * This delay must be at least 74 clock sizes, or 1 ms, or the
 	 * time required to reach a stable voltage.
 	 */
+#ifdef CONFIG_MACH_LGE
+	/*           
+                                               
+                                 
+  */
+	mmc_delay(20);
+#else
 	mmc_delay(10);
+#endif
 
 	mmc_host_clk_release(host);
 }
 
 void mmc_power_off(struct mmc_host *host)
 {
+	#ifdef CONFIG_MACH_LGE
+		/*           
+                                            
+                                  
+   */
+		if (host->ios.power_mode == MMC_POWER_OFF) {
+            pr_info("[LGE][MMC][%-18s( )] host->index:%d, already power-off, skip below\n", __func__, host->index);
+			return;
+		}
+	#endif
+
 	mmc_host_clk_hold(host);
 
 	host->ios.clock = 0;
@@ -2040,7 +2103,7 @@ int mmc_resume_bus(struct mmc_host *host)
 	if (!mmc_bus_needs_resume(host))
 		return -EINVAL;
 
-	printk("%s: Starting deferred resume\n", mmc_hostname(host));
+    printk("%s: Starting deferred resume\n", mmc_hostname(host));
 	spin_lock_irqsave(&host->lock, flags);
 	host->bus_resume_flags &= ~MMC_BUSRESUME_NEEDS_RESUME;
 	host->rescan_disable = 0;
@@ -2054,7 +2117,8 @@ int mmc_resume_bus(struct mmc_host *host)
 	}
 
 	mmc_bus_put(host);
-	printk("%s: Deferred resume completed\n", mmc_hostname(host));
+    printk("%s: Deferred resume completed\n", mmc_hostname(host));
+
 	return 0;
 }
 
@@ -2126,6 +2190,14 @@ void mmc_detect_change(struct mmc_host *host, unsigned long delay)
 #endif
 	host->detect_change = 1;
 
+#ifdef CONFIG_MACH_LGE
+/*
+             
+                                                                           
+                                
+ */
+	wake_lock(&host->detect_wake_lock);
+#endif
 	mmc_schedule_delayed_work(&host->detect, delay);
 }
 
@@ -2642,7 +2714,14 @@ int mmc_can_reset(struct mmc_card *card)
 		rst_n_function = card->ext_csd.rst_n_function;
 		if ((rst_n_function & EXT_CSD_RST_N_EN_MASK) !=
 		    EXT_CSD_RST_N_ENABLED)
+		#ifdef CONFIG_MACH_LGE
+		{
+            pr_info("%s: mmc, MMC_CAP_HW_RESET, rst_n_function=0x%02x\n", __func__, rst_n_function);
 			return 0;
+		}
+		#else
+			return 0;
+		#endif
 	}
 	return 1;
 }
@@ -3151,6 +3230,10 @@ int _mmc_detect_card_removed(struct mmc_host *host)
 		pr_debug("%s: card remove detected\n", mmc_hostname(host));
 	}
 
+	#ifdef CONFIG_MACH_LGE
+    pr_info("[LGE][MMC][%-18s( )] end, mmc%d, return %d\n", __func__, host->index, ret);
+	#endif
+
 	return ret;
 }
 
@@ -3196,6 +3279,14 @@ void mmc_rescan(struct work_struct *work)
 		container_of(work, struct mmc_host, detect.work);
 	bool extend_wakelock = false;
 
+#ifdef CONFIG_MACH_LGE
+	/*           
+               
+                                
+ */
+    pr_info("[LGE][MMC][%-18s( ) START!] mmc%d\n", __func__, host->index);
+#endif
+
 	if (host->rescan_disable)
 		return;
 
@@ -3211,13 +3302,6 @@ void mmc_rescan(struct work_struct *work)
 		host->bus_ops->detect(host);
 
 	host->detect_change = 0;
-	/* If the card was removed the bus will be marked
-	 * as dead - extend the wakelock so userspace
-	 * can respond */
-	if (host->bus_dead)
-		extend_wakelock = 1;
-
-
 	/* If the card was removed the bus will be marked
 	 * as dead - extend the wakelock so userspace
 	 * can respond */
@@ -3264,6 +3348,15 @@ void mmc_rescan(struct work_struct *work)
 	if (extend_wakelock && !host->rescan_disable)
 		wake_lock_timeout(&host->detect_wake_lock, HZ / 2);
 
+#ifdef CONFIG_MACH_LGE
+/*
+             
+                                                                           
+                                
+ */
+	else
+		wake_unlock(&host->detect_wake_lock);
+#endif
 	if (host->caps & MMC_CAP_NEEDS_POLL)
 		mmc_schedule_delayed_work(&host->detect, HZ);
 }
@@ -3694,6 +3787,13 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		}
 		host->rescan_disable = 0;
 		spin_unlock_irqrestore(&host->lock, flags);
+#ifdef CONFIG_BCMDHD_MODULE
+		/* This patch is for nonremovable 0 case of BCM WiFi */
+		if (host->card && mmc_card_sdio(host->card)) {
+            pr_info("J:%s-mmc_card_sdio, host->index=%d\n", __FUNCTION__, host->index);
+			return 0;
+		}
+#endif /* CONFIG_BCMDHD_MODULE */
 		mmc_detect_change(host, 0);
 		break;
 

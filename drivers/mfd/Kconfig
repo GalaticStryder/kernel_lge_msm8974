@@ -467,6 +467,24 @@ config PMIC_ADP5520
 	  individual components like LCD backlight, LEDs, GPIOs and Kepad
 	  under the corresponding menus.
 
+config MFD_LM3631
+	tristate "TI LM3631 Backlight and Bias Power Driver"
+	depends on I2C
+	select MFD_CORE
+	select REGMAP_I2C
+	help
+	  Say yes here to enable support for TI LM3631 chip.
+	  LM3631 has 2 strings for backlight with 5 regulators for LCD bias.
+
+config MFD_TPS65132
+	bool "TPS65132 Power Management chip"
+	depends on I2C
+	select MFD_CORE
+	select REGMAP_I2C
+	help
+	  if you say yes here you get support for the TPS65132 series of
+	  Power Management chips.
+
 config MFD_MAX8925
 	bool "Maxim Semiconductor MAX8925 PMIC Support"
 	depends on I2C=y && GENERIC_HARDIRQS
@@ -510,6 +528,48 @@ config MFD_S5M_CORE
 	 This driver provies common support for accessing the device,
 	 additional drivers must be enabled in order to use the functionality
 	 of the device
+
+config MFD_ARIZONA
+	default n
+	select REGMAP
+	select REGMAP_IRQ
+	bool
+
+config MFD_ARIZONA_I2C
+	tristate "Support Wolfson Microelectronics Arizona platform with I2C"
+	default n
+	select MFD_ARIZONA
+	select MFD_CORE
+	select REGMAP_I2C
+	depends on I2C
+	help
+	  Support for the Wolfson Microelectronics Arizona platform audio SoC
+	  core functionality controlled via I2C.
+
+config MFD_ARIZONA_SPI
+	tristate "Support Wolfson Microelectronics Arizona platform with SPI"
+	default n
+	select MFD_ARIZONA
+	select MFD_CORE
+	select REGMAP_SPI
+	depends on SPI_MASTER
+	help
+	  Support for the Wolfson Microelectronics Arizona platform audio SoC
+	  core functionality controlled via I2C.
+
+config MFD_WM5102
+	bool "Support Wolfson Microelectronics WM5102"
+	default n
+	depends on MFD_ARIZONA
+	help
+	  Support for Wolfson Microelectronics WM5102 low power audio SoC
+
+config MFD_WM5110
+	bool "Support Wolfson Microelectronics WM5110"
+	default n
+	depends on MFD_ARIZONA
+	help
+	  Support for Wolfson Microelectronics WM5110 low power audio SoC
 
 config MFD_WM8400
 	tristate "Support Wolfson Microelectronics WM8400"
@@ -880,6 +940,19 @@ config MFD_PM8921_CORE
 
 	  Say M here if you want to include support for PM8921 chip as a module.
 	  This will build a module called "pm8921-core".
+
+config MFD_MAX77819
+	bool "Maxim Integrated MAX77819 PMIC Support"
+	depends on I2C=y && GENERIC_HARDIRQS
+	select MFD_CORE
+	select REGMAP_I2C
+	select REGMAP_IRQ
+	default n
+	help
+	  Say yes here to support for Maxim MAX77819. This is a Power Management IC.
+	  This driver provies common support for accessing the device,
+	  additional drivers must be enabled in order to use the functionality
+	  of the device.
 
 config MFD_PM8821_CORE
 	tristate "Qualcomm PM8821 PMIC chip"

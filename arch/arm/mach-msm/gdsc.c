@@ -34,12 +34,32 @@
 #define HW_CONTROL_MASK		BIT(1)
 #define SW_COLLAPSE_MASK	BIT(0)
 
+#ifdef CONFIG_LGE_GDSC_SWCONTROL
+#include <mach/board_lge.h>
+
+#define RESTORE_MASK		BIT(10)
+#define SAVE_MASK			BIT(9)
+#define RETAIN_MASK			BIT(8)
+#define EN_RESET_MASK		BIT(7)
+#define EN_FEW_MASK			BIT(6)
+#define CLAMP_IO_MASK		BIT(5)
+#define CLK_DISABLE_MASK	BIT(4)
+#define PD_ARES_MASK		BIT(3)
+#define MAX_RETRY_COUNT		10
+
+#endif
+
 /* Wait 2^n CXO cycles between all states. Here, n=2 (4 cycles). */
 #define EN_REST_WAIT_VAL	(0x2 << 20)
 #define EN_FEW_WAIT_VAL		(0x8 << 16)
 #define CLK_DIS_WAIT_VAL	(0x2 << 12)
 
+#ifdef CONFIG_LGE_GDSC_SWCONTROL
+#define TIMEOUT_US_LGE	20000
 #define TIMEOUT_US		100
+#else
+#define TIMEOUT_US		100
+#endif
 
 struct gdsc {
 	struct regulator_dev	*rdev;
@@ -51,6 +71,9 @@ struct gdsc {
 	bool			toggle_periph;
 	bool			toggle_logic;
 	bool			resets_asserted;
+#ifdef CONFIG_LGE_GDSC_SWCONTROL
+	bool			use_lge_workaround;
+#endif
 };
 
 static int gdsc_is_enabled(struct regulator_dev *rdev)
@@ -63,6 +86,112 @@ static int gdsc_is_enabled(struct regulator_dev *rdev)
 	return !!(readl_relaxed(sc->gdscr) & PWR_ON_MASK);
 }
 
+#ifdef CONFIG_LGE_GDSC_SWCONTROL
+static int lge_gdsc_disable(struct gdsc *sc)
+{
+	uint32_t regval;
+	int ret;
+
+	regval = readl_relaxed(sc->gdscr);
+	regval |= SW_OVERRIDE_MASK;
+	writel_relaxed(regval, sc->gdscr);
+
+	regval = readl_relaxed(sc->gdscr);
+	regval |= CLK_DISABLE_MASK;
+	writel_relaxed(regval, sc->gdscr);
+
+	regval |= RETAIN_MASK;
+	writel_relaxed(regval, sc->gdscr);
+	regval &= ~RESTORE_MASK;
+	regval |= CLAMP_IO_MASK | SAVE_MASK;
+	writel_relaxed(regval, sc->gdscr);
+
+	regval = readl_relaxed(sc->gdscr);
+	regval |= SW_COLLAPSE_MASK;
+	writel_relaxed(regval, sc->gdscr);
+
+	ret = readl_tight_poll_timeout(sc->gdscr, regval,
+				       !(regval & PWR_ON_MASK), TIMEOUT_US_LGE);
+
+	if (ret)
+		pr_err("%s: %s disable timed out\n", __func__, sc->rdesc.name);
+	return ret;
+}
+
+static int lge_gdsc_enable(struct gdsc *sc)
+{
+	uint32_t regval;
+	int ret;
+	int retry_count = 0;
+
+retry_enable:
+	regval = readl_relaxed(sc->gdscr);
+	regval |= SW_OVERRIDE_MASK;
+	writel_relaxed(regval, sc->gdscr);
+
+	regval = readl_relaxed(sc->gdscr);
+	regval |= PD_ARES_MASK|EN_FEW_MASK;
+	writel_relaxed(regval, sc->gdscr);
+	regval = readl_relaxed(sc->gdscr);
+	udelay(15);
+
+	regval &= ~PD_ARES_MASK;
+	writel_relaxed(regval, sc->gdscr);
+	regval = readl_relaxed(sc->gdscr);
+
+	regval |= EN_RESET_MASK;
+	writel_relaxed(regval, sc->gdscr);
+	regval = readl_relaxed(sc->gdscr);
+	udelay(1);
+
+	regval = readl_relaxed(sc->gdscr);
+	regval &= ~SW_COLLAPSE_MASK;
+	writel_relaxed(regval, sc->gdscr);
+
+	ret = readl_tight_poll_timeout(sc->gdscr, regval, regval & PWR_ON_MASK,
+				       TIMEOUT_US_LGE);
+	if (ret) {
+		pr_err("%s: %s enable timed out, state : 0x%08x, retry count : %d\n",
+				__func__, sc->rdesc.name, readl_relaxed(sc->gdscr),
+				retry_count+1);
+		lge_gdsc_disable(sc);
+		if (++retry_count <= MAX_RETRY_COUNT)
+			goto retry_enable;
+		pr_err("%s: %s fail to enable\n", __func__, sc->rdesc.name);
+		BUG();
+		return ret;
+	}
+
+	regval = readl_relaxed(sc->gdscr);
+	regval &= ~CLAMP_IO_MASK;
+	writel_relaxed(regval, sc->gdscr);
+	regval = readl_relaxed(sc->gdscr);
+
+	regval &= ~RETAIN_MASK;
+	writel_relaxed(regval, sc->gdscr);
+	regval = readl_relaxed(sc->gdscr);
+
+	regval &= ~SAVE_MASK;
+	regval |= RESTORE_MASK;
+	writel_relaxed(regval, sc->gdscr);
+	regval = readl_relaxed(sc->gdscr);
+
+	regval &= ~(CLK_DISABLE_MASK);
+	writel_relaxed(regval, sc->gdscr);
+	regval = readl_relaxed(sc->gdscr);
+
+	/*
+	 * If clocks to this power domain were already on, they will take an
+	 * additional 4 clock cycles to re-enable after the rail is enabled.
+	 * Delay to account for this. A delay is also needed to ensure clocks
+	 * are not enabled within 400ns of enabling power to the memories.
+	 */
+	udelay(1);
+
+	return 0;
+}
+#endif
+
 static int gdsc_enable(struct regulator_dev *rdev)
 {
 	struct gdsc *sc = rdev_get_drvdata(rdev);
@@ -70,16 +199,25 @@ static int gdsc_enable(struct regulator_dev *rdev)
 	int i, ret;
 
 	if (sc->toggle_logic) {
-		regval = readl_relaxed(sc->gdscr);
-		regval &= ~SW_COLLAPSE_MASK;
-		writel_relaxed(regval, sc->gdscr);
+#ifdef CONFIG_LGE_GDSC_SWCONTROL
+		if (sc->use_lge_workaround) {
+			ret = lge_gdsc_enable(sc);
+			if (ret)
+				return ret;
+		} else
+#endif
+		{
+			regval = readl_relaxed(sc->gdscr);
+			regval &= ~SW_COLLAPSE_MASK;
+			writel_relaxed(regval, sc->gdscr);
 
-		ret = readl_tight_poll_timeout(sc->gdscr, regval,
-					regval & PWR_ON_MASK, TIMEOUT_US);
-		if (ret) {
-			dev_err(&rdev->dev, "%s enable timed out\n",
-				sc->rdesc.name);
-			return ret;
+			ret = readl_tight_poll_timeout(sc->gdscr, regval,
+						regval & PWR_ON_MASK, TIMEOUT_US);
+			if (ret) {
+				dev_err(&rdev->dev, "%s enable timed out\n",
+					sc->rdesc.name);
+				return ret;
+			}
 		}
 	} else {
 		for (i = 0; i < sc->clock_count; i++)
@@ -119,16 +257,23 @@ static int gdsc_disable(struct regulator_dev *rdev)
 	}
 
 	if (sc->toggle_logic) {
-		regval = readl_relaxed(sc->gdscr);
-		regval |= SW_COLLAPSE_MASK;
-		writel_relaxed(regval, sc->gdscr);
+#ifdef CONFIG_LGE_GDSC_SWCONTROL
+		if (sc->use_lge_workaround)
+			ret = lge_gdsc_disable(sc);
+		else
+#endif
+		{
+			regval = readl_relaxed(sc->gdscr);
+			regval |= SW_COLLAPSE_MASK;
+			writel_relaxed(regval, sc->gdscr);
 
-		ret = readl_tight_poll_timeout(sc->gdscr, regval,
-					       !(regval & PWR_ON_MASK),
-						TIMEOUT_US);
-		if (ret)
-			dev_err(&rdev->dev, "%s disable timed out\n",
-				sc->rdesc.name);
+			ret = readl_tight_poll_timeout(sc->gdscr, regval,
+						       !(regval & PWR_ON_MASK),
+							TIMEOUT_US);
+			if (ret)
+				dev_err(&rdev->dev, "%s disable timed out\n",
+					sc->rdesc.name);
+		}
 	} else {
 		for (i = sc->clock_count-1; i >= 0; i--)
 			clk_reset(sc->clocks[i], CLK_RESET_ASSERT);
@@ -153,6 +298,9 @@ static int __devinit gdsc_probe(struct platform_device *pdev)
 	uint32_t regval;
 	bool retain_mem, retain_periph;
 	int i, ret;
+#ifdef CONFIG_LGE_GDSC_SWCONTROL
+	int use_lge_workaround = 0; /* default: all not applied */
+#endif
 
 	sc = devm_kzalloc(&pdev->dev, sizeof(struct gdsc), GFP_KERNEL);
 	if (sc == NULL)
@@ -204,7 +352,12 @@ static int __devinit gdsc_probe(struct platform_device *pdev)
 			return rc;
 		}
 	}
-
+#ifdef CONFIG_LGE_GDSC_SWCONTROL
+	of_property_read_u32(pdev->dev.of_node, "lge,use_workaround",
+			&use_lge_workaround);
+	sc->use_lge_workaround =
+		lge_get_board_revno() >= use_lge_workaround ? 0 : 1;
+#endif
 	sc->rdesc.id = atomic_inc_return(&gdsc_count);
 	sc->rdesc.ops = &gdsc_ops;
 	sc->rdesc.type = REGULATOR_VOLTAGE;
@@ -232,6 +385,30 @@ static int __devinit gdsc_probe(struct platform_device *pdev)
 	sc->toggle_logic = !of_property_read_bool(pdev->dev.of_node,
 						"qcom,skip-logic-collapse");
 	if (!sc->toggle_logic) {
+#ifdef CONFIG_LGE_GDSC_SWCONTROL
+		/*                                                             */
+		if (lge_get_board_revno() >= use_lge_workaround) {
+			regval &= ~SW_COLLAPSE_MASK;
+			writel_relaxed(regval, sc->gdscr);
+
+			ret = readl_tight_poll_timeout(sc->gdscr, regval,
+					regval & PWR_ON_MASK, TIMEOUT_US);
+			if (ret) {
+				dev_err(&pdev->dev, "%s enable timed out\n",
+						sc->rdesc.name);
+				return ret;
+			}
+		} else {
+			pr_info("%s: %s is enabled only at first by lge workaround\n",
+					__func__, sc->rdesc.name);
+			ret = lge_gdsc_enable(sc);
+			if (ret) {
+				dev_err(&pdev->dev, "%s enable timed out\n",
+						sc->rdesc.name);
+				return ret;
+			}
+		}
+#else /* qmc */
 		regval &= ~SW_COLLAPSE_MASK;
 		writel_relaxed(regval, sc->gdscr);
 
@@ -242,6 +419,7 @@ static int __devinit gdsc_probe(struct platform_device *pdev)
 				sc->rdesc.name);
 			return ret;
 		}
+#endif
 	}
 
 	for (i = 0; i < sc->clock_count; i++) {

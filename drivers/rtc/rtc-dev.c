@@ -15,10 +15,18 @@
 #include <linux/rtc.h>
 #include <linux/sched.h>
 #include "rtc-core.h"
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+#include <linux/syscalls.h>
+#endif
 
 static dev_t rtc_devt;
 
 #define RTC_DEV_MAX 16 /* 16 RTCs should be enough for everyone... */
+
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+bool poweron_alarm;
+struct rtc_wkalrm g_poalarm;
+#endif
 
 static int rtc_dev_open(struct inode *inode, struct file *file)
 {
@@ -357,10 +365,30 @@ static long rtc_dev_ioctl(struct file *file,
 
 	case RTC_AIE_ON:
 		mutex_unlock(&rtc->ops_lock);
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+		if(poweron_alarm == 0) {
+			poweron_alarm = 1;
+		}
+
+		pr_info("[%s %d] RTC_AIE_ON (%d),poweron_alarm (%d)\n", __func__, __LINE__,
+					g_poalarm.enabled, poweron_alarm);
+#endif
 		return rtc_alarm_irq_enable(rtc, 1);
 
 	case RTC_AIE_OFF:
 		mutex_unlock(&rtc->ops_lock);
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+		if(poweron_alarm == 1) {
+			poweron_alarm = 0;
+		}
+
+		pr_info("[%s %d] RTC_AIE_OFF (%d),poweron_alarm (%d)\n", __func__, __LINE__,
+					g_poalarm.enabled, poweron_alarm);
+		if (g_poalarm.enabled) {
+			g_poalarm.enabled = 0;
+			rtc_set_po_alarm(rtc, &g_poalarm);
+		}
+#endif
 		return rtc_alarm_irq_enable(rtc, 0);
 
 	case RTC_UIE_ON:
@@ -405,6 +433,22 @@ static long rtc_dev_ioctl(struct file *file,
 
 		return rtc_set_alarm(rtc, &alarm);
 
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+	case RTC_DEVICE_UP:
+		mutex_unlock(&rtc->ops_lock);
+		if (copy_from_user(&g_poalarm, uarg, sizeof(g_poalarm))) {
+			pr_err("[%s %d] copy error, RTC_DEVICE_UP\n", __func__, __LINE__);
+			return -EFAULT;
+		}
+
+		pr_info("[%s]:RTC_DEVICE_UP(%d)\n",__func__,g_poalarm.enabled);
+		pr_info("[%s]:Alarm Set for h:r:s=%d:%d:%d, d/m/y=%d/%d/%d\n",__func__,
+			alarm.time.tm_hour, alarm.time.tm_min,
+			alarm.time.tm_sec, alarm.time.tm_mday,
+			alarm.time.tm_mon, alarm.time.tm_year);
+
+		return rtc_set_po_alarm(rtc, &g_poalarm);
+#endif
 	case RTC_WKALM_RD:
 		mutex_unlock(&rtc->ops_lock);
 		err = rtc_read_alarm(rtc, &alarm);
@@ -520,6 +564,10 @@ void __init rtc_dev_init(void)
 	if (err < 0)
 		printk(KERN_ERR "%s: failed to allocate char dev region\n",
 			__FILE__);
+
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+	memset(&g_poalarm, 0, sizeof(g_poalarm));
+#endif
 }
 
 void __exit rtc_dev_exit(void)

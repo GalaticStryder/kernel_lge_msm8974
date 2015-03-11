@@ -140,4 +140,9 @@ config SSM
 	  This driver uses Secure Channel Manager interface for trustzone
 	  communication and communicates with modem over SMD channel.
 
+config VIBRATOR_PM8974_HAPTIC
+	tristate "Support for vibrator power control using pm8974"
+	help
+	  This option enables support for the vibrator power control.
+
 endmenu

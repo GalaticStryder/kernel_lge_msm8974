@@ -97,9 +97,14 @@ extern void tcp_time_wait(struct sock *sk, int state, int timeo);
 				 * RFC1122 says that the limit is 100 sec.
 				 * 15 is ~13-30min depending on RTO.
 				 */
-
+/*                                                                            */
+#if defined(CONFIG_MACH_MSM8974_B1_LGU) || defined(CONFIG_MACH_MSM8974_G3_LGU) || defined(CONFIG_MACH_MSM8974_G2_LGU)
+#define TCP_SYN_RETRIES	 4
+#else
 #define TCP_SYN_RETRIES	 5	/* number of times to retry active opening a
 				 * connection: ~180sec is RFC minimum	*/
+#endif
+/*                                                                          */
 
 #define TCP_SYNACK_RETRIES 5	/* number of times to retry passive opening a
 				 * connection: ~180sec is RFC minimum	*/
@@ -254,11 +259,16 @@ extern int sysctl_tcp_max_ssthresh;
 extern int sysctl_tcp_cookie_size;
 extern int sysctl_tcp_thin_linear_timeouts;
 extern int sysctl_tcp_thin_dupack;
+extern int sysctl_tcp_challenge_ack_limit;
 extern int sysctl_tcp_default_init_rwnd;
 
 /* sysctl variables for controlling various tcp parameters */
 extern int sysctl_tcp_delack_seg;
 extern int sysctl_tcp_use_userconfig;
+
+/*                                                                   */
+extern int sysctl_ds_enable;
+/*                                                                 */
 
 extern atomic_long_t tcp_memory_allocated;
 extern struct percpu_counter tcp_sockets_allocated;

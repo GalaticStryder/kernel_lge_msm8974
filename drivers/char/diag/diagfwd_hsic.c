@@ -33,6 +33,10 @@
 #include "diagfwd_smux.h"
 #include "diagfwd_bridge.h"
 
+#ifdef CONFIG_LGE_DIAG_BYPASS
+#include "lg_diag_bypass.h"
+extern int diag_bypass_enable;
+#endif
 #define READ_HSIC_BUF_SIZE 2048
 struct diag_hsic_dev *diag_hsic;
 
@@ -251,7 +255,11 @@ static void diag_hsic_resume(void *ctxt)
 	if ((diag_hsic[index].count_hsic_pool <
 		diag_hsic[index].poolsize_hsic) &&
 		((driver->logging_mode == MEMORY_DEVICE_MODE) ||
-				(diag_bridge[index].usb_connected)))
+#ifdef CONFIG_LGE_DIAG_BYPASS
+             (lge_bypass_is_opened()&&diag_bypass_enable==1) || (diag_bridge[index].usb_connected)))
+#else
+        (diag_bridge[index].usb_connected)))
+#endif
 		queue_work(diag_bridge[index].wq,
 			 &diag_hsic[index].diag_read_hsic_work);
 }

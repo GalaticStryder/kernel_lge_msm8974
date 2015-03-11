@@ -380,6 +380,33 @@ int rtc_set_alarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
 }
 EXPORT_SYMBOL_GPL(rtc_set_alarm);
 
+#ifdef CONFIG_LGE_PM_RTC_PWROFF_ALARM
+int rtc_set_po_alarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
+{
+	int err;
+
+	err = rtc_valid_tm(&alarm->time);
+
+	if (err != 0){
+		return err;
+	}
+
+	if (!rtc->ops) {
+		dev_err(&rtc->dev, "[%s %d] ops not exist\n", __func__, __LINE__);
+		err = -ENODEV;
+	} else if (!rtc->ops->set_po_alarm) {
+		dev_err(&rtc->dev, "[%s %d] bootalarm func not exist\n", __func__, __LINE__);
+		err = -EINVAL;
+	} else
+		err = rtc->ops->set_po_alarm(rtc->dev.parent, alarm);
+
+	pr_info("[%s %d] Set Power Off Alarm\n", __func__, __LINE__);
+
+	return err;
+}
+EXPORT_SYMBOL_GPL(rtc_set_po_alarm);
+#endif
+
 /* Called once per device from rtc_device_register */
 int rtc_initialize_alarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
 {

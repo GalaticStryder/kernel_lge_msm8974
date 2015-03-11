@@ -57,3 +57,5 @@ obj-$(CONFIG_ANDROID)		+= android/
 obj-$(CONFIG_PHONE)		+= telephony/
 obj-$(CONFIG_RAMSTER)		+= ramster/
 obj-$(CONFIG_USB_WPAN_HCD)	+= ozwpan/
+#[LGE_WIFI][sangheon.shim@lge.com]:20131011. wlan module is changed to Built-In driver.
+obj-$(CONFIG_PRONTO_WLAN)   += prima/

@@ -134,4 +134,7 @@ struct generic_bl_info {
 	void (*kick_battery)(void);
 };
 
+#if defined(CONFIG_MACH_LGE_BACKLIGHT_SUPPORT)
+extern struct backlight_device *get_backlight_device(void);
+#endif
 #endif

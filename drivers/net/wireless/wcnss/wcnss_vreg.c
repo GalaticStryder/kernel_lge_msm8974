@@ -48,7 +48,6 @@ static int auto_detect;
 #define WCNSS_PMU_CFG_IRIS_XO_CFG          BIT(3)
 #define WCNSS_PMU_CFG_IRIS_XO_EN           BIT(4)
 #define WCNSS_PMU_CFG_IRIS_XO_CFG_STS      BIT(6) /* 1: in progress, 0: done */
-
 #define WCNSS_PMU_CFG_IRIS_RESET           BIT(7)
 #define WCNSS_PMU_CFG_IRIS_RESET_STS       BIT(8) /* 1: in progress, 0: done */
 #define WCNSS_PMU_CFG_IRIS_XO_READ         BIT(9)

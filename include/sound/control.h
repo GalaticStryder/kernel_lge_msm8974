@@ -40,7 +40,11 @@ struct snd_kcontrol_new {
 	snd_ctl_elem_iface_t iface;	/* interface identifier */
 	unsigned int device;		/* device/client number */
 	unsigned int subdevice;		/* subdevice (substream) number */
-	unsigned char *name;	/* ASCII name of item */
+#ifdef CONFIG_SND_SOC_WM5110
+	const unsigned char *name;	/* ASCII name of item */
+#else
+	unsigned char *name;
+#endif
 	unsigned int index;		/* index of item */
 	unsigned int access;		/* access rights */
 	unsigned int count;		/* count of same elements */

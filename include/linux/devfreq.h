@@ -140,6 +140,10 @@ struct devfreq_governor {
 				u32 *flag);
 	int (*event_handler)(struct devfreq *devfreq,
 				unsigned int event, void *data);
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
+	int (*init)(struct devfreq *this);
+	void (*exit)(struct devfreq *this);
+#endif
 };
 
 /**

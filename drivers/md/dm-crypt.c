@@ -1441,6 +1441,12 @@ static int crypt_ctr_cipher(struct dm_target *ti,
 	if (!cipher_api)
 		goto bad_mem;
 
+#ifdef CONFIG_CRYPTO_DEV_KFIPS
+	if (!strcmp(cipher, "aes") &&
+	    (!strcmp(chainmode, "cbc") || !strcmp(chainmode, "xts")))
+		cipher = "fipsaes";
+
+#endif
 	ret = snprintf(cipher_api, CRYPTO_MAX_ALG_NAME,
 		       "%s(%s)", chainmode, cipher);
 	if (ret < 0) {

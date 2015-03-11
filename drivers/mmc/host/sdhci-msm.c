@@ -42,6 +42,14 @@
 #include <mach/mpm.h>
 #include <linux/iopoll.h>
 
+#if defined(CONFIG_MACH_LGE) && defined(CONFIG_MMC_MSM_DEBUGFS)
+/*           
+                                                    
+                                              
+                                
+ */
+#include <linux/debugfs.h>
+#endif
 #include "sdhci-pltfm.h"
 
 enum sdc_mpm_pin_state {
@@ -132,9 +140,14 @@ enum sdc_mpm_pin_state {
 #define CORE_MCI_DATA_CTRL	0x2C
 #define CORE_MCI_DPSM_ENABLE	(1 << 0)
 
+#define CORE_MCI_DATA_CNT 0x30
+#define CORE_MCI_STATUS 0x34
+#define CORE_MCI_FIFO_CNT 0x44
+
 #define CORE_TESTBUS_CONFIG	0x0CC
+#define CORE_TESTBUS_SEL2_BIT	4
 #define CORE_TESTBUS_ENA	(1 << 3)
-#define CORE_TESTBUS_SEL2	(1 << 4)
+#define CORE_TESTBUS_SEL2	(1 << CORE_TESTBUS_SEL2_BIT)
 
 #define CORE_MCI_VERSION	0x050
 #define CORE_VERSION_310	0x10000011
@@ -346,6 +359,14 @@ enum vdd_io_level {
 	 */
 	VDD_IO_SET_LEVEL,
 };
+#if defined(CONFIG_MACH_LGE) && defined(CONFIG_MMC_MSM_DEBUGFS)
+/*           
+                                                    
+                                              
+                                
+ */
+static void msmsdhci_dbg_createhost(struct sdhci_msm_host *);
+#endif
 
 /* MSM platform specific tuning */
 static inline int msm_dll_poll_ck_out_en(struct sdhci_host *host,
@@ -1085,6 +1106,12 @@ static int sdhci_msm_dt_parse_vreg_info(struct device *dev,
 			"qcom,%s-lpm-sup", vreg_name);
 	if (of_get_property(np, prop_name, NULL))
 		vreg->lpm_sup = true;
+
+    /*                                
+                                                                                                            */
+	prop = of_get_property(np, prop_name, &len);
+    if (prop != NULL && len >0 && of_compat_cmp((const char*)prop, "disable", strlen("disable")) == 0)
+        vreg->lpm_sup = false;
 
 	snprintf(prop_name, MAX_PROP_SIZE,
 			"qcom,%s-voltage-level", vreg_name);
@@ -2191,10 +2218,29 @@ static void sdhci_msm_check_power_status(struct sdhci_host *host, u32 req_type)
 	unsigned long flags;
 	bool done = false;
 
+#ifdef CONFIG_LGE_MMC_SD_USE_SDCC3
+/*           
+                                                              
+                                
+ */
+	if (strcmp(host->hw_name, "msm_sdcc.3") == 0) {
+		if (req_type == REQ_IO_HIGH) {
+			/* Switch voltage High */
+			sdhci_msm_set_vdd_io_vol(msm_host->pdata, VDD_IO_HIGH, 0);
+			msm_host->curr_io_level = REQ_IO_HIGH;
+		} else if (req_type == REQ_IO_LOW) {
+			/* Switch voltage Low */
+			sdhci_msm_set_vdd_io_vol(msm_host->pdata, VDD_IO_LOW, 0);
+			msm_host->curr_io_level = REQ_IO_LOW;
+		}
+	}
+#endif
+
 	spin_lock_irqsave(&host->lock, flags);
 	pr_debug("%s: %s: request %d curr_pwr_state %x curr_io_level %x\n",
 			mmc_hostname(host->mmc), __func__, req_type,
 			msm_host->curr_pwr_state, msm_host->curr_io_level);
+
 	if ((req_type & msm_host->curr_pwr_state) ||
 			(req_type & msm_host->curr_io_level))
 		done = true;
@@ -2658,6 +2704,61 @@ static void sdhci_msm_disable_data_xfer(struct sdhci_host *host)
 	udelay(CORE_AHB_DESC_DELAY_US);
 }
 
+#define MAX_TEST_BUS 20
+
+void sdhci_msm_dump_vendor_regs(struct sdhci_host *host)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_msm_host *msm_host = pltfm_host->priv;
+	int tbsel, tbsel2;
+	int i, index = 0;
+	u32 test_bus_val = 0;
+	u32 debug_reg[MAX_TEST_BUS] = {0};
+
+	pr_info("----------- VENDOR REGISTER DUMP -----------\n");
+	pr_info("Data cnt: 0x%08x | Fifo cnt: 0x%08x | Int sts: 0x%08x\n",
+			readl_relaxed(msm_host->core_mem + CORE_MCI_DATA_CNT),
+			readl_relaxed(msm_host->core_mem + CORE_MCI_FIFO_CNT),
+			readl_relaxed(msm_host->core_mem + CORE_MCI_STATUS));
+	pr_info("DLL cfg:  0x%08x | DLL sts:  0x%08x | SDCC ver: 0x%08x\n",
+			readl_relaxed(host->ioaddr + CORE_DLL_CONFIG),
+			readl_relaxed(host->ioaddr + CORE_DLL_STATUS),
+			readl_relaxed(msm_host->core_mem + CORE_MCI_VERSION));
+	pr_info("Vndr func: 0x%08x | Vndr adma err : addr0: 0x%08x addr1: 0x%08x\n",
+			readl_relaxed(host->ioaddr + CORE_VENDOR_SPEC),
+			readl_relaxed(host->ioaddr + CORE_VENDOR_SPEC_ADMA_ERR_ADDR0),
+			readl_relaxed(host->ioaddr + CORE_VENDOR_SPEC_ADMA_ERR_ADDR1));
+
+	/*
+	 * tbsel indicates [2:0] bits and tbsel2 indicates [7:4] bits
+	 * of CORE_TESTBUS_CONFIG register.
+	 *
+	 * To select test bus 0 to 7 use tbsel and to select any test bus
+	 * above 7 use (tbsel2 | tbsel) to get the test bus number. For eg,
+	 * to select test bus 14, write 0x1E to CORE_TESTBUS_CONFIG register
+	 * i.e., tbsel2[7:4] = 0001, tbsel[2:0] = 110.
+	 */
+	for (tbsel2 = 0; tbsel2 < 3; tbsel2++) {
+		for (tbsel = 0; tbsel < 8; tbsel++) {
+			if (index >= MAX_TEST_BUS)
+				break;
+			test_bus_val = (tbsel2 << CORE_TESTBUS_SEL2_BIT) |
+				tbsel | CORE_TESTBUS_ENA;
+			writel_relaxed(test_bus_val,
+					msm_host->core_mem + CORE_TESTBUS_CONFIG);
+			debug_reg[index++] = readl_relaxed(msm_host->core_mem +
+					CORE_SDCC_DEBUG_REG);
+		}
+	}
+	for (i = 0; i < MAX_TEST_BUS; i = i + 4)
+		pr_info(" Test bus[%d to %d]: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+				i, i + 3, debug_reg[i], debug_reg[i+1],
+				debug_reg[i+2], debug_reg[i+3]);
+	/* Disable test bus */
+	writel_relaxed(~CORE_TESTBUS_ENA, msm_host->core_mem +
+			CORE_TESTBUS_CONFIG);
+}
+
 static struct sdhci_ops sdhci_msm_ops = {
 	.set_uhs_signaling = sdhci_msm_set_uhs_signaling,
 	.check_power_status = sdhci_msm_check_power_status,
@@ -2668,6 +2769,7 @@ static struct sdhci_ops sdhci_msm_ops = {
 	.get_min_clock = sdhci_msm_get_min_clock,
 	.get_max_clock = sdhci_msm_get_max_clock,
 	.disable_data_xfer = sdhci_msm_disable_data_xfer,
+	.dump_vendor_regs = sdhci_msm_dump_vendor_regs,
 	.enable_controller_clock = sdhci_msm_enable_controller_clock,
 };
 
@@ -2987,6 +3089,16 @@ static int __devinit sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 	msm_host->mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 	msm_host->mmc->caps2 |= MMC_CAP2_CORE_PM;
+#ifdef CONFIG_MACH_LGE
+#if defined (CONFIG_LGE_MMC_BKOPS_ENABLE) && defined(CONFIG_MMC_SDHCI_MSM)
+	/*           
+                                                               
+                                                                                               
+                                 
+  */
+	msm_host->mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
+#endif
+#endif
 	msm_host->mmc->pm_caps |= MMC_PM_KEEP_POWER | MMC_PM_WAKE_SDIO_IRQ;
 
 	if (msm_host->pdata->nonremovable)
@@ -3079,6 +3191,14 @@ static int __devinit sdhci_msm_probe(struct platform_device *pdev)
 
 	device_enable_async_suspend(&pdev->dev);
 	/* Successful initialization */
+#if defined(CONFIG_MACH_LGE) && defined(CONFIG_MMC_MSM_DEBUGFS)
+/*           
+                                                    
+                                        
+                                
+ */
+    msmsdhci_dbg_createhost(msm_host);
+#endif
 	goto out;
 
 remove_max_bus_bw_file:
@@ -3364,3 +3484,206 @@ module_platform_driver(sdhci_msm_driver);
 
 MODULE_DESCRIPTION("Qualcomm Secure Digital Host Controller Interface driver");
 MODULE_LICENSE("GPL v2");
+#if defined(CONFIG_MACH_LGE) && defined(CONFIG_MMC_MSM_DEBUGFS)
+/*           
+                                                    
+                                        
+                                
+ */
+static int gpio_to_value(int cfg)
+{
+	switch (cfg) {
+	case GPIO_CFG_2MA:
+		return 2;
+		break;
+	case GPIO_CFG_4MA:
+		return 4;
+		break;
+	case GPIO_CFG_6MA:
+		return 6;
+		break;
+	case GPIO_CFG_8MA:
+		return 8;
+		break;
+	case GPIO_CFG_10MA:
+		return 10;
+		break;
+	case GPIO_CFG_12MA:
+		return 12;
+		break;
+	case GPIO_CFG_14MA:
+		return 14;
+		break;
+	case GPIO_CFG_16MA:
+		return 16;
+		break;
+	}
+	return -1;
+}
+
+static int value_to_gpio(int value)
+{
+	switch (value) {
+	case 2:
+		return GPIO_CFG_2MA;
+		break;
+	case 4:
+		return GPIO_CFG_4MA;
+		break;
+	case 6:
+		return GPIO_CFG_6MA;
+		break;
+	case 8:
+		return GPIO_CFG_8MA;
+		break;
+	case 10:
+		return GPIO_CFG_10MA;
+		break;
+	case 12:
+		return GPIO_CFG_12MA;
+		break;
+	case 14:
+		return GPIO_CFG_14MA;
+		break;
+	case 16:
+		return GPIO_CFG_16MA;
+		break;
+	}
+	return -1;
+}
+
+static int msmsdhci_dbg_strength_open(struct inode *inode, struct file *filp)
+{
+	filp->private_data = inode->i_private;
+	return 0;
+}
+
+static int msmsdhci_dbg_strength_read(struct file *filp, char __user *ubuf,
+		size_t cnt, loff_t *ppos)
+{
+	char buf[512] = {0, };
+	int i = 0;
+	struct sdhci_msm_host *host = filp->private_data;
+	struct sdhci_msm_pad_data *curr;
+	struct sdhci_msm_gpio_data *gpio_curr;
+	int clk = -1, cmd = -1, data = -1;
+
+	if (!host || !host->pdata || !host->pdata->pin_data)
+		return 0;
+	if (host->pdata->pin_data->is_gpio) {
+		gpio_curr = host->pdata->pin_data->gpio_data;
+		sprintf(buf, "%s : gpio\n", host->mmc ? mmc_hostname(host->mmc) : "unknown");
+		for (i = 0; i < gpio_curr->size; i++) {
+			if (gpio_is_valid(gpio_curr->gpio[i].no)) {
+				sprintf(buf, "%s%s: %d\n", buf,
+						gpio_curr->gpio[i].name,
+						gpio_curr->gpio[i].no);
+			}
+		}
+		return simple_read_from_buffer(ubuf, cnt, ppos, buf, 128);
+	}
+
+	curr = host->pdata->pin_data->pad_data;
+	for (i = 0; i < curr->drv->size; i++) {
+		switch (curr->drv->on[i].no) {
+		case TLMM_HDRV_SDC1_CLK:
+		case TLMM_HDRV_SDC2_CLK:
+		case TLMM_HDRV_SDC3_CLK:
+		case TLMM_HDRV_SDC4_CLK:
+			clk = gpio_to_value(curr->drv->on[i].val);
+			break;
+		case TLMM_HDRV_SDC1_CMD:
+		case TLMM_HDRV_SDC2_CMD:
+		case TLMM_HDRV_SDC3_CMD:
+		case TLMM_HDRV_SDC4_CMD:
+			cmd = gpio_to_value(curr->drv->on[i].val);
+			break;
+		case TLMM_HDRV_SDC1_DATA:
+		case TLMM_HDRV_SDC2_DATA:
+		case TLMM_HDRV_SDC3_DATA:
+		case TLMM_HDRV_SDC4_DATA:
+			data = gpio_to_value(curr->drv->on[i].val);
+			break;
+		default:
+			continue;
+		}
+	}
+	sprintf(buf, "%d %d %d\n", clk, cmd, data);
+
+	return simple_read_from_buffer(ubuf, cnt, ppos, buf, 512);
+}
+
+static int msmsdhci_dbg_strength_write(struct file *filp,
+		const char __user *ubuf, size_t cnt,
+		loff_t *ppos)
+{
+	struct sdhci_msm_host *host = filp->private_data;
+	struct sdhci_msm_pad_data *curr;
+	int i;
+	int clk, cmd, data, value;
+
+	if (!host || !host->pdata || !host->pdata->pin_data)
+		return 0;
+	if (host->pdata->pin_data->is_gpio)
+		return 0;
+
+	if (sscanf(ubuf, "%d %d %d", &clk, &cmd, &data) != 3)
+		return 0;
+
+	curr = host->pdata->pin_data->pad_data;
+	for (i = 0; i < curr->drv->size; i++) {
+		switch (curr->drv->on[i].no) {
+		case TLMM_HDRV_SDC1_CLK:
+		case TLMM_HDRV_SDC2_CLK:
+		case TLMM_HDRV_SDC3_CLK:
+		case TLMM_HDRV_SDC4_CLK:
+			value = value_to_gpio(clk);
+			if (value == -1)
+				continue;
+			curr->drv->on[i].val = value;
+			break;
+		case TLMM_HDRV_SDC1_CMD:
+		case TLMM_HDRV_SDC2_CMD:
+		case TLMM_HDRV_SDC3_CMD:
+		case TLMM_HDRV_SDC4_CMD:
+			value = value_to_gpio(cmd);
+			if (value == -1)
+				continue;
+			curr->drv->on[i].val = value;
+			break;
+		case TLMM_HDRV_SDC1_DATA:
+		case TLMM_HDRV_SDC2_DATA:
+		case TLMM_HDRV_SDC3_DATA:
+		case TLMM_HDRV_SDC4_DATA:
+			value = value_to_gpio(data);
+			if (value == -1)
+				continue;
+			curr->drv->on[i].val = value;
+			break;
+		default:
+			continue;
+		}
+		msm_tlmm_set_hdrive(curr->drv->on[i].no,
+				curr->drv->on[i].val);
+	}
+	return cnt;
+}
+
+static const struct file_operations msmsdhci_dbg_strength_fops = {
+	.open = msmsdhci_dbg_strength_open,
+	.read = msmsdhci_dbg_strength_read,
+	.write = msmsdhci_dbg_strength_write,
+};
+
+static void msmsdhci_dbg_createhost(struct sdhci_msm_host *host)
+{
+	struct mmc_host *mmc = host->mmc;
+
+	if (!mmc || !mmc->debugfs_root)
+		return;
+
+	debugfs_create_file("strength",
+			S_IROTH | S_IWOTH | S_IRGRP | S_IWGRP | S_IRUSR | S_IWUSR,
+			mmc->debugfs_root, host, &msmsdhci_dbg_strength_fops);
+}
+#endif /*CONFIG_MMC_MSM_DEBUGFS*/

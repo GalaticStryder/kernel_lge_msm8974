@@ -484,6 +484,12 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	int rc = 0;
 	const char *name = clk ? clk->dbg_name : NULL;
 
+#ifdef CONFIG_LGE_SYSTRACE_EXT
+	static unsigned long bimc_a_rate;
+	static unsigned long bimc_rate;
+	static unsigned long max_rate;
+#endif
+
 	if (IS_ERR_OR_NULL(clk))
 		return -EINVAL;
 
@@ -501,6 +507,17 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 
 	trace_clock_set_rate(name, rate, raw_smp_processor_id());
 
+#ifdef CONFIG_LGE_SYSTRACE_EXT
+	trace_printk("tracing_mark_write: C|%d|%s|%lu\n", -1, name, rate);
+
+	if (strcmp(name, "bimc_a_clk") == 0)
+		bimc_a_rate = rate;
+	else
+		bimc_rate = rate;
+
+	max_rate = max(bimc_a_rate, bimc_rate);
+	trace_printk("tracing_mark_write: C|%d|%s|%lu\n", -1, "BIMC_MAX", max_rate);
+#endif
 	start_rate = clk->rate;
 
 	if (clk->ops->pre_set_rate)
@@ -619,6 +636,21 @@ int clk_set_flags(struct clk *clk, unsigned long flags)
 	return clk->ops->set_flags(clk, flags);
 }
 EXPORT_SYMBOL(clk_set_flags);
+
+#ifdef CONFIG_ANDROID_SW_IRRC
+unsigned int get_clk_count(struct clk *clk)
+{
+    unsigned int count;
+    unsigned long flags;
+
+    spin_lock_irqsave(&clk->lock, flags);
+    count = clk->count;
+    spin_unlock_irqrestore(&clk->lock, flags);
+    return count;
+}
+EXPORT_SYMBOL(get_clk_count);
+#endif  // CONFIG_ANDROID_SW_IRRC
+
 
 static LIST_HEAD(initdata_list);
 

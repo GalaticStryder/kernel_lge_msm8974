@@ -52,6 +52,33 @@ struct page *ecryptfs_get_locked_page(struct inode *inode, loff_t index)
 	return page;
 }
 
+#ifdef CONFIG_CRYPTO_DEV_KFIPS
+/**
+ * ecryptfs_writepage_complete
+ * @page_crypt_req: The encrypt page request that completed
+ *
+ * Calls when the requested page has been encrypted and written to the lower
+ * file system.
+ */
+static void ecryptfs_writepage_complete(
+		struct ecryptfs_page_crypt_req *page_crypt_req)
+{
+	struct page *page = page_crypt_req->page;
+	int rc;
+	rc = atomic_read(&page_crypt_req->rc);
+	if (unlikely(rc)) {
+		ecryptfs_printk(KERN_WARNING, "Error encrypting "
+				"page (upper index [0x%.16lx])\n", page->index);
+		ClearPageUptodate(page);
+		SetPageError(page);
+	} else {
+		SetPageUptodate(page);
+	}
+	end_page_writeback(page);
+	ecryptfs_free_page_crypt_req(page_crypt_req);
+}
+
+#endif
 /**
  * ecryptfs_writepage
  * @page: Page that is locked before this call is made
@@ -64,7 +91,18 @@ struct page *ecryptfs_get_locked_page(struct inode *inode, loff_t index)
  */
 static int ecryptfs_writepage(struct page *page, struct writeback_control *wbc)
 {
+#ifndef CONFIG_CRYPTO_DEV_KFIPS
 	int rc;
+#else
+	struct ecryptfs_page_crypt_req *page_crypt_req;
+	int rc = 0;
+#endif
+#if 1 // FEATURE_SDCARD_ENCRYPTION
+	struct inode *ecryptfs_inode;
+	struct ecryptfs_crypt_stat *crypt_stat =
+		&ecryptfs_inode_to_private(page->mapping->host)->crypt_stat;
+	ecryptfs_inode = page->mapping->host;
+#endif
 
 	/*
 	 * Refuse to write the page out if we are called from reclaim context
@@ -74,10 +112,55 @@ static int ecryptfs_writepage(struct page *page, struct writeback_control *wbc)
 	 */
 	if (current->flags & PF_MEMALLOC) {
 		redirty_page_for_writepage(wbc, page);
+#ifndef CONFIG_CRYPTO_DEV_KFIPS
 		rc = 0;
+#endif
 		goto out;
 	}
 
+#if 1 // FEATURE_SDCARD_ENCRYPTION
+	if (!crypt_stat || !(crypt_stat->flags & ECRYPTFS_ENCRYPTED)) {
+		ecryptfs_printk(KERN_DEBUG,
+				"Passing through unencrypted page\n");
+		rc = ecryptfs_write_lower_page_segment(ecryptfs_inode, page,
+			0, PAGE_CACHE_SIZE);
+		if (rc) {
+			ClearPageUptodate(page);
+			goto out;
+		}
+		SetPageUptodate(page);
+	} else {
+#ifndef CONFIG_CRYPTO_DEV_KFIPS
+	rc = ecryptfs_encrypt_page(page);
+	if (rc) {
+		ecryptfs_printk(KERN_WARNING, "Error encrypting "
+				"page (upper index [0x%.16lx])\n", page->index);
+		ClearPageUptodate(page);
+#else
+//	rc = ecryptfs_encrypt_page(page);
+//	if (rc) {
+//		ecryptfs_printk(KERN_WARNING, "Error encrypting "
+//				"page (upper index [0x%.16lx])\n", page->index);
+//		ClearPageUptodate(page);
+	page_crypt_req = ecryptfs_alloc_page_crypt_req(
+				page, ecryptfs_writepage_complete);
+	if (unlikely(!page_crypt_req)) {
+		rc = -ENOMEM;
+		ecryptfs_printk(KERN_ERR,
+				"Failed to allocate page crypt request "
+				"for encryption\n");
+#endif
+		goto out;
+	}
+#ifndef CONFIG_CRYPTO_DEV_KFIPS
+	SetPageUptodate(page);
+#else
+//	SetPageUptodate(page);
+	set_page_writeback(page);
+	ecryptfs_encrypt_page_async(page_crypt_req);
+#endif
+	}
+#else
 	rc = ecryptfs_encrypt_page(page);
 	if (rc) {
 		ecryptfs_printk(KERN_WARNING, "Error encrypting "
@@ -86,6 +169,7 @@ static int ecryptfs_writepage(struct page *page, struct writeback_control *wbc)
 		goto out;
 	}
 	SetPageUptodate(page);
+#endif
 out:
 	unlock_page(page);
 	return rc;
@@ -194,6 +278,34 @@ out:
 	return rc;
 }
 
+#ifdef CONFIG_CRYPTO_DEV_KFIPS
+/**
+ * ecryptfs_readpage_complete
+ * @page_crypt_req: The decrypt page request that completed
+ *
+ * Calls when the requested page has been read and decrypted.
+ */
+static void ecryptfs_readpage_complete(
+		struct ecryptfs_page_crypt_req *page_crypt_req)
+{
+	struct page *page = page_crypt_req->page;
+	int rc;
+	rc = atomic_read(&page_crypt_req->rc);
+	if (unlikely(rc)) {
+		ecryptfs_printk(KERN_ERR, "Error decrypting page; "
+				"rc = [%d]\n", rc);
+		ClearPageUptodate(page);
+		SetPageError(page);
+	} else {
+		SetPageUptodate(page);
+	}
+	ecryptfs_printk(KERN_DEBUG, "Unlocking page with index = [0x%.16lx]\n",
+			page->index);
+	unlock_page(page);
+	ecryptfs_free_page_crypt_req(page_crypt_req);
+}
+#endif
+
 /**
  * ecryptfs_readpage
  * @file: An eCryptfs file
@@ -207,6 +319,9 @@ static int ecryptfs_readpage(struct file *file, struct page *page)
 {
 	struct ecryptfs_crypt_stat *crypt_stat =
 		&ecryptfs_inode_to_private(page->mapping->host)->crypt_stat;
+#ifdef CONFIG_CRYPTO_DEV_KFIPS
+	struct ecryptfs_page_crypt_req *page_crypt_req = NULL;
+#endif
 	int rc = 0;
 
 	if (!crypt_stat || !(crypt_stat->flags & ECRYPTFS_ENCRYPTED)) {
@@ -237,21 +352,42 @@ static int ecryptfs_readpage(struct file *file, struct page *page)
 			}
 		}
 	} else {
+#ifndef CONFIG_CRYPTO_DEV_KFIPS
 		rc = ecryptfs_decrypt_page(page);
 		if (rc) {
 			ecryptfs_printk(KERN_ERR, "Error decrypting page; "
 					"rc = [%d]\n", rc);
+#else
+		page_crypt_req = ecryptfs_alloc_page_crypt_req(
+					page, ecryptfs_readpage_complete);
+		if (!page_crypt_req) {
+			rc = -ENOMEM;
+			ecryptfs_printk(KERN_ERR,
+					"Failed to allocate page crypt request "
+					"for decryption\n");
+#endif
 			goto out;
 		}
+#ifdef CONFIG_CRYPTO_DEV_KFIPS
+		ecryptfs_decrypt_page_async(page_crypt_req);
+		goto out_async_started;
+#endif
 	}
 out:
+#ifndef CONFIG_CRYPTO_DEV_KFIPS
 	if (rc)
+#else
+	if (unlikely(rc))
+#endif
 		ClearPageUptodate(page);
 	else
 		SetPageUptodate(page);
 	ecryptfs_printk(KERN_DEBUG, "Unlocking page with index = [0x%.16lx]\n",
 			page->index);
 	unlock_page(page);
+#ifdef CONFIG_CRYPTO_DEV_KFIPS
+out_async_started:
+#endif
 	return rc;
 }
 

@@ -19,6 +19,9 @@
 #include <media/v4l2-subdev.h>
 #include <media/msm_cam_sensor.h>
 #include "msm_sd.h"
+/*                                                                                                                    */
+#include <linux/wakelock.h>
+/*                                                                                                                     */
 
 #define CSID_NUM_CLK_MAX  16
 
@@ -40,6 +43,9 @@ struct csid_device {
 	uint32_t hw_version;
 	enum msm_csid_state_t csid_state;
 
+/*                                                                                                                     */
+	struct wake_lock        csid_wake_lock;
+/*                                                                                                                     */
 	struct clk *csid_clk[CSID_NUM_CLK_MAX];
 };
 

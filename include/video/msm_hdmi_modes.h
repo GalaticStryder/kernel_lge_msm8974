@@ -259,7 +259,7 @@ do {	\
 		MSM_HDMI_MODES_SET_TIMING(__lut,	\
 			HDMI_VFRMT_1920x1080p30_16_9);	\
 	}	\
-	if (__type & MSM_HDMI_MODES_XTND) {	\
+/*	if (__type & MSM_HDMI_MODES_XTND) {	\
 		MSM_HDMI_MODES_SET_TIMING(__lut,	\
 			HDMI_VFRMT_3840x2160p30_16_9);	\
 		MSM_HDMI_MODES_SET_TIMING(__lut,	\
@@ -268,14 +268,14 @@ do {	\
 			HDMI_VFRMT_3840x2160p24_16_9);	\
 		MSM_HDMI_MODES_SET_TIMING(__lut,	\
 			HDMI_VFRMT_4096x2160p24_16_9);	\
-	}	\
+	} */	\
 	if (__type & MSM_HDMI_MODES_DVI) {	\
 		MSM_HDMI_MODES_SET_TIMING(__lut,	\
 			HDMI_VFRMT_1024x768p60_4_3);	\
 		MSM_HDMI_MODES_SET_TIMING(__lut,	\
 			HDMI_VFRMT_1280x1024p60_5_4);	\
-		MSM_HDMI_MODES_SET_TIMING(__lut,	\
-			HDMI_VFRMT_2560x1600p60_16_9);	\
+	/*	MSM_HDMI_MODES_SET_TIMING(__lut,	\
+			HDMI_VFRMT_2560x1600p60_16_9);*/\
 	}	\
 } while (0)
 

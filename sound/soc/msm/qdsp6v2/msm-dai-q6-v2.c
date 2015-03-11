@@ -1896,6 +1896,33 @@ rtn:
 	return rc;
 }
 
+#ifdef CONFIG_SND_SOC_CS35L32
+static ssize_t msm_setrtip_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size) {
+	int ret = 0, enable;
+
+
+	if(sscanf(buf, "%d", &enable) != 1)
+		return -EINVAL;
+
+	pr_info("%s, %d\n", __func__, enable);
+
+	ret = q6afe_set_rtip(enable);
+	if (ret < 0) {
+		pr_err("%s: AFE disable RTIP failed\n", __func__);
+		ret = -EINVAL;
+		goto fail_cmd;
+	}
+
+	return size;
+
+fail_cmd:
+	return -EINVAL;
+}
+
+static DEVICE_ATTR(rtip, 0644, NULL, msm_setrtip_store);
+#endif /*CONFIG_SND_SOC_CS35L32*/
+
 static __devinit int msm_dai_q6_mi2s_dev_probe(struct platform_device *pdev)
 {
 	struct msm_dai_q6_mi2s_dai_data *dai_data;
@@ -1983,6 +2010,11 @@ static __devinit int msm_dai_q6_mi2s_dev_probe(struct platform_device *pdev)
 	rc = snd_soc_register_dai(&pdev->dev, mi2s_dai);
 	if (IS_ERR_VALUE(rc))
 		goto err_register;
+#ifdef CONFIG_SND_SOC_CS35L32
+	if(device_create_file(&pdev->dev, &dev_attr_rtip)){
+		pr_err("RTIP set sysfs node create error \n");
+	}
+#endif
 	return 0;
 
 err_register:
@@ -1999,6 +2031,9 @@ rtn:
 
 static __devexit int msm_dai_q6_mi2s_dev_remove(struct platform_device *pdev)
 {
+#ifdef CONFIG_SND_SOC_CS35L32
+	device_remove_file(&pdev->dev, &dev_attr_rtip);
+#endif
 	snd_soc_unregister_dai(&pdev->dev);
 	return 0;
 }

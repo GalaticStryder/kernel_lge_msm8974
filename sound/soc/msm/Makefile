@@ -77,10 +77,15 @@ snd-soc-mdm9615-objs := mdm9615.o
 obj-$(CONFIG_SND_SOC_MDM9615) += snd-soc-mdm9615.o
 
 # for MSM 8974 sound card driver
+# for MSM 8974 Wolfson codec based sound card driver
 obj-$(CONFIG_SND_SOC_MSM_QDSP6V2_INTF) += qdsp6v2/
+ifeq ($(CONFIG_MFD_WM5110),y)
+snd-soc-msm8974_wm5110-objs := msm8974_wm5110.o
+obj-$(CONFIG_SND_SOC_WM5110) += snd-soc-msm8974_wm5110.o
+else
 snd-soc-msm8974-objs := msm8974.o
 obj-$(CONFIG_SND_SOC_MSM8974) += snd-soc-msm8974.o
-
+endif
 snd-soc-qdsp6v2-objs := msm-dai-fe.o
 obj-$(CONFIG_SND_SOC_QDSP6V2) += snd-soc-qdsp6v2.o
 

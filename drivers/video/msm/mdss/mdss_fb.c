@@ -1,4 +1,4 @@
-/*
+ /*
  * Core MDSS framebuffer driver.
  *
  * Copyright (C) 2007 Google Incorporated
@@ -51,9 +51,15 @@
 #include <mach/iommu.h>
 #include <mach/iommu_domains.h>
 #include <mach/msm_memtypes.h>
-
+#include <mach/board_lge.h>
+#ifdef CONFIG_LGE_HANDLE_PANIC
+#include <mach/lge_handle_panic.h>
+#endif
 #include "mdss_fb.h"
 #include "mdss_mdp_splash_logo.h"
+#ifdef CONFIG_MACH_LGE
+#include "mdss_mdp.h"
+#endif
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -72,6 +78,14 @@ static u32 mdss_fb_pseudo_palette[16] = {
 	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
 };
 
+#if defined(CONFIG_LGE_BROADCAST_TDMB) || defined(CONFIG_LGE_BROADCAST_JFULLSEG)
+extern struct mdp_csc_cfg dmb_csc_convert;
+extern int pp_set_dmb_status(int flag);
+#endif /*               */
+
+#ifdef CONFIG_LGE_LCD_OFF_DIMMING
+static bool fb_blank_called;
+#endif
 static struct msm_mdp_interface *mdp_instance;
 
 static int mdss_fb_register(struct msm_fb_data_type *mfd);
@@ -208,10 +222,21 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 	if (value > mfd->panel_info->brightness_max)
 		value = mfd->panel_info->brightness_max;
 
+#ifdef CONFIG_LGE_LCD_OFF_DIMMING
+	if (((lge_get_bootreason() == 0x77665560) || (lge_get_bootreason() == 0x77665561))
+		&& !fb_blank_called) {
+		pr_info("%s : lcd dimming mode! minimum brightness.\n",__func__);
+		value = 50;
+	}
+#endif
+#ifdef CONFIG_MACH_LGE
+	bl_lvl = value;
+#else
 	/* This maps android backlight level 0 to 255 into
 	   driver backlight level 0 to bl_max with rounding */
 	MDSS_BRIGHT_TO_BL(bl_lvl, value, mfd->panel_info->bl_max,
 				mfd->panel_info->brightness_max);
+#endif
 
 	if (!bl_lvl && value)
 		bl_lvl = 1;
@@ -530,6 +555,9 @@ static void mdss_fb_shutdown(struct platform_device *pdev)
 	unlock_fb_info(mfd->fbi);
 }
 
+#ifdef CONFIG_MACH_LGE
+struct msm_fb_data_type *mfd_base;
+#endif
 static int mdss_fb_probe(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd = NULL;
@@ -634,6 +662,10 @@ static int mdss_fb_probe(struct platform_device *pdev)
 		mfd->mdp.splash_init_fnc(mfd);
 
 	INIT_DELAYED_WORK(&mfd->idle_notify_work, __mdss_fb_idle_notify_work);
+#ifdef CONFIG_MACH_LGE
+	if (mfd_base == NULL)
+		mfd_base = mfd;
+#endif
 
 	return rc;
 }
@@ -657,6 +689,7 @@ static void mdss_fb_set_mdp_sync_pt_threshold(struct msm_fb_data_type *mfd)
 		mfd->mdp_sync_pt_data.retire_threshold = 0;
 		break;
 	}
+
 }
 static int mdss_fb_remove(struct platform_device *pdev)
 {
@@ -919,11 +952,16 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 		 * as well as setting bl_level to bkl_lvl even though the
 		 * backlight has been set to the scaled value.
 		 */
+
 		if (mfd->bl_level_scaled == temp) {
 			mfd->bl_level = bkl_lvl;
-			return;
+#ifdef CONFIG_MACH_MSM8974_G2
+			if (mfd->bl_level != 0)
+#endif
+				return;
 		}
 		pr_debug("backlight sent to panel :%d\n", temp);
+
 		pdata->set_backlight(pdata, temp);
 		mfd->bl_level = bkl_lvl;
 		mfd->bl_level_scaled = temp;
@@ -1000,7 +1038,10 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 		mutex_lock(&mfd->bl_lock);
 		if (!mfd->bl_updated) {
 			mfd->bl_updated = 1;
-			mdss_fb_set_backlight(mfd, mfd->bl_level_prev_scaled);
+#ifdef CONFIG_MACH_MSM8974_G2
+			if (mfd->bl_level_prev_scaled != 0)
+#endif
+				mdss_fb_set_backlight(mfd, mfd->bl_level_prev_scaled);
 		}
 		mutex_unlock(&mfd->bl_lock);
 		break;
@@ -1012,7 +1053,9 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 	default:
 		if (mfd->panel_power_on && mfd->mdp.off_fnc) {
 			int curr_pwr_state;
-
+#ifdef CONFIG_LGE_LCD_OFF_DIMMING
+			fb_blank_called = true;
+#endif
 			mutex_lock(&mfd->update.lock);
 			mfd->update.type = NOTIFY_TYPE_SUSPEND;
 			mfd->update.is_suspend = 1;
@@ -1420,6 +1463,10 @@ static int mdss_fb_alloc_fbmem_iommu(struct msm_fb_data_type *mfd, int dom)
 	pr_debug("alloc 0x%zxB @ (%pa phys) (0x%p virt) (%pa iova) for fb%d\n",
 		 size, &phys, virt, &mfd->iova, mfd->index);
 
+#ifdef CONFIG_LGE_HANDLE_PANIC
+    /* save fb1 address for crash handler display buffer */
+    lge_set_fb1_addr((unsigned int)(phys));
+#endif
 	mfd->fbi->screen_base = virt;
 	mfd->fbi->fix.smem_start = phys;
 	mfd->fbi->fix.smem_len = size;
@@ -1593,7 +1640,6 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 							bpp);
 	else
 		fix->line_length = var->xres * bpp;
-
 	var->yres = panel_info->yres;
 	if (panel_info->physical_width)
 		var->width = panel_info->physical_width;
@@ -2755,6 +2801,13 @@ static int mdss_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	struct msm_sync_pt_data *sync_pt_data = NULL;
 	unsigned int dsi_mode = 0;
 
+#ifdef CONFIG_MACH_LGE
+	u32 dsi_panel_invert = 0;
+#endif
+#if defined(CONFIG_LGE_BROADCAST_TDMB) || defined(CONFIG_LGE_BROADCAST_JFULLSEG)
+	int dmb_flag = 0;
+	struct mdp_csc_cfg dmb_csc_cfg;
+#endif /*               */
 	if (!info || !info->par)
 		return -EINVAL;
 
@@ -2819,6 +2872,28 @@ static int mdss_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	case MSMFB_DISPLAY_COMMIT:
 		ret = mdss_fb_display_commit(info, argp);
 		break;
+#ifdef CONFIG_MACH_LGE
+	case MSMFB_INVERT_PANEL:
+		ret = copy_from_user(&dsi_panel_invert, argp, sizeof(int));
+		if (ret)
+			return ret;
+		ret = mdss_dsi_panel_invert(dsi_panel_invert);
+		break;
+#endif
+#if defined(CONFIG_LGE_BROADCAST_TDMB) || defined(CONFIG_LGE_BROADCAST_JFULLSEG)
+	case MSMFB_DMB_SET_FLAG:
+		ret = copy_from_user(&dmb_flag, argp, sizeof(int));
+		if (ret)
+			return ret;
+		ret = pp_set_dmb_status(dmb_flag);
+		break;
+	case MSMFB_DMB_SET_CSC_MATRIX:
+		ret = copy_from_user(&dmb_csc_cfg, argp, sizeof(dmb_csc_cfg));
+		if (ret)
+			return ret;
+		memcpy(dmb_csc_convert.csc_mv, dmb_csc_cfg.csc_mv, sizeof(dmb_csc_cfg.csc_mv));
+		break;
+#endif /*               */
 
 	case MSMFB_LPM_ENABLE:
 		ret = copy_from_user(&dsi_mode, argp, sizeof(dsi_mode));

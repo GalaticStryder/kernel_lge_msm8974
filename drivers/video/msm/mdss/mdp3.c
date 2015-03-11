@@ -2063,7 +2063,7 @@ static int mdp3_panel_register_done(struct mdss_panel_data *pdata)
 static int mdp3_debug_dump_stats(void *data, char *buf, int len)
 {
 	int total = 0;
-	total = scnprintf(buf, len,"underrun: %08u\n",
+	total = scnprintf(buf, len, "underrun: %08u\n",
 			mdp3_res->underrun_cnt);
 	return total;
 }

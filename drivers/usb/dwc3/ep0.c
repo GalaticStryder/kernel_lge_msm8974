@@ -683,6 +683,9 @@ static int dwc3_ep0_set_isoch_delay(struct dwc3 *dwc, struct usb_ctrlrequest *ct
 static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 {
 	int ret;
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+	u16	w_value = le16_to_cpu(ctrl->wValue);
+#endif
 
 	switch (ctrl->bRequest) {
 	case USB_REQ_GET_STATUS:
@@ -700,9 +703,19 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 	case USB_REQ_SET_ADDRESS:
 		dev_vdbg(dwc->dev, "USB_REQ_SET_ADDRESS\n");
 		ret = dwc3_ep0_set_address(dwc, ctrl);
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+		dwc->dotg->charger->vzw_usb_config_state = VZW_USB_STATE_CONNECTED;
+		queue_delayed_work(system_nrt_wq, dwc->dotg->charger->drv_check_state_wq, 0);
+#endif
 		break;
 	case USB_REQ_SET_CONFIGURATION:
 		dev_vdbg(dwc->dev, "USB_REQ_SET_CONFIGURATION\n");
+#ifdef CONFIG_DWC3_MSM_BC_12_VZW_SUPPORT
+		if (w_value) {
+			dwc->dotg->charger->vzw_usb_config_state = VZW_USB_STATE_CONFIGURED;
+			queue_delayed_work(system_nrt_wq, dwc->dotg->charger->drv_check_state_wq, 0);
+		}
+#endif
 		ret = dwc3_ep0_set_config(dwc, ctrl);
 		break;
 	case USB_REQ_SET_SEL:

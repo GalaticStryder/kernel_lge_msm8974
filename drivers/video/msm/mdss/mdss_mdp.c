@@ -1184,8 +1184,68 @@ static ssize_t mdss_mdp_show_capabilities(struct device *dev,
 
 static DEVICE_ATTR(caps, S_IRUGO, mdss_mdp_show_capabilities, NULL);
 
+#ifdef CONFIG_LGE_VSYNC_SKIP
+static ssize_t fps_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	ulong fps;
+
+	if (!count)
+		return -EINVAL;
+
+	fps = simple_strtoul(buf, NULL, 10);
+
+	if (fps == 0 || fps >= 60) {
+		mdss_res->enable_skip_vsync = 0;
+		mdss_res->skip_value = 0;
+		mdss_res->weight = 0;
+		mdss_res->bucket = 0;
+		mdss_res->skip_count = 0;
+		mdss_res->skip_ratio = 60;
+		mdss_res->skip_first = false;
+		pr_info("Disable frame skip.\n");
+	} else {
+		mdss_res->enable_skip_vsync = 1;
+		mdss_res->skip_value = (60<<16)/fps;
+		mdss_res->weight = (1<<16);
+		mdss_res->bucket = 0;
+		mdss_res->skip_ratio = fps;
+		mdss_res->skip_first = false;
+		pr_info("Enable frame skip: Set to %lu fps.\n", fps);
+	}
+	return count;
+}
+
+static ssize_t fps_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int r = 0;
+	r = snprintf(buf, PAGE_SIZE, "enable_skip_vsync=%d\nweight=%lu\nskip_value=%lu\nbucket=%lu\nskip_count=%lu\n",
+		mdss_res->enable_skip_vsync,
+		mdss_res->weight,
+		mdss_res->skip_value,
+		mdss_res->bucket,
+		mdss_res->skip_count);
+	return r;
+}
+
+static ssize_t fps_ratio_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int r = 0;
+	r = snprintf(buf, PAGE_SIZE, "%d 60\n", mdss_res->skip_ratio);
+	return r;
+}
+
+static DEVICE_ATTR(vfps, S_IRUGO | S_IWUSR, fps_show, fps_store);
+static DEVICE_ATTR(vfps_ratio, 0644, fps_ratio_show, NULL);
+#endif
 static struct attribute *mdp_fs_attrs[] = {
 	&dev_attr_caps.attr,
+#ifdef CONFIG_LGE_VSYNC_SKIP
+	&dev_attr_vfps.attr,
+	&dev_attr_vfps_ratio.attr,
+#endif
 	NULL
 };
 
@@ -2315,6 +2375,13 @@ static int mdss_mdp_parse_dt_misc(struct platform_device *pdev)
 	mdata->ib_factor_overlap.denom = mdata->ib_factor.denom;
 	mdss_mdp_parse_dt_fudge_factors(pdev, "qcom,mdss-ib-factor-overlap",
 		&mdata->ib_factor_overlap);
+
+#ifdef MDP_BW_LIMIT_AB
+	mdata->ab_factor_limit.numer = mdata->ab_factor.numer;
+	mdata->ab_factor_limit.denom = mdata->ab_factor.denom;
+	mdss_mdp_parse_dt_fudge_factors(pdev, "qcom,mdss-ab-factor-limit",
+		&mdata->ab_factor_limit);
+#endif
 
 	mdata->clk_factor.numer = 1;
 	mdata->clk_factor.denom = 1;

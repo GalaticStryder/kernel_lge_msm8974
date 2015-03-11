@@ -1006,9 +1006,13 @@ static int do_test(int m)
 		ret += tcrypt_test("ecb(aes)");
 		ret += tcrypt_test("cbc(aes)");
 		ret += tcrypt_test("lrw(aes)");
+#ifdef CONFIG_CRYPTO_XTS
 		ret += tcrypt_test("xts(aes)");
+#endif
+#ifdef CONFIG_CRYPTO_CTR
 		ret += tcrypt_test("ctr(aes)");
 		ret += tcrypt_test("rfc3686(ctr(aes))");
+#endif
 		break;
 
 	case 11:
@@ -1110,7 +1114,9 @@ static int do_test(int m)
 		break;
 
 	case 35:
+#ifdef CONFIG_CRYPTO_GCM
 		ret += tcrypt_test("gcm(aes)");
+#endif
 		break;
 
 	case 36:
@@ -1118,8 +1124,10 @@ static int do_test(int m)
 		break;
 
 	case 37:
+#ifdef CONFIG_CRYPTO_CCM
 		ret += tcrypt_test("ccm(aes)");
 		break;
+#endif
 
 	case 38:
 		ret += tcrypt_test("cts(cbc(aes))");
@@ -1150,8 +1158,10 @@ static int do_test(int m)
 		break;
 
 	case 45:
+#ifdef CONFIG_CRYPTO_CCM
 		ret += tcrypt_test("rfc4309(ccm(aes))");
 		break;
+#endif
 
 	case 100:
 		ret += tcrypt_test("hmac(md5)");
@@ -1198,7 +1208,9 @@ static int do_test(int m)
 		break;
 
 	case 151:
+#ifdef CONFIG_CRYPTO_GCM
 		ret += tcrypt_test("rfc4106(gcm(aes))");
+#endif
 		break;
 
 	case 200:
@@ -1582,6 +1594,11 @@ static int __init tcrypt_mod_init(void)
 	int err = -ENOMEM;
 	int i;
 
+#ifdef CONFIG_CRYPTO_FIPS
+	fips_init_proc();
+	if (!fips_enabled)
+		return 0;
+#endif
 	for (i = 0; i < TVMEMSIZE; i++) {
 		tvmem[i] = (void *)__get_free_page(GFP_KERNEL);
 		if (!tvmem[i])

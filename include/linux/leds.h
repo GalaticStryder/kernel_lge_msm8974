@@ -28,12 +28,30 @@ enum led_brightness {
 	LED_FULL	= 255,
 };
 
+#if defined(CONFIG_LEDS_WINDOW_COLOR)
+enum WINDOW_COLORS {
+	WINDOW_COLOR_BK = 0,	/* Black */
+	WINDOW_COLOR_WH,		/* White */
+	WINDOW_COLOR_SV,		/* Silver */
+	WINDOW_COLOR_TK			/* Titan */
+};
+#endif
+
 struct led_classdev {
 	const char		*name;
 	int			 brightness;
+#if defined(CONFIG_LGE_DUAL_LED)
+/*           
+                 
+                               
+ */
+	int			 brightness2;
+#endif
 	int			 max_brightness;
 	int			 flags;
-
+#if defined(CONFIG_LEDS_PM8941_EMOTIONAL)
+	int			 pattern_num;
+#endif
 	/* Lower 16 bits reflect status */
 #define LED_SUSPENDED		(1 << 0)
 	/* Upper 16 bits reflect control information */
@@ -43,6 +61,14 @@ struct led_classdev {
 	/* Must not sleep, use a workqueue if needed */
 	void		(*brightness_set)(struct led_classdev *led_cdev,
 					  enum led_brightness brightness);
+#if defined(CONFIG_LGE_DUAL_LED)
+/*           
+                 
+                               
+ */
+	void		(*brightness_set2)(struct led_classdev *led_cdev,
+					  enum led_brightness brightness, enum led_brightness brightness2);
+#endif
 	/* Get LED brightness level */
 	enum led_brightness (*brightness_get)(struct led_classdev *led_cdev);
 
@@ -81,6 +107,9 @@ extern int led_classdev_register(struct device *parent,
 extern void led_classdev_unregister(struct led_classdev *led_cdev);
 extern void led_classdev_suspend(struct led_classdev *led_cdev);
 extern void led_classdev_resume(struct led_classdev *led_cdev);
+#if defined(CONFIG_LEDS_PM8941_EMOTIONAL)
+extern int led_pattern_sysfs_register(void);
+#endif
 
 /**
  * led_blink_set - set blinking with software fallback
@@ -111,6 +140,15 @@ extern void led_blink_set(struct led_classdev *led_cdev,
  */
 extern void led_brightness_set(struct led_classdev *led_cdev,
 			       enum led_brightness brightness);
+
+#if defined(CONFIG_LGE_DUAL_LED)
+/*           
+                 
+                               
+ */
+extern void led_brightness_set2(struct led_classdev *led_cdev,
+			       enum led_brightness brightness, enum led_brightness brightness2);
+#endif
 
 /*
  * LED Triggers
@@ -145,6 +183,15 @@ extern void led_trigger_register_simple(const char *name,
 extern void led_trigger_unregister_simple(struct led_trigger *trigger);
 extern void led_trigger_event(struct led_trigger *trigger,
 				enum led_brightness event);
+#if defined(CONFIG_LGE_DUAL_LED)
+/*           
+                 
+                               
+ */
+extern void led_trigger_event2(struct led_trigger *trigger,
+				enum led_brightness event, enum led_brightness event2);
+#endif
+
 extern void led_trigger_blink(struct led_trigger *trigger,
 			      unsigned long *delay_on,
 			      unsigned long *delay_off);
@@ -157,6 +204,14 @@ extern void led_trigger_blink(struct led_trigger *trigger,
 #define led_trigger_register_simple(x, y) do {} while(0)
 #define led_trigger_unregister_simple(x) do {} while(0)
 #define led_trigger_event(x, y) do {} while(0)
+
+#if defined(CONFIG_LGE_DUAL_LED)
+/*           
+                 
+                               
+ */
+#define led_trigger_event2(x, y, z) do {} while(0)
+#endif
 
 #endif
 

@@ -22,12 +22,12 @@
 #include <linux/io.h>
 #include <linux/err.h>
 #include <linux/types.h>
-#include <mach/msm_iomap.h>
 #include <mach/socinfo.h>
 #include <mach/msm_bus.h>
 #include <linux/qrng.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
+#include <linux/delay.h>
 
 #include <linux/platform_data/qcom_crypto_device.h>
 
@@ -113,24 +113,41 @@ int msm_rng_direct_read(struct msm_rng_device *msm_rng_dev, void *data)
 	struct platform_device *pdev;
 	void __iomem *base;
 	size_t currsize = 0;
-	unsigned long val;
-	unsigned long *retdata = data;
+	u32 val;
+	u32 *retdata = data;
 	int ret;
+	int failed = 0;
 
 	pdev = msm_rng_dev->pdev;
 	base = msm_rng_dev->base;
 
+	mutex_lock(&msm_rng_dev->rng_lock);
+
+	if (msm_rng_dev->qrng_perf_client) {
+		ret = msm_bus_scale_client_update_request(
+				msm_rng_dev->qrng_perf_client, 1);
+		if (ret)
+			pr_err("bus_scale_client_update_req failed!\n");
+	}
 	/* enable PRNG clock */
 	ret = clk_prepare_enable(msm_rng_dev->prng_clk);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to enable clock in callback\n");
-		return 0;
+		goto err;
 	}
 	/* read random data from h/w */
 	do {
 		/* check status bit if data is available */
-		if (!(readl_relaxed(base + PRNG_STATUS_OFFSET) & 0x00000001))
-			break;	/* no data to read so just bail */
+		while (!(readl_relaxed(base + PRNG_STATUS_OFFSET)
+					& 0x00000001)) {
+			if (failed == 10) {
+				pr_err("Data not available after retry\n");
+				break;
+			}
+			pr_err("msm_rng:Data not available!\n");
+			msleep_interruptible(10);
+			failed++;
+		}
 
 		/* read FIFO */
 		val = readl_relaxed(base + PRNG_DATA_OUT_OFFSET);
@@ -145,10 +162,17 @@ int msm_rng_direct_read(struct msm_rng_device *msm_rng_dev, void *data)
 
 	/* vote to turn off clock */
 	clk_disable_unprepare(msm_rng_dev->prng_clk);
+err:
+	if (msm_rng_dev->qrng_perf_client) {
+		ret = msm_bus_scale_client_update_request(
+				msm_rng_dev->qrng_perf_client, 0);
+		if (ret)
+			pr_err("bus_scale_client_update_req failed!\n");
+	}
+	mutex_unlock(&msm_rng_dev->rng_lock);
 
 	val = 0L;
 	return currsize;
-
 }
 
 static int msm_rng_drbg_read(struct hwrng *rng,
@@ -157,47 +181,57 @@ static int msm_rng_drbg_read(struct hwrng *rng,
 	struct msm_rng_device *msm_rng_dev;
 	struct platform_device *pdev;
 	void __iomem *base;
-	size_t maxsize;
 	size_t currsize = 0;
-	unsigned long val;
-	unsigned long *retdata = data;
+	u32 val;
+	u32 *retdata = data;
 	int ret, ret1;
+	int failed = 0;
 
 	msm_rng_dev = (struct msm_rng_device *)rng->priv;
 	pdev = msm_rng_dev->pdev;
 	base = msm_rng_dev->base;
 
-
-	down(&msm_rng_dev->drbg_sem);
-
-	/* calculate max size bytes to transfer back to caller */
-	maxsize = min_t(size_t, MAX_HW_FIFO_SIZE, max);
-
 	/* no room for word data */
-	if (maxsize < 4)
+	if (max < 4)
 		return 0;
+
+	mutex_lock(&msm_rng_dev->rng_lock);
 
 	/* read random data from CTR-AES based DRBG */
 	if (FIPS140_DRBG_ENABLED == msm_rng_dev->fips140_drbg_enabled) {
-		ret1 = fips_drbg_gen(msm_rng_dev->drbg_ctx, data, maxsize);
+		ret1 = fips_drbg_gen(msm_rng_dev->drbg_ctx, data, max);
 		if (FIPS140_PRNG_ERR == ret1)
 			panic("random number generator generator error.\n");
 	} else
 		ret1 = 1;
+
+	if (msm_rng_dev->qrng_perf_client) {
+		ret = msm_bus_scale_client_update_request(
+				msm_rng_dev->qrng_perf_client, 1);
+		if (ret)
+			pr_err("bus_scale_client_update_req failed!\n");
+	}
 
 	/* read random data from h/w */
 	/* enable PRNG clock */
 	ret = clk_prepare_enable(msm_rng_dev->prng_clk);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to enable clock in callback\n");
-		up(&msm_rng_dev->drbg_sem);
-		return 0;
+		goto err;
 	}
 	/* read random data from h/w */
 	do {
 		/* check status bit if data is available */
-		if (!(readl_relaxed(base + PRNG_STATUS_OFFSET) & 0x00000001))
-			break;	/* no data to read so just bail */
+		while (!(readl_relaxed(base + PRNG_STATUS_OFFSET)
+				& 0x00000001)) {
+			if (failed == 10) {
+				pr_err("Data not available after retry\n");
+				break;
+			}
+			pr_err("msm_rng:Data not available!\n");
+			msleep_interruptible(10);
+			failed++;
+		}
 
 		/* read FIFO */
 		val = readl_relaxed(base + PRNG_DATA_OUT_OFFSET);
@@ -210,13 +244,20 @@ static int msm_rng_drbg_read(struct hwrng *rng,
 		currsize += 4;
 
 		/* make sure we stay on 32bit boundary */
-		if ((maxsize - currsize) < 4)
+		if ((max - currsize) < 4)
 			break;
-	} while (currsize < maxsize);
+	} while (currsize < max);
 	/* vote to turn off clock */
 	clk_disable_unprepare(msm_rng_dev->prng_clk);
+err:
+	if (msm_rng_dev->qrng_perf_client) {
+		ret = msm_bus_scale_client_update_request(
+				msm_rng_dev->qrng_perf_client, 0);
+		if (ret)
+			pr_err("bus_scale_client_update_req failed!\n");
+	}
 
-	up(&msm_rng_dev->drbg_sem);
+	mutex_unlock(&msm_rng_dev->rng_lock);
 
 	return currsize;
 }
@@ -327,7 +368,7 @@ static struct hwrng msm_rng = {
 	.read = msm_rng_read,
 };
 
-static int __devinit msm_rng_enable_hw(struct msm_rng_device *msm_rng_dev)
+static int msm_rng_enable_hw(struct msm_rng_device *msm_rng_dev)
 {
 	unsigned long val = 0;
 	unsigned long reg_val = 0;
@@ -370,6 +411,14 @@ static int __devinit msm_rng_enable_hw(struct msm_rng_device *msm_rng_dev)
 		mb();
 	}
 	clk_disable_unprepare(msm_rng_dev->prng_clk);
+
+	if (msm_rng_dev->qrng_perf_client) {
+		ret = msm_bus_scale_client_update_request(
+				msm_rng_dev->qrng_perf_client, 0);
+		if (ret)
+			pr_err("bus_scale_client_update_req failed!\n");
+	}
+
 	return 0;
 }
 
@@ -393,7 +442,7 @@ static void _first_msm_drbg_init(struct msm_rng_device *msm_rng_dev)
 }
 #endif
 
-static int __devinit msm_rng_probe(struct platform_device *pdev)
+static int msm_rng_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	struct msm_rng_device *msm_rng_dev = NULL;
@@ -468,6 +517,8 @@ static int __devinit msm_rng_probe(struct platform_device *pdev)
 	if (error)
 		goto rollback_clk;
 
+	mutex_init(&msm_rng_dev->rng_lock);
+
 	/* register with hwrng framework */
 	msm_rng.priv = (unsigned long) msm_rng_dev;
 	error = hwrng_register(&msm_rng);
@@ -493,8 +544,6 @@ static int __devinit msm_rng_probe(struct platform_device *pdev)
 	}
 	cdev_init(&msm_rng_cdev, &msm_rng_fops);
 
-	sema_init(&msm_rng_dev->drbg_sem, 1);
-
 	_first_msm_drbg_init(msm_rng_dev);
 
 	return error;
@@ -512,7 +561,7 @@ err_exit:
 	return error;
 }
 
-static int __devexit msm_rng_remove(struct platform_device *pdev)
+static int msm_rng_remove(struct platform_device *pdev)
 {
 	struct msm_rng_device *msm_rng_dev = platform_get_drvdata(pdev);
 
@@ -541,7 +590,7 @@ static struct of_device_id qrng_match[] = {
 
 static struct platform_driver rng_driver = {
 	.probe      = msm_rng_probe,
-	.remove     = __devexit_p(msm_rng_remove),
+	.remove     = msm_rng_remove,
 	.driver     = {
 		.name   = DRIVER_NAME,
 		.owner  = THIS_MODULE,

@@ -203,6 +203,33 @@ enum dev_state {
 	DEV_RESUMED,
 };
 
+ #ifdef CONFIG_MACH_LGE
+/*                                          
+                                  
+ */
+extern int mmc_cd_get_status(struct mmc_host *host);
+#endif
+
+#ifdef CONFIG_MACH_LGE
+/*           
+                                                
+                                
+ */
+enum mmc_host_driver_index {
+	MMC_HOST_DRIVER_INDEX_MMC0 = 0,
+	MMC_HOST_DRIVER_INDEX_MMC1,
+	MMC_HOST_DRIVER_INDEX_MMC2,
+	MMC_HOST_DRIVER_INDEX_MMC3
+};
+
+enum mmc_sdcc_controller_index {
+	MMC_SDCC_CONTROLLER_INDEX_SDCC1 = 1,
+	MMC_SDCC_CONTROLLER_INDEX_SDCC2,
+	MMC_SDCC_CONTROLLER_INDEX_SDCC3,
+	MMC_SDCC_CONTROLLER_INDEX_SDCC4
+};
+#endif
+
 struct mmc_host {
 	struct device		*parent;
 	struct device		class_dev;

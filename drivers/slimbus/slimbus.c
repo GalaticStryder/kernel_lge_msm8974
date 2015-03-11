@@ -797,6 +797,13 @@ int slim_assign_laddr(struct slim_controller *ctrl, const u8 *e_addr,
 	u8 i = 0;
 	bool exists = false;
 	struct slim_device *sbdev;
+#ifdef CONFIG_SND_SOC_ES325_SLIM
+	/*              
+                                                                    
+                                
+ */
+	struct sbi_boardinfo *bi;
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
 	struct list_head *pos, *next;
 
 	mutex_lock(&ctrl->m_ctrl);
@@ -839,6 +846,22 @@ int slim_assign_laddr(struct slim_controller *ctrl, const u8 *e_addr,
 	}
 	ctrl->addrt[i].laddr = *laddr;
 
+#ifdef CONFIG_SND_SOC_ES325_SLIM
+	/*              
+                                                                    
+                                
+ */
+	list_for_each(pos, &board_list) {
+		bi = list_entry(pos, struct sbi_boardinfo, list);
+		if (memcmp(e_addr, bi->board_info.slim_slave->e_addr, 6) == 0) {
+			if (bi->board_info.slim_slave) {
+				bi->board_info.slim_slave->laddr = *laddr;
+				dev_dbg(&ctrl->dev, "es325 MLB: assigned la=%d to sbdev=%p\n",*laddr, bi->board_info.slim_slave);
+				break;
+			}
+		}
+	}
+#endif /* CONFIG_SND_SOC_ES325_SLIM */
 	dev_dbg(&ctrl->dev, "setting slimbus l-addr:%x\n", *laddr);
 ret_assigned_laddr:
 	mutex_unlock(&ctrl->m_ctrl);
