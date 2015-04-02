@@ -1121,4 +1121,8 @@ source "drivers/input/touchscreen/g2/Kconfig"
 
 endif
 
+config STATE_NOTIFIER
+        bool "State Notifier"
+	default y
+
 endif
