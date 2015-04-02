@@ -87,10 +87,12 @@ CONFIG_HZ_300=y
 CONFIG_HZ=300
 
 #
-# Lambda ~ Touchscreen Drivers
+# Lambda ~ Overall Management
 #
 CONFIG_STATE_NOTIFIER=y
 CONFIG_CPU_INPUT_BOOST=y
+CONFIG_MSM_LIMITER=y
+CONFIG_THERMAL_MONITOR=y
 
 #
 # Lambda ~ CPU Governors
@@ -126,11 +128,6 @@ CONFIG_DEVFREQ_GOV_CONSERVATIVE=y
 CONFIG_DEVFREQ_SIMPLE_DEV=y
 CONFIG_MSM_DEVFREQ_DEVBW=y
 CONFIG_MSM_BIMC_BWMON=y
-
-#
-# Lambda ~ Thermal Control
-#
-CONFIG_THERMAL_MONITOR=y
 
 #
 # Lambda ~ Memory Management

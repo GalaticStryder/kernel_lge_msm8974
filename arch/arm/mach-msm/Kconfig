@@ -3010,5 +3010,13 @@ config HAS_MACH_MEMUTILS
 	default n
 	bool "Motorola MSM memcpy enhancements"
 	help
-	Faster memcpy performance for Krait
+	  Faster memcpy performance for Krait architectures.
+
+config MSM_LIMITER
+	bool "MSM Frequency Limiter Driver"
+	default y
+	help
+	  The MSM frequency limiter driver controls the max frequency limit for each CPU
+	  according to the desired value on suspend/resume routines.
+
 endif
