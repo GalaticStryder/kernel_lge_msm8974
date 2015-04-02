@@ -3069,4 +3069,11 @@ config BRICKED_HOTPLUG
 	  This enables kernel based multi core control
 	  (up/down hotplug based on load).
 
+config MSM_LIMITER
+	bool "MSM Frequency Limiter Driver"
+	default y
+	help
+	  The MSM Frequency Limiter Driver controls max frequency limit for each CPU
+	  to desired value on suspend/resume
+
 endif
