@@ -96,7 +96,7 @@ static int g_nMajor = 0;
 #ifdef CONFIG_HIGH_RES_TIMERS
     #include "VibeOSKernelLinuxHRTime.c"
 #else
-    #include <VibeOSKernelLinuxTime.c>
+    #include "VibeOSKernelLinuxTime.c"
 #endif
 
 asmlinkage void _DbgOut(int level, const char *fmt,...)
