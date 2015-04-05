@@ -155,7 +155,6 @@ DHDCFLAGS += -DPKTPRIO_OVERRIDE
 #DHDCFLAGS += -DSUPPORT_SOFTAP_WPAWPA2_MIXED
 
 # B/G/BGN mode support in HOSTAPD
-
 #DHDCFLAGS += -DSUPPORT_HOSTAPD_BGN_MODE
 
 # Used short dwell time during initial scan

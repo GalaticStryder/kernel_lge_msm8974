@@ -64,3 +64,4 @@ config  LGE_HEADSET_INSERT_ADDITIONAL_DELAY
     default n
     help
       delay to decide 3 or 4 poly while detecting
+
