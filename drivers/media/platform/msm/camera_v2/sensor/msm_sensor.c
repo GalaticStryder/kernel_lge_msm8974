@@ -933,11 +933,13 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 			write_config.slave_addr,
 			write_config.conf_array.size);
 
-		if (!write_config.conf_array.size) {
+		if (!write_config.conf_array.size ||
+			write_config.conf_array.size > I2C_REG_DATA_MAX) {
 			pr_err("%s:%d failed\n", __func__, __LINE__);
 			rc = -EFAULT;
 			break;
 		}
+
 		reg_setting = kzalloc(write_config.conf_array.size *
 			(sizeof(struct msm_camera_i2c_reg_array)), GFP_KERNEL);
 		if (!reg_setting) {
