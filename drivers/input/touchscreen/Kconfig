@@ -1128,4 +1128,14 @@ config STATE_NOTIFIER
 	help
 	  Allows monitoring the current display state.
 
+config TOUCHSCREEN_SWEEP2SLEEP
+	bool "Sweep2Sleep Driver"
+	depends on STATE_NOTIFIER
+	default y
+	help
+	  Works as an extension for the State Notifier driver,
+	  once the screen is off it will suspend the driver.
+	  When the screen is on, it will let the user swipe the
+	  bottom of the touchscreen to suspend the device.
+
 endif
