@@ -29,6 +29,7 @@ modules.builtin
 *.bz2
 *.lzma
 *.xz
+*.lz4
 *.lzo
 *.patch
 *.gcno
@@ -88,3 +89,4 @@ arch/arm/boot/compressed/piggy.lz4
 arch/arm/mach-msm/smd_rpc_sym.c
 kernel/hz.bc
 /store/
+ozip/boot.img
