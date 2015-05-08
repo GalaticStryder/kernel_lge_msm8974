@@ -683,6 +683,7 @@ config CHARGER_MAX77819
 	default n
 	help
 	  Say Y to enable support for the MAX77819 PMIC battery charger.
+
 config CHARGER_MAX8971
 	tristate "Maxim MAX8971 Charger driver"
 	depends on I2C
@@ -692,32 +693,33 @@ config CHARGER_MAX8971
 		and sysfs. The driver supports controlling charger-enable and current
 		limiting capavilities. The driver also supports dual-charging with
 		Max77819
+
 config CHARGER_MAX8971_FORCE_SINGLE_CHARGING
 	tristate "Maxim MAX77819 PMIC battery charger driver"
 	depends on CHARGER_MAX8971
 	default n
 	help
 	  Say Y to enable support for the MAX8971 PMIC force-single charger.
+
 config CHARGER_UNIFIED_WLC
 	tristate "wireless charger control driver"
 	default n
 	help
 		wireless charger control driver
+
 config CHARGER_UNIFIED_WLC_BQ5102X
 	tristate "wireless charger control driver"
 	depends on CHARGER_UNIFIED_WLC
 	default n
 	help
 		wireless charger control driver
+
 config CHARGER_UNIFIED_WLC_ALIGNMENT
 	tristate "wireless charger alignment"
 	depends on CHARGER_UNIFIED_WLC
 	default n
 	help
 		wireless charger alignment
-choice
-	prompt "WLC Alignment"
-	depends on CHARGER_UNIFIED_WLC
 
 config CHARGER_UNIFIED_WLC_ALIGNMENT_IDT9025A
 	tristate "wireless charger alignment"
@@ -725,44 +727,50 @@ config CHARGER_UNIFIED_WLC_ALIGNMENT_IDT9025A
 	default n
 	help
 		wireless charger alignment
+
 config CHARGER_UNIFIED_WLC_ALIGNMENT_BQ5102X
 	tristate "wireless charger alignment"
 	select CHARGER_UNIFIED_WLC_ALIGNMENT
 	default n
 	help
 		wireless charger alignment
-endchoice
+
 config CHARGER_FACTORY_MODE
 	bool "Enable charger factory mode"
 	depends on BQ24296_CHARGER
 	depends on CHARGER_MAX77819
 	help
 		charger factory mode
+
 config VZW_POWER_REQ
-    tristate "implementation power requirements of Verizon"
-    depends on BQ24296_CHARGER
-    default n
-    help
-		power requirements for verizon
-config LGE_PM_CHARGING_SUPPORT_PHIHONG
-    tristate "Support Phihong travel charger"
-    depends on BQ24296_CHARGER
-    default n
-    help
-		Chargers which is not support AICL need this feature.
-config LGE_PM_LLK_MODE
-    tristate "implementation power requirements of retail mode"
+	tristate "implementation power requirements of Verizon"
+	depends on BQ24296_CHARGER
 	default n
-    help
-		power requirements for retail mode
+	help
+	  power requirements for verizon
+
+config LGE_PM_CHARGING_SUPPORT_PHIHONG
+	tristate "Support Phihong travel charger"
+	depends on BQ24296_CHARGER
+	default n
+	help
+	  Chargers which is not support AICL need this feature.
+
+config LGE_PM_LLK_MODE
+	tristate "implementation power requirements of retail mode"
+	default n
+	help
+	  power requirements for retail mode
+
 config LGE_LOW_BATT_LIMIT
 	tristate "to prevent UVLO at low voltage"
 	default n
+
 config LGE_SMART_CHARGING
 	tristate "smart charging driver"
 	default n
 	help
-		Say Y to enable support for smart charging
+	  Say Y to enable support for smart charging
 
 config LGE_G2_EMBEDDED_BATT
 	depends on SMB349_CHARGER
@@ -783,12 +791,13 @@ config LGE_PM_BATTERY_BATT_ADC_G2_BASE
 	depends on LGE_PM
 	default n
 	help
-		Say Y to apply batt adc table for g2 base model
+	  Say Y to apply batt adc table for g2 base model
 
 config LGE_PM_CHARGING_TEMP_SCENARIO_V1_7
 	bool "LGE CHARGING TEMP SCENARIO V1.7 Configuration"
 	depends on LGE_PM
 	default n
 	help
-		LGE CHARGING TEMP SCENARIO V1.7 Configuration
+	  LGE CHARGING TEMP SCENARIO V1.7 Configuration
+
 endif # POWER_SUPPLY
