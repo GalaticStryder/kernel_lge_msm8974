@@ -19,13 +19,13 @@
 #define LGE_TOUCH_CORE_H
 
 /* #define MT_PROTOCOL_A */
-/* #define LGE_TOUCH_TIME_DEBUG */
+/*                              */
 #include <linux/earlysuspend.h>
 
-#define I2C_SUSPEND_WORKAROUND 1
 #define MAX_FINGER	10
 #define MAX_BUTTON	4
 
+#ifndef CUST_G2_TOUCH
 #define CUST_G2_TOUCH
 
 #if !defined(CONFIG_MACH_MSM8974_VU3_KR) && !defined(CONFIG_LGE_Z_TOUCHSCREEN)
@@ -37,19 +37,13 @@
 #define Z_GLOVE_TOUCH_SUPPORT
 #endif
 
-#ifdef CONFIG_MACH_MSM8974_G2_KR
-#define F12_2D_CTRL10 0x15
-#define TUNING_VALUE_NOISE_FLOOR 4
-#define TUNING_VALUE_MINIMUM_PEAK_AMPLITUDE 4
-#define TUNING_VALUE_PEAK_MERGE_THRESHOLD 48
-#define TUNING_VALUE_NOISE_PEAK_FILTER 60
-#endif
-
 #ifdef CUST_G2_TOUCH
 #define REPORT_WAKEUP_GESTURE_ONLY_REG	0x19 /* offset 2  bit:1 */
 #define WAKEUP_GESTURE_ENABEL_REG	0x1D /* bit:0 */
 #define DOUBLE_TAP_AREA_REG	0x18
 #define DOZE_INTERVAL_REG	0xF
+#endif
+
 #endif
 
 #ifdef CUST_G2_TOUCH
@@ -68,17 +62,6 @@ lcd_maker_id get_panel_maker_id(void);
 #if defined(CONFIG_LGE_Z_TOUCHSCREEN)
 #define SMALL_FINGER_AMPLITUDE_THRESHOLD_REG    0x17
 #endif
-
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
-#define MAX_POINT_SIZE_FOR_LPWG 12
-
-struct point
-{
-    int x;
-    int y;
-};
-#endif
-
 struct touch_device_caps {
 	u8		button_support;
 	u16		y_button_boundary;
@@ -189,15 +172,6 @@ enum {
 	TOUCH_VENDOR_LGIT = 0,
 	TOUCH_VENDOR_TPK,
 };
-
-#if defined(CONFIG_MACH_MSM8974_G2_OPEN_COM) || defined(CONFIG_MACH_MSM8974_G2_OPT_AU)
-enum {
-	TOUCH_PANEL_UNKNOWN = 0,
-	TOUCH_PANEL_G1F_LGIT,
-	TOUCH_PANEL_G1F_SSUNTEL,
-	TOUCH_PANEL_G2_LGIT,
-};
-#endif
 
 #if defined(CONFIG_LGE_Z_TOUCHSCREEN)
 enum {
@@ -327,25 +301,8 @@ struct ghost_detect_ctrl {
 	struct ghost_detect_init_data init_data;
 };
 
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
-struct state_info
-{
-	atomic_t power_state;
-	atomic_t interrupt_state;
-	atomic_t upgrade_state;
-	atomic_t ta_state;
-	atomic_t temperature_state;
-	atomic_t proximity_state;
-	atomic_t hallic_state;
-	atomic_t uevent_state;
-};
-#endif
-
 struct lge_touch_data {
 	void *h_touch;
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
-	struct state_info       state;
-#endif
 	atomic_t		next_work;
 	atomic_t		device_init;
 	u8				work_sync_err_cnt;
@@ -365,14 +322,11 @@ struct lge_touch_data {
 	struct delayed_work			work_gesture_wakeup;
 	struct delayed_work			work_thermal;
 #endif
-#ifdef I2C_SUSPEND_WORKAROUND
-	struct delayed_work check_suspended_work;
-#endif
 #if defined(A1_only) || defined(CONFIG_LGE_Z_TOUCHSCREEN)
 	struct delayed_work			work_ime_drumming;
 #endif
 #if defined(CONFIG_FB)
-	struct notifier_block		fb_notif;
+	struct notifier_block notif;
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	struct early_suspend		early_suspend;
 #endif
@@ -387,36 +341,6 @@ struct lge_touch_data {
 	struct accuracy_filter_info	accuracy_filter;
 };
 
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
-enum{
-    TA_DISCONNECTED = 0,
-    TA_CONNECTED,
-};
-
-enum{
-    PROXIMITY_FAR = 0,
-    PROXIMITY_NEAR,
-};
-
-enum{
-    HALL_NONE = 0,
-    HALL_COVERED,
-};
-
-enum{
-    UEVENT_IDLE = 0,
-    UEVENT_BUSY,
-};
-
-
-typedef enum error_type {
-    NO_ERROR = 0,
-    ERROR,
-    IGNORE_EVENT,
-    IGNORE_EVENT_BUT_SAVE_IT,
-} err_t;
-#endif
-
 struct touch_device_driver {
 	int		(*probe)		(struct lge_touch_data *lge_touch_ts);
 #if defined(CONFIG_LGE_Z_TOUCHSCREEN)
@@ -428,11 +352,6 @@ struct touch_device_driver {
 	int		(*power)		(struct i2c_client *client, int power_ctrl);
 	int		(*ic_ctrl)		(struct i2c_client *client, u8 code, u16 value);
 	int	(*fw_upgrade)	(struct i2c_client *client, struct touch_fw_info *info);
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
-	err_t	 	(*suspend) (struct i2c_client *client);
-	err_t	 	(*resume) (struct i2c_client *client);
-	err_t	 	(*lpwg) (struct i2c_client *client, u32 code, u32 value, struct point *data);
-#endif
 };
 
 #ifdef CUST_G2_TOUCH
@@ -586,68 +505,6 @@ enum{
 #endif
 };
 
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
-/* For Error Handling
-  *
-  * DO_IF : execute 'do_work', and if the result is true, print 'error_log' and goto 'goto_error'.
-  * DO_SAFE : execute 'do_work', and if the result is '< 0', print 'error_log' and goto 'goto_error'
-  * ASSIGN : excute 'do_assign', and if the result is 'NULL', print 'error_log' and goto 'goto_error'
-  * ERROR_IF : if the condition is true(ERROR), print 'string' and goto 'goto_error'.
-  */
-#define DO_IF(do_work, goto_error)                              \
-do {                                                \
-    if(do_work){                                        \
-        printk(KERN_INFO "[Touch E] Action Failed [%s %d] \n", __FUNCTION__, __LINE__); \
-        goto goto_error;                                \
-    }                                           \
-} while(0)
-
-#define DO_SAFE(do_work, goto_error)                                \
-    DO_IF(unlikely((do_work) < 0), goto_error)
-
-#define ASSIGN(do_assign, goto_error)                               \
-do {                                                \
-    if((do_assign) == NULL){                                \
-        printk(KERN_INFO "[Touch E] Assign Failed [%s %d] \n", __FUNCTION__, __LINE__); \
-        goto goto_error;                                \
-    }                                           \
-} while(0)
-
-#define ERROR_IF(cond, string, goto_error)  \
-do {                        \
-    if(cond){               \
-        TOUCH_ERR_MSG(string);      \
-        goto goto_error;        \
-    }                   \
-} while(0)
-
-enum{
-    NOTIFY_TA_CONNECTION = 1,
-    NOTIFY_TEMPERATURE_CHANGE,
-    NOTIFY_PROXIMITY,
-    NOTIFY_HALL_IC,
-};
-
-enum{
-    LPWG_NONE = 0,
-    LPWG_DOUBLE_TAP,
-    LPWG_PASSWORD,
-};
-
-enum{
-    LPWG_READ = 1,
-    LPWG_ENABLE,
-    LPWG_LCD_X,
-    LPWG_LCD_Y,
-    LPWG_ACTIVE_AREA_X1,
-    LPWG_ACTIVE_AREA_X2,
-    LPWG_ACTIVE_AREA_Y1,
-    LPWG_ACTIVE_AREA_Y2,
-    LPWG_TAP_COUNT,
-    LPWG_REPLY,
-};
-#endif
-
 enum{
 	DEBUG_NONE				= 0,
 	DEBUG_BASE_INFO			= (1U << 0),	/* 1 */
@@ -725,9 +582,9 @@ enum{
 #define LGE_TOUCH_NAME		"lge_touch"
 
 /* Debug Mask setting */
-#define TOUCH_DEBUG_PRINT   (1)
+//#define TOUCH_DEBUG_PRINT   (0)
 #define TOUCH_ERROR_PRINT   (1)
-#define TOUCH_INFO_PRINT	(1)
+#define TOUCH_INFO_PRINT	(0)
 
 #if defined(TOUCH_INFO_PRINT)
 #define TOUCH_INFO_MSG(fmt, args...) \
@@ -770,13 +627,6 @@ void touch_driver_unregister(void);
 
 void set_touch_handle(struct i2c_client *client, void *h_touch);
 void *get_touch_handle(struct i2c_client *client);
-
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
-void send_uevent(char* string[2]);
-#endif
-#ifdef I2C_SUSPEND_WORKAROUND
-	extern bool atmel_touch_i2c_suspended;
-#endif
 int touch_i2c_read(struct i2c_client *client, u8 reg, int len, u8 *buf);
 int touch_i2c_write(struct i2c_client *client, u8 reg, int len, u8 *buf);
 int touch_i2c_write_byte(struct i2c_client *client, u8 reg, u8 data);
