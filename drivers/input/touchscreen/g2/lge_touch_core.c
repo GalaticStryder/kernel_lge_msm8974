@@ -2336,10 +2336,13 @@ static void touch_gesture_wakeup_func(struct work_struct *work_gesture_wakeup)
 		}
 	}
 #else
+	/* CM Hack */
+        if( buf > 0 ) {
+                input_report_key(ts->input_dev, KEY_POWER, BUTTON_PRESSED);
+                input_report_key(ts->input_dev, KEY_POWER, BUTTON_RELEASED);
+                input_sync(ts->input_dev);
+	}
 	if( buf & 0x04 ){
-		input_report_key(ts->input_dev, KEY_POWER, BUTTON_PRESSED);
-		input_report_key(ts->input_dev, KEY_POWER, BUTTON_RELEASED);
-		input_sync(ts->input_dev);
 		kobject_uevent_env(&lge_touch_sys_device.kobj, KOBJ_CHANGE, touch_wakeup_gesture);
 	}else{
 		wake_unlock(&touch_wake_lock);
