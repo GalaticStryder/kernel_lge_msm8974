@@ -42,6 +42,7 @@
 #include <mach/rpm-smd.h>
 #include <mach/scm.h>
 #include <linux/sched.h>
+#include <linux/ratelimit.h>
 
 #define MAX_CURRENT_UA 1000000
 #define MAX_RAILS 5
