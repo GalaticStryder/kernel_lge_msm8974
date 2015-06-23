@@ -10,6 +10,7 @@ struct state_event {
 	void *data;
 };
 
+extern bool state_suspended;
 extern bool use_fb_notifier;
 int state_register_client(struct notifier_block *nb);
 int state_unregister_client(struct notifier_block *nb);
