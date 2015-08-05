@@ -1410,6 +1410,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 #ifdef CONFIG_STATE_NOTIFIER
 		if (!use_fb_notifier)
 			state_notifier_call_chain(STATE_NOTIFIER_SUSPEND, NULL);
+#endif
 #if defined(CONFIG_LGE_MIPI_DZNY_JDI_INCELL_FHD_VIDEO_PANEL)
         if(touch_driver_registered){
             touch_notifier_call_chain(LCD_EVENT_TOUCH_LPWG_ON, NULL);
