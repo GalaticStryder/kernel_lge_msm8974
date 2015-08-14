@@ -4606,6 +4606,11 @@ static ssize_t store_glove_finger_enable(struct lge_touch_data *ts, const char *
 
 #ifndef CONFIG_LGE_SECURITY_KNOCK_ON
 #ifdef CUST_G2_TOUCH_WAKEUP_GESTURE
+static ssize_t show_touch_gesture(struct lge_touch_data *ts, char *buf)
+{
+	return sprintf(buf, "%d\n", touch_gesture_enable);
+}
+
 static ssize_t store_touch_gesture(struct lge_touch_data *ts, const char *buf, size_t count)
 {
 	int value;
@@ -4962,7 +4967,7 @@ static LGE_TOUCH_ATTR(ime_status, S_IRUGO | S_IWUSR, show_ime_drumming_status, s
 #if defined(CONFIG_LGE_VU3_TOUCHSCREEN) || defined(CONFIG_LGE_Z_TOUCHSCREEN)
 static LGE_TOUCH_ATTR(lpwg_notify, S_IRUGO | S_IWUSR, NULL, store_touch_gesture);
 #else
-static LGE_TOUCH_ATTR(touch_gesture, S_IRUGO | S_IWUSR, NULL, store_touch_gesture);
+static LGE_TOUCH_ATTR(touch_gesture, S_IRUGO | S_IWUSR, show_touch_gesture, store_touch_gesture);
 #endif
 #endif
 #endif
