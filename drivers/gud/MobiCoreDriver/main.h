@@ -21,7 +21,7 @@
 
 #include "public/mc_linux.h"
 /* Platform specific settings */
-#include "platform.h"
+#include "platforms/MSM8960_SURF_STD/platform.h"
 
 #define MC_VERSION(major, minor) \
 		(((major & 0x0000ffff) << 16) | (minor & 0x0000ffff))
