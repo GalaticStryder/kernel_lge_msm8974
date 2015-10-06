@@ -1168,7 +1168,7 @@ static VOS_STATUS btcDeferDisconnectEventForACL( tpAniSirGlobal pMac, tpSmeBtEve
     tpSmeBtAclEventHist pAclEventHist;
     tpSmeBtAclModeChangeEventHist pModeChangeEventHist;
     v_BOOL_t fDone = VOS_FALSE;
-    int i;
+    unsigned int i;
     pAclEventHist = btcFindAclEventHist( pMac, NULL, 
                                 pEvent->uEventParam.btDisconnect.connectionHandle );
     if(pAclEventHist)
@@ -1252,7 +1252,7 @@ static VOS_STATUS btcDeferDisconnectEventForSync( tpAniSirGlobal pMac, tpSmeBtEv
     tpSmeBtSyncEventHist pSyncEventHist;
     tpSmeBtSyncUpdateHist pSyncUpdateHist;
     v_BOOL_t fDone = VOS_FALSE;
-    int i;
+    unsigned int i;
     pSyncEventHist = btcFindSyncEventHist( pMac, NULL, 
                                 pEvent->uEventParam.btDisconnect.connectionHandle );
     if(pSyncEventHist)
