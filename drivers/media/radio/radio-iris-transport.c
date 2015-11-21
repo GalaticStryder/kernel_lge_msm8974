@@ -197,7 +197,11 @@ static void radio_hci_smd_deregister(void)
 	hs.fm_channel = 0;
 }
 
+#ifndef RADIO_IRIS_TRANSPORT_MODULE
+int radio_hci_smd_init(void)
+#else
 static int radio_hci_smd_init(void)
+#endif
 {
 	return radio_hci_smd_register_dev(&hs);
 }

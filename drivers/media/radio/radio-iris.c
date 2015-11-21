@@ -4898,6 +4898,18 @@ static int iris_fops_release(struct file *file)
 	return retval;
 }
 
+#ifndef RADIO_IRIS_TRANSPORT_MODULE
+extern int radio_hci_smd_init(void);
+static int transport_ready = -1;
+static int iris_fops_open(struct file *file)
+{
+	if (transport_ready < 0) {
+		transport_ready = radio_hci_smd_init();
+	}
+	return transport_ready;
+}
+#endif
+
 static int iris_vidioc_dqbuf(struct file *file, void *priv,
 				struct v4l2_buffer *buffer)
 {
@@ -5096,6 +5108,9 @@ static const struct v4l2_file_operations iris_fops = {
 	.owner = THIS_MODULE,
 	.unlocked_ioctl = video_ioctl2,
 	.release        = iris_fops_release,
+#ifndef RADIO_IRIS_TRANSPORT_MODULE
+	.open           = iris_fops_open,
+#endif
 };
 
 static struct video_device iris_viddev_template = {
