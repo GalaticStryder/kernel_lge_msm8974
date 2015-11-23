@@ -586,7 +586,6 @@ enum{
 #endif
 };
 
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
 /* For Error Handling
   *
   * DO_IF : execute 'do_work', and if the result is true, print 'error_log' and goto 'goto_error'.
@@ -634,6 +633,7 @@ enum{
     LPWG_PASSWORD,
 };
 
+#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
 enum{
     LPWG_READ = 1,
     LPWG_ENABLE,

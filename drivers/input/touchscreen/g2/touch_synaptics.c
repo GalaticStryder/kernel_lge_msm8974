@@ -176,12 +176,10 @@
 #define SENSOR_PAGE					(ts->sensor_fc.function_page)
 #define DEFAULT_PAGE					0x00
 
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
 #define LPWG_CTRL_PAGE					0x04
 #define MULTITAP_COUNT_REG				0x31
 #define MAX_INTERTAP_TIME_REG			0x33
 #define INTERTAP_DISTANCE_REG			0x35
-#endif
 
 /* Get user-finger-data from register.
  */
@@ -2093,7 +2091,6 @@ int synaptics_ts_ic_ctrl(struct i2c_client *client, u8 code, u16 value)
 						if(r_mem != NULL) kfree(r_mem);
 						return -EIO;
 						}
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
 					if (unlikely(touch_i2c_write_byte(client, PAGE_SELECT_REG, LPWG_CTRL_PAGE) < 0)) {
 						TOUCH_ERR_MSG("PAGE_SELECT_REG write fail\n");
 						return -EIO;
@@ -2131,6 +2128,7 @@ int synaptics_ts_ic_ctrl(struct i2c_client *client, u8 code, u16 value)
 					TOUCH_INFO_MSG("MultiTap LPWG Control Reg value 0x%02X\n", buf);
 					DO_SAFE(synaptics_ts_page_data_write_byte(client, LPWG_CTRL_PAGE, MULTITAP_COUNT_REG, buf), error);
 					DO_SAFE(touch_i2c_write_byte(client, PAGE_SELECT_REG, DEFAULT_PAGE), error);
+#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
 					ts->double_tap_enable = 1;
 #endif
 					if (r_mem != NULL)
@@ -2308,10 +2306,8 @@ int synaptics_ts_ic_ctrl(struct i2c_client *client, u8 code, u16 value)
 }
 
 	return buf;
-#ifdef CONFIG_LGE_SECURITY_KNOCK_ON
 error:
 	return -EIO;
-#endif
 }
 
 #ifdef CONFIG_LGE_SECURITY_KNOCK_ON
