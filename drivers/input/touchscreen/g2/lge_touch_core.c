@@ -2272,6 +2272,15 @@ static void touch_gesture_wakeup_func(struct work_struct *work_gesture_wakeup)
 	mutex_unlock(&ts->irq_work_mutex);
 
 	TOUCH_INFO_MSG("INTERRUPT_STATUS_REG %x\n", buf);
+
+#ifndef CONFIG_LGE_SECURITY_KNOCK_ON
+	if ((buf & 0x40) && touch_gesture_enable == LPWG_DOUBLE_TAP) {
+		input_report_key(ts->input_dev, KEY_POWER, BUTTON_PRESSED);
+		input_report_key(ts->input_dev, KEY_POWER, BUTTON_RELEASED);
+		input_sync(ts->input_dev);
+	}
+#endif
+
 #ifdef CONFIG_LGE_SECURITY_KNOCK_ON
 	wake_lock_timeout(&touch_wake_lock, msecs_to_jiffies(3000));
 #endif
@@ -5695,6 +5704,10 @@ static int touch_probe(struct i2c_client *client, const struct i2c_device_id *id
 	set_bit(EV_ABS, ts->input_dev->evbit);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
 	set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
+#endif
+#ifdef CUST_G2_TOUCH_WAKEUP_GESTURE
+	set_bit(EV_KEY, ts->input_dev->evbit);
+	set_bit(KEY_POWER, ts->input_dev->keybit);
 #endif
 
 	if (ts->pdata->caps->button_support && ts->pdata->role->key_type != VIRTUAL_KEY) {
