@@ -35,10 +35,6 @@
 #include "SynaImage_for_Z_revB_H_Pattern.h"
 #elif defined(CONFIG_MACH_MSM8974_G2_KDDI)
 #include "SynaImage_for_G2_KDDI.h"
-#elif defined(CONFIG_MACH_MSM8974_G2_VZW) // knockcode disable firmware for VS980
-#include "SynaImage_for_G2_TPK_OLD.h"
-#include "SynaImage_for_G2_LGIT_revA.h"
-#include "SynaImage_for_G2_LGIT_revB_OLD.h"
 #else
 #include "SynaImage_for_G2_LGIT_revA.h"
 #include "SynaImage_for_G2_LGIT_revB.h"
