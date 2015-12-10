@@ -1648,7 +1648,7 @@ wl_show_host_event(dhd_pub_t *dhd_pub, wl_event_msg_t *event, void *event_data,
 #endif /* SHOW_EVENTS */
 
 int
-wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
+wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata, size_t pktlen,
 	wl_event_msg_t *event, void **data_ptr, void *raw_event)
 {
 	/* check whether packet is a BRCM event pkt */
@@ -1670,6 +1670,9 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 		return (BCME_ERROR);
 	}
 
+	if (pktlen < sizeof(bcm_event_t))
+		return (BCME_ERROR);
+
 	*data_ptr = &pvt_data[1];
 	event_data = *data_ptr;
 
@@ -1680,8 +1683,15 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 	type = ntoh32_ua((void *)&event->event_type);
 	flags = ntoh16_ua((void *)&event->flags);
 	status = ntoh32_ua((void *)&event->status);
+
 	datalen = ntoh32_ua((void *)&event->datalen);
+	if (datalen > pktlen)
+		return (BCME_ERROR);
+
 	evlen = datalen + sizeof(bcm_event_t);
+	if (evlen > pktlen) {
+		return (BCME_ERROR);
+	}
 
 	/* find equivalent host index for event ifidx */
 	hostidx = dhd_ifidx2hostidx(dhd_pub->info, event->ifidx);
