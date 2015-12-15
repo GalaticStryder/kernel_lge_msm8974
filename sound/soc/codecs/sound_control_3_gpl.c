@@ -29,6 +29,7 @@ extern struct snd_soc_codec *fauxsound_codec_ptr;
 extern int wcd9xxx_hw_revision;
 
 static int snd_ctrl_locked = 0;
+static int snd_rec_ctrl_locked = 0;
 
 unsigned int taiko_read(struct snd_soc_codec *codec, unsigned int reg);
 int taiko_write(struct snd_soc_codec *codec, unsigned int reg,
@@ -289,7 +290,7 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 	sscanf(buf, "%u %u", &lval, &chksum);
 
 	taiko_write(fauxsound_codec_ptr,
-			AIKO_A_CDC_TX7_VOL_CTL_GAIN, lval);
+		TAIKO_A_CDC_TX7_VOL_CTL_GAIN, lval);
 
 	return count;
 
