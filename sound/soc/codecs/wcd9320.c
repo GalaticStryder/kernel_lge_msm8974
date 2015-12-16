@@ -4442,7 +4442,7 @@ extern unsigned int snd_hax_cache_read(unsigned int);
 extern void snd_hax_cache_write(unsigned int, unsigned int);
 #endif
 
-#ifndef CONFIG_SOUND_CONTROL_HAX_3_GPL 
+#ifndef CONFIG_SOUND_CONTROL_HAX_3_GPL
 static
 #endif
 unsigned int taiko_read(struct snd_soc_codec *codec,
@@ -7358,6 +7358,7 @@ void taiko_dec5_vol_mute(void)
        snd_soc_update_bits(taiko_codec_priv, tx_vol_ctl_reg, 0x01, 0x01);
 }
 EXPORT_SYMBOL(taiko_dec5_vol_mute);
+#endif
 
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
 struct snd_soc_codec *fauxsound_codec_ptr;
