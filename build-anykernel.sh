@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #
-#  Build Script for Render Kernel for G2!
-#  Based off AK'sbuild script - Thanks!
+#  Build Script for Lambda Kernel
+#  Based off AK's and Render's build script - Danke!
 #
 
 # Bash Color
@@ -11,6 +11,7 @@ red='\033[01;31m'
 blink_red='\033[05;31m'
 restore='\033[0m'
 
+# Clean
 clear
 
 # Resources
@@ -18,33 +19,39 @@ THREAD="-j$(grep -c ^processor /proc/cpuinfo)"
 KERNEL="zImage"
 DTBIMAGE="dtb"
 
-# Kernel Details
-VER=Render-Kernel
+# Versioning
+NAME="Lambda-Kernel"
+RELEASE="Candelabro"
+BUILD_DATE=$(date -u +%m%d%Y)
+export VERSION=$NAME~$RELEASE
 
-# Vars
-export LOCALVERSION=~`echo $VER`
+# Variables
+export LOCALVERSION=~`echo $VERSION`
 export ARCH=arm
 export SUBARCH=arm
-export KBUILD_BUILD_USER=RenderBroken
-export KBUILD_BUILD_HOST=RenderServer.net
+export KBUILD_BUILD_USER=galatic
 export CCACHE=ccache
 
 # Paths
 KERNEL_DIR=`pwd`
-REPACK_DIR="${HOME}/android/source/kernel/G2-AnyKernel"
-PATCH_DIR="${HOME}/android/source/kernel/G2-AnyKernel/patch"
-MODULES_DIR="${HOME}/android/source/kernel/G2-AnyKernel/modules"
-ZIP_MOVE="${HOME}/android/source/zips/g2-caf-zips"
-ZIMAGE_DIR="${HOME}/android/source/kernel/msm8974_G2-CAF_render_kernel/arch/arm/boot"
+REPACK_DIR="${HOME}/Desenvolvimento/kernel/anykernel"
+PATCH_DIR="${HOME}/Desenvolvimento/kernel/anykernel/patch"
+MODULES_DIR="${HOME}/Desenvolvimento/kernel/anykernel/modules"
+ZIP_MOVE="${HOME}/Desenvolvimento/kernel/source/store"
+ZIMAGE_DIR="${HOME}/Desenvolvimento/kernel/source/arch/arm/boot"
 
 # Functions
 function checkout_branches {
 		cd $REPACK_DIR
-		git checkout rk-anykernel
+		git checkout lambda
 		cd $KERNEL_DIR
 }
 
 function clean_all {
+		rm -f $KERNEL_DIR/arch/arm/boot/*.dtb
+		rm -f $KERNEL_DIR/arch/arm/boot/*.cmd
+		rm -f $KERNEL_DIR/arch/arm/boot/zImage
+		rm -f $KERNEL_DIR/arch/arm/boot/Image
 		rm -rf $MODULES_DIR/*
 		cd $REPACK_DIR
 		rm -rf $KERNEL
@@ -72,20 +79,25 @@ function make_dtb {
 
 function make_zip {
 		cd $REPACK_DIR
-		zip -r9 RenderKernel-G2-CAF-"$VARIANT"-R.zip *
-		mv RenderKernel-G2-CAF-"$VARIANT"-R.zip $ZIP_MOVE
+		zip -r9 "$NAME"-"$RELEASE"-"$VARIANT"-"$BUILD_DATE".zip *
+		mv "$NAME"-"$RELEASE"-"$VARIANT"-"$BUILD_DATE".zip $ZIP_MOVE
 		cd $KERNEL_DIR
 }
 
 
 DATE_START=$(date +"%s")
 
-echo -e "${green}"
-echo "Render Kernel Creation Script:"
+echo -e "${red}"
+echo ""
+echo "   \    "
+echo "   /\   "
+echo "  /  \  "
+echo " /    \ "
+echo ""
 echo -e "${restore}"
 
-echo "Pick VARIANT..."
-select choice in d800 d801 d802 d803 ls980 vs980 f320x l01f
+echo "Pick an LG G2 variant..."
+select choice in d800 d801 d802 d803 ls980 vs980
 do
 case "$choice" in
 	"d800")
@@ -112,37 +124,32 @@ case "$choice" in
 		VARIANT="vs980"
 		DEFCONFIG="vs980_defconfig"
 		break;;
-	"f320x")
-		VARIANT="f320x"
-		DEFCONFIG="f320x_defconfig"
-		break;;
-	"l01f")
-		VARIANT="l01f"
-		DEFCONFIG="l01f_defconfig"
-		break;;
 esac
 done
 
 echo "Pick Toolchain..."
-select choice in UBER-4.9-Cortex-a15 UBER-5.1
+select choice in ArchiToolchain-5.2 ArchiToolchain-5.1 ArchiToolchain-4.9
 do
 case "$choice" in
-	"UBER-4.9-Cortex-a15")
-		export CROSS_COMPILE=${HOME}/android/source/toolchains/UBER-arm-eabi-4.9-cortex-a15-062715/bin/arm-eabi-
+	"ArchiToolchain-5.2")
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/architoolchain-5.1/bin/arm-eabi-
 		break;;
-	"UBER-5.1")
-		export CROSS_COMPILE=${HOME}/android/source/toolchains/UBER-arm-eabi-5.1-062715/bin/arm-eabi-
+	"ArchiToolchain-5.1")
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/architoolchain-5.1/bin/arm-eabi-
+		break;;
+	"ArchiToolchain-4.9")
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/architoolchain-4.9/bin/arm-eabi-
 		break;;
 esac
 done
 
-while read -p "Do you want to clean stuffs (y/n)? " cchoice
+while read -p "Do you want to clean stuff (y/n)? " cchoice
 do
 case "$cchoice" in
 	y|Y )
 		clean_all
 		echo
-		echo "All Cleaned now."
+		echo "All cleaned."
 		break
 		;;
 	n|N )
