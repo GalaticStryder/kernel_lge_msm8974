@@ -84,3 +84,7 @@ GTAGS
 *.orig
 *~
 \#*#
+arch/arm/boot/compressed/piggy.lz4
+arch/arm/mach-msm/smd_rpc_sym.c
+kernel/hz.bc
+/store/
