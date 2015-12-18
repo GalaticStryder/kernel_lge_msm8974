@@ -21,7 +21,7 @@ DTBIMAGE="dtb"
 
 # Versioning
 NAME="Lambda-Kernel"
-RELEASE="Candelabro"
+RELEASE="Dominó"
 BUILD_DATE=$(date -u +%m%d%Y)
 export VERSION=$NAME~$RELEASE
 
