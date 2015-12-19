@@ -19,14 +19,7 @@ THREAD="-j$(grep -c ^processor /proc/cpuinfo)"
 KERNEL="zImage"
 DTBIMAGE="dtb"
 
-# Versioning
-NAME="Lambda-Kernel"
-RELEASE="Dominó"
-BUILD_DATE=$(date -u +%m%d%Y)
-export VERSION=$NAME~$RELEASE
-
 # Variables
-export LOCALVERSION=~`echo $VERSION`
 export ARCH=arm
 export SUBARCH=arm
 export KBUILD_BUILD_USER=galatic
@@ -79,8 +72,8 @@ function make_dtb {
 
 function make_zip {
 		cd $REPACK_DIR
-		zip -r9 "$NAME"-"$RELEASE"-"$VARIANT"-"$BUILD_DATE".zip *
-		mv "$NAME"-"$RELEASE"-"$VARIANT"-"$BUILD_DATE".zip $ZIP_MOVE
+		zip -r9 "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip *
+		mv "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip $ZIP_MOVE
 		cd $KERNEL_DIR
 }
 
@@ -95,6 +88,51 @@ echo "  /  \  "
 echo " /    \ "
 echo ""
 echo -e "${restore}"
+
+echo "Build state..."
+select choice in stable beta incremental
+do
+case "$choice" in
+	"stable")
+		export STATE=stable
+		break;;
+	"stable")
+		export STATE=beta
+		break;;
+	"incremental")
+		export STATE=incremental
+		break;;
+esac
+done
+
+echo ""
+echo "You have chosen $STATE!"
+echo ""
+
+# Versioning
+NAME="LambdaKernel"
+RELEASE="Dominó"
+BUILD_DATE=$(date -u +%m%d%Y)
+if STATE=stable
+	then
+	TAG="Stable"
+	export VERSION=$NAME-$RELEASE-$TAG
+if STATE=beta
+	then
+	TAG="Beta"
+	export VERSION=$NAME-$RELEASE-$TAG
+if STATE=incremental
+	then
+	TAG="Incremental"
+	echo "Could you assign an incremental number?"
+	read -e tag_number
+	TAG_NUMBER="$tag_number"
+	echo ""
+	export VERSION=$NAME-$RELEASE-$TAG-N$TAG_NUMBER
+fi
+fi
+fi
+export LOCALVERSION=-`echo $VERSION`
 
 echo "Pick an LG G2 variant..."
 select choice in d800 d801 d802 d803 ls980 vs980
@@ -127,21 +165,32 @@ case "$choice" in
 esac
 done
 
+echo ""
+echo "You are building $VERSION for $VARIANT..."
+echo ""
+
 echo "Pick Toolchain..."
 select choice in ArchiToolchain-5.2 ArchiToolchain-5.1 ArchiToolchain-4.9
 do
 case "$choice" in
 	"ArchiToolchain-5.2")
+		export TOOLCHAIN="Architoolchain 5.2"
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/architoolchain-5.1/bin/arm-eabi-
 		break;;
 	"ArchiToolchain-5.1")
+		export TOOLCHAIN="Architoolchain 5.1 (Cortex A15)"
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/architoolchain-5.1/bin/arm-eabi-
 		break;;
 	"ArchiToolchain-4.9")
+		export TOOLCHAIN="Architoolchain 4.9 (Cortex A15)"
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/architoolchain-4.9/bin/arm-eabi-
 		break;;
 esac
 done
+
+echo ""
+echo "You have chosen $TOOLCHAIN!"
+echo ""
 
 while read -p "Do you want to clean stuff (y/n)? " cchoice
 do

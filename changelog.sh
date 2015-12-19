@@ -22,7 +22,6 @@ if [ -z "$sdate" ]; then
     echo "Failed!"
     echo "Add a date in mm/dd/yyyy format to count from..."
     echo ""
-    read sdate
 fi
 
 # Find the directories to log
