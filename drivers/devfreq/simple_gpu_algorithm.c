@@ -17,10 +17,10 @@
 #include <linux/devfreq.h>
 #include <linux/msm_adreno_devfreq.h>
 
-static int default_laziness = 4;
+static int default_laziness = 2;
 module_param_named(simple_laziness, default_laziness, int, 0664);
 
-static int ramp_up_threshold = 5000;
+static int ramp_up_threshold = 6000;
 module_param_named(simple_ramp_threshold, ramp_up_threshold, int, 0664);
 
 int simple_gpu_active = 0;
@@ -31,10 +31,10 @@ static int laziness;
 int simple_gpu_algorithm(int level,
 			struct devfreq_msm_adreno_tz_data *priv)
 {
-	int val;
+	int val = 0;
 
 	/* it's currently busy */
-	if (priv->bin.busy_time > ramp_up_threshold) {
+	if ((unsigned int)priv->bin.busy_time > ramp_up_threshold) {
 		if (level == 0)
 			val = 0; /* already maxed, so do nothing */
 		else if ((level > 0) &&
