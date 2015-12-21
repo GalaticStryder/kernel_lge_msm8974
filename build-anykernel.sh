@@ -96,7 +96,7 @@ case "$choice" in
 	"stable")
 		export STATE=stable
 		break;;
-	"stable")
+	"beta")
 		export STATE=beta
 		break;;
 	"incremental")
@@ -113,15 +113,15 @@ echo ""
 NAME="LambdaKernel"
 RELEASE="Dominó"
 BUILD_DATE=$(date -u +%m%d%Y)
-if STATE=stable
+if [ "$STATE" == "stable" ]
 	then
 	TAG="Stable"
 	export VERSION=$NAME-$RELEASE-$TAG
-if STATE=beta
+if [ "$STATE" == "beta" ]
 	then
 	TAG="Beta"
 	export VERSION=$NAME-$RELEASE-$TAG
-if STATE=incremental
+if [ "$STATE" == "incremental" ]
 	then
 	TAG="Incremental"
 	echo "Could you assign an incremental number?"
@@ -170,13 +170,9 @@ echo "You are building $VERSION for $VARIANT..."
 echo ""
 
 echo "Pick Toolchain..."
-select choice in ArchiToolchain-5.2 ArchiToolchain-5.1 ArchiToolchain-4.9
+select choice in ArchiToolchain-5.1 ArchiToolchain-4.9
 do
 case "$choice" in
-	"ArchiToolchain-5.2")
-		export TOOLCHAIN="Architoolchain 5.2"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/architoolchain-5.1/bin/arm-eabi-
-		break;;
 	"ArchiToolchain-5.1")
 		export TOOLCHAIN="Architoolchain 5.1 (Cortex A15)"
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/architoolchain-5.1/bin/arm-eabi-
