@@ -77,6 +77,12 @@ function make_zip {
 		cd $KERNEL_DIR
 }
 
+function generate_md5 {
+		cd $ZIP_MOVE
+		md5sum "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip >> $KERNEL_DIR/md5.txt
+		cd $KERNEL_DIR
+}
+
 
 DATE_START=$(date +"%s")
 
@@ -215,6 +221,7 @@ case "$dchoice" in
 		make_dtb
 		make_modules
 		make_zip
+		generate_md5
 		break
 		;;
 	n|N )
