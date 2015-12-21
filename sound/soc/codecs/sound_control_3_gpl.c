@@ -23,12 +23,16 @@
 #include <linux/mfd/wcd9xxx/wcd9320_registers.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION	3
-#define SOUND_CONTROL_MINOR_VERSION	7
+#define SOUND_CONTROL_MINOR_VERSION	8
 
 extern struct snd_soc_codec *fauxsound_codec_ptr;
 extern int wcd9xxx_hw_revision;
 
+#ifdef CONFIG_MACH_LGE
+static int snd_ctrl_locked = 1;
+#else
 static int snd_ctrl_locked = 0;
+#endif
 static int snd_rec_ctrl_locked = 0;
 
 unsigned int taiko_read(struct snd_soc_codec *codec, unsigned int reg);
@@ -36,9 +40,15 @@ int taiko_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 #define REG_SZ	25
+#ifdef CONFIG_MACH_LGE
+static int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
+			    0, 0, 0, 0, 0, 0, 10, 10, 0, 0,
+					0, 0, 0, 0, 0 };
+#else
 static int cached_regs[] = {0, 0, 0, 0, 0, 0, -1, -1, -1, -1,
 			    0, -1, -1, -1, -1, -1, 10, 10, -1, 1,
-			    -1, -1, -1, -1, -1 };
+			    -1, 0, 0, 0, 0 };
+#endif
 
 void snd_hax_cache_write(unsigned int reg, unsigned int value)
 {
@@ -130,7 +140,6 @@ int snd_hax_cache_read(unsigned int reg)
 	int out = -1;
 
 	switch (reg) {
-#ifndef CONFIG_MACH_LGE
 		/* Headphone PowerAmp Gain */
 		case TAIKO_A_RX_HPH_L_GAIN:
 			out = cached_regs[0];
@@ -144,7 +153,6 @@ int snd_hax_cache_read(unsigned int reg)
 		case TAIKO_A_RX_HPH_R_STATUS:
 			out = cached_regs[3];
 			break;
-#endif
 		/* Headphone Digital Gain */
 		case TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL:
 			out = cached_regs[4];
@@ -152,7 +160,6 @@ int snd_hax_cache_read(unsigned int reg)
 		case TAIKO_A_CDC_RX2_VOL_CTL_B2_CTL:
 			out = cached_regs[5];
 			break;
-#ifndef CONFIG_MACH_LGE
 		case TAIKO_A_CDC_RX3_VOL_CTL_B2_CTL:
 			out = cached_regs[6];
 			break;
@@ -165,12 +172,10 @@ int snd_hax_cache_read(unsigned int reg)
 		case TAIKO_A_CDC_RX6_VOL_CTL_B2_CTL:
 			out = cached_regs[9];
 			break;
-#endif
 		/* Speaker Gain */
 		case TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL:
 			out = cached_regs[10];
 			break;
-#ifndef CONFIG_MACH_LGE
 		case TAIKO_A_CDC_TX1_VOL_CTL_GAIN:
 			out = cached_regs[11];
 			break;
@@ -186,7 +191,6 @@ int snd_hax_cache_read(unsigned int reg)
 		case TAIKO_A_CDC_TX5_VOL_CTL_GAIN:
 			out = cached_regs[15];
 			break;
-#endif
 		/* Cam Mic Gain */
 		case TAIKO_A_CDC_TX6_VOL_CTL_GAIN:
 			out = cached_regs[16];
@@ -195,7 +199,6 @@ int snd_hax_cache_read(unsigned int reg)
 		case TAIKO_A_CDC_TX7_VOL_CTL_GAIN:
 			out = cached_regs[17];
 			break;
-#ifndef CONFIG_MACH_LGE
 		case TAIKO_A_CDC_TX8_VOL_CTL_GAIN:
 			out = cached_regs[18];
 			break;
@@ -205,7 +208,6 @@ int snd_hax_cache_read(unsigned int reg)
 		case TAIKO_A_CDC_TX10_VOL_CTL_GAIN:
 			out = cached_regs[20];
 			break;
-#endif
 		default:
 			break;
         }
@@ -233,16 +235,22 @@ int snd_hax_reg_access(unsigned int reg)
 		case TAIKO_A_RX_LINE_2_GAIN:
 		case TAIKO_A_RX_LINE_3_GAIN:
 		case TAIKO_A_RX_LINE_4_GAIN:
+/*
 		case TAIKO_A_CDC_TX1_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX2_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX3_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX4_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX5_VOL_CTL_GAIN:
+*/
+#ifdef CONFIG_MACH_LGE
 		case TAIKO_A_CDC_TX6_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX7_VOL_CTL_GAIN:
+#endif
+/*
 		case TAIKO_A_CDC_TX8_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX9_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX10_VOL_CTL_GAIN:
+*/
 			if (snd_ctrl_locked)
 				ret = 0;
 			break;
@@ -258,7 +266,7 @@ static ssize_t cam_mic_gain_show(struct kobject *kobj,
 {
   return sprintf(buf, "%u\n",
 		taiko_read(fauxsound_codec_ptr,
-			TAIKO_A_CDC_TX6_VOL_CTL_GAIN));
+			TAIKO_A_CDC_TX7_VOL_CTL_GAIN));
 }
 
 static ssize_t cam_mic_gain_store(struct kobject *kobj,
@@ -268,18 +276,42 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%u %u", &lval, &chksum);
 
+#ifdef CONFIG_MACH_LGE
 	taiko_write(fauxsound_codec_ptr,
-		TAIKO_A_CDC_TX6_VOL_CTL_GAIN, lval);
+		TAIKO_A_CDC_TX7_VOL_CTL_GAIN, lval);
+#endif
 
 	return count;
 }
+
+#ifdef CONFIG_MACH_LGE
+static ssize_t lge_cam_mic_gain_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int lval;
+
+	sscanf(buf, "%u", &lval);
+
+	if (lval >= 255)
+		lval = 255;
+	if (lval < 0)
+		lval = 0;
+
+	snd_ctrl_locked = 0;
+	taiko_write(fauxsound_codec_ptr,
+		TAIKO_A_CDC_TX7_VOL_CTL_GAIN, lval);
+	snd_ctrl_locked = 1;
+
+	return count;
+}
+#endif
 
 static ssize_t mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%u\n",
 		taiko_read(fauxsound_codec_ptr,
-			TAIKO_A_CDC_TX7_VOL_CTL_GAIN));
+			TAIKO_A_CDC_TX6_VOL_CTL_GAIN));
 }
 
 static ssize_t mic_gain_store(struct kobject *kobj,
@@ -289,12 +321,36 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%u %u", &lval, &chksum);
 
+#ifdef CONFIG_MACH_LGE
 	taiko_write(fauxsound_codec_ptr,
-		TAIKO_A_CDC_TX7_VOL_CTL_GAIN, lval);
+		TAIKO_A_CDC_TX6_VOL_CTL_GAIN, lval);
+#endif
 
 	return count;
 
 }
+
+#ifdef CONFIG_MACH_LGE
+static ssize_t lge_mic_gain_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int lval;
+
+	sscanf(buf, "%u", &lval);
+
+	if (lval >= 255)
+		lval = 255;
+	if (lval < 0)
+		lval = 0;
+
+	snd_ctrl_locked = 0;
+	taiko_write(fauxsound_codec_ptr,
+		TAIKO_A_CDC_TX6_VOL_CTL_GAIN, lval);
+	snd_ctrl_locked = 1;
+
+	return count;
+}
+#endif
 
 static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -325,13 +381,45 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%u %u %u", &lval, &rval, &chksum);
 
+#ifndef CONFIG_MACH_LGE
+	/* We have a mono speaker, so lval = rval */
 	taiko_write(fauxsound_codec_ptr,
 		TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL, lval);
 	taiko_write(fauxsound_codec_ptr,
 		TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL, rval);
+#endif
 
 	return count;
 }
+
+#ifdef CONFIG_MACH_LGE
+static ssize_t lge_speaker_gain_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int lval, rval;
+
+	sscanf(buf, "%u %u", &lval, &rval);
+
+	if (lval >= 255)
+		lval = 255;
+  if (rval >= 255)
+		rval = 255;
+  if (lval < 0)
+ 		lval = 0;
+ 	if (rval < 0)
+ 		rval = 0;
+
+	snd_ctrl_locked = 0;
+	/* We have a mono speaker, so lval = rval */
+	taiko_write(fauxsound_codec_ptr,
+		TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL, lval);
+	taiko_write(fauxsound_codec_ptr,
+		TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL, rval);
+	snd_ctrl_locked = 1;
+
+	return count;
+}
+#endif
 
 static ssize_t headphone_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -350,10 +438,16 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%u %u %u", &lval, &rval, &chksum);
 
+#ifdef CONFIG_MACH_LGE
+	snd_ctrl_locked = 0;
+#endif
 	taiko_write(fauxsound_codec_ptr,
 		TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL, lval);
 	taiko_write(fauxsound_codec_ptr,
 		TAIKO_A_CDC_RX2_VOL_CTL_B2_CTL, rval);
+#ifdef CONFIG_MACH_LGE
+	snd_ctrl_locked = 1;
+#endif
 
 	return count;
 }
@@ -375,6 +469,9 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%u %u %u", &lval, &rval, &chksum);
 
+#ifdef CONFIG_MACH_LGE
+	snd_ctrl_locked = 0;
+#endif
 	gain = taiko_read(fauxsound_codec_ptr, TAIKO_A_RX_HPH_L_GAIN);
 	out = (gain & 0xf0) | lval;
 	taiko_write(fauxsound_codec_ptr, TAIKO_A_RX_HPH_L_GAIN, out);
@@ -390,6 +487,9 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	status = taiko_read(fauxsound_codec_ptr, TAIKO_A_RX_HPH_R_STATUS);
 	out = (status & 0x0f) | (rval << 4);
 	taiko_write(fauxsound_codec_ptr, TAIKO_A_RX_HPH_R_STATUS, out);
+#ifdef CONFIG_MACH_LGE
+	snd_ctrl_locked = 1;
+#endif
 
 	return count;
 }
@@ -502,6 +602,26 @@ static struct kobj_attribute speaker_gain_attribute =
 		speaker_gain_show,
 		speaker_gain_store);
 
+#ifdef CONFIG_MACH_LGE
+static struct kobj_attribute lge_cam_mic_gain_attribute =
+	__ATTR(lge_cam_mic_gain,
+		0666,
+		cam_mic_gain_show,
+		lge_cam_mic_gain_store);
+
+static struct kobj_attribute lge_mic_gain_attribute =
+	__ATTR(lge_mic_gain,
+		0666,
+		mic_gain_show,
+		lge_mic_gain_store);
+
+static struct kobj_attribute lge_speaker_gain_attribute =
+	__ATTR(lge_speaker_gain,
+		0666,
+		speaker_gain_show,
+		lge_speaker_gain_store);
+#endif
+
 static struct kobj_attribute headphone_gain_attribute =
 	__ATTR(gpl_headphone_gain,
 		0666,
@@ -535,6 +655,11 @@ static struct attribute *sound_control_attrs[] =
 		&cam_mic_gain_attribute.attr,
 		&mic_gain_attribute.attr,
 		&speaker_gain_attribute.attr,
+#ifdef CONFIG_MACH_LGE
+		&lge_cam_mic_gain_attribute.attr,
+		&lge_mic_gain_attribute.attr,
+		&lge_speaker_gain_attribute.attr,
+#endif
 		&headphone_gain_attribute.attr,
 		&headphone_pa_gain_attribute.attr,
 		&sound_control_locked_attribute.attr,
