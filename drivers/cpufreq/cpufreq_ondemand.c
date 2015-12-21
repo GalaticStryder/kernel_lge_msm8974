@@ -397,10 +397,6 @@ static ssize_t store_input_boost(struct kobject *a, struct attribute *b,
 {
 	unsigned int input;
 	int ret;
-
-	if (sysfs_streq(current->comm, "mpdecision"))
-		return -EINVAL;
-
 	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
 		return -EINVAL;
@@ -413,9 +409,6 @@ static ssize_t store_sync_freq(struct kobject *a, struct attribute *b,
 {
 	unsigned int input;
 	int ret;
-
-	if (sysfs_streq(current->comm, "mpdecision"))
-		return -EINVAL;
 
 	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
