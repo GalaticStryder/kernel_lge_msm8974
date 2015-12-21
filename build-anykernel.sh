@@ -90,17 +90,17 @@ echo ""
 echo -e "${restore}"
 
 echo "Build state..."
-select choice in stable beta incremental
+select choice in Stable Beta Incremental
 do
 case "$choice" in
-	"stable")
-		export STATE=stable
+	"Stable")
+		export STATE="stable"
 		break;;
-	"beta")
-		export STATE=beta
+	"Beta")
+		export STATE="beta"
 		break;;
-	"incremental")
-		export STATE=incremental
+	"Incremental")
+		export STATE="incremental"
 		break;;
 esac
 done
@@ -113,24 +113,21 @@ echo ""
 NAME="LambdaKernel"
 RELEASE="Dominó"
 BUILD_DATE=$(date -u +%m%d%Y)
-if [ "$STATE" == "stable" ]
-	then
+if [ "$STATE" = stable ]; then
 	TAG="Stable"
 	export VERSION=$NAME-$RELEASE-$TAG
-if [ "$STATE" == "beta" ]
-	then
+fi
+if [ "$STATE" = beta ]; then
 	TAG="Beta"
 	export VERSION=$NAME-$RELEASE-$TAG
-if [ "$STATE" == "incremental" ]
-	then
+fi
+if [ "$STATE" = incremental ]; then
 	TAG="Incremental"
 	echo "Could you assign an incremental number?"
 	read -e tag_number
 	TAG_NUMBER="$tag_number"
 	echo ""
 	export VERSION=$NAME-$RELEASE-$TAG-N$TAG_NUMBER
-fi
-fi
 fi
 export LOCALVERSION=-`echo $VERSION`
 
