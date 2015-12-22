@@ -79,7 +79,7 @@ function make_zip {
 
 function generate_md5 {
 		cd $ZIP_MOVE
-		md5sum "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip >> $KERNEL_DIR/md5.txt
+		md5sum "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip >> "$VERSION"-"$VARIANT"-"$BUILD_DATE".md5
 		cd $KERNEL_DIR
 }
 
