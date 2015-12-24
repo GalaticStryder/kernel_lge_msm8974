@@ -45,13 +45,13 @@ int taiko_write(struct snd_soc_codec *codec, unsigned int reg,
 
 #define REG_SZ	25
 #ifdef CONFIG_MACH_LGE
-static int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
-			    1, 0, 0, 0, 0, 0, 10, 10, 0, 0,
-					0, 0, 0, 0, 0 };
+static int cached_regs[] = {0, 0, 0, 0, 2, 2, -1, -1, -1, -1,
+			    1, -1, -1, -1, -1, -1, 10, 10, -1, -1,
+					0, 0, 0, 0, -1 };
 #else
-static int cached_regs[] = {0, 0, 0, 0, 0, 0, -1, -1, -1, -1,
-			    0, -1, -1, -1, -1, -1, 10, 10, -1, 1,
-			    -1, 0, 0, 0, 0 };
+static int cached_regs[] = {0, 0, 0, 0, -1, -1, -1, -1, -1, -1,
+			    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+			    -1, 0, 0, 0, -1 };
 #endif
 
 void snd_hax_cache_write(unsigned int reg, unsigned int value)
@@ -230,17 +230,21 @@ int snd_hax_reg_access(unsigned int reg)
 			if ((snd_ctrl_locked > 1) ||
 					(lg_snd_ctrl_locked > 0))
 				ret = 0;
-			break;
+#else
+      if (snd_ctrl_locked > 1)
+        ret = 0;
 #endif
+      break;
 		case TAIKO_A_RX_HPH_L_STATUS:
 		case TAIKO_A_RX_HPH_R_STATUS:
 #ifdef CONFIG_MACH_LGE
 			if ((snd_ctrl_locked > 1) ||
 					(lg_snd_ctrl_locked > 0))
+        ret = 0;
 #else
 			if (snd_ctrl_locked > 1)
+        ret = 0;
 #endif
-				ret = 0;
 			break;
 		case TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL:
 		case TAIKO_A_CDC_RX2_VOL_CTL_B2_CTL:
@@ -251,11 +255,12 @@ int snd_hax_reg_access(unsigned int reg)
 		case TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL:
 #ifdef CONFIG_MACH_LGE
 			if ((snd_ctrl_locked > 0) ||
-				(lg_snd_ctrl_locked > 0))
+				  (lg_snd_ctrl_locked > 0))
+        ret = 0;
 #else
 			if (snd_ctrl_locked > 0)
-#endif
 				ret = 0;
+#endif
 			break;
 		case TAIKO_A_RX_LINE_1_GAIN:
 		case TAIKO_A_RX_LINE_2_GAIN:
@@ -280,10 +285,11 @@ int snd_hax_reg_access(unsigned int reg)
 #ifdef CONFIG_MACH_LGE
 			if ((snd_rec_ctrl_locked > 0) ||
 					(lg_snd_ctrl_locked > 0))
+        ret = 0;
 #else
-			if (snd_ctrl_locked)
-#endif
+			if (snd_rec_ctrl_locked > 0)
 				ret = 0;
+#endif
 			break;
 		default:
 			break;

@@ -4404,6 +4404,14 @@ static int taiko_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 	if (taiko_is_digital_gain_register(reg))
 		return 1;
 
+#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
+#ifndef CONFIG_MACH_LGE
+	/* HPH gain registers */
+	if (reg == TAIKO_A_RX_HPH_L_GAIN || reg == TAIKO_A_RX_HPH_R_GAIN)
+		return 1;
+#endif
+#endif
+
 	/* HPH status registers */
 	if (reg == TAIKO_A_RX_HPH_L_STATUS || reg == TAIKO_A_RX_HPH_R_STATUS)
 		return 1;
@@ -4411,14 +4419,6 @@ static int taiko_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 	/* HPH PA Enable */
 	if (reg == TAIKO_A_RX_HPH_CNP_EN)
 		return 1;
-
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-#ifndef CONFIG_MACH_LGE
-	/* HPH gain registers */
-		if (reg == TAIKO_A_RX_HPH_L_GAIN || reg == TAIKO_A_RX_HPH_R_GAIN)
-		return 1;
-#endif
-#endif
 
 	if (reg == TAIKO_A_MBHC_INSERT_DET_STATUS)
 		return 1;
@@ -4494,9 +4494,6 @@ int taiko_write(struct snd_soc_codec *codec, unsigned int reg,
 	unsigned int value)
 {
 	int ret;
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	int val;
-#endif
 	struct wcd9xxx *wcd9xxx;
 
 	if (!codec)
@@ -4517,18 +4514,14 @@ int taiko_write(struct snd_soc_codec *codec, unsigned int reg,
 	}
 
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	if (!snd_hax_reg_access(reg)) {
-		if (!((val = snd_hax_cache_read(reg)) != -1)) {
-			val = wcd9xxx_reg_read_safe(codec->control_data, reg);
-		}
-	} else {
+	/* In case of no reg access, override with cache value */
+	if (!snd_hax_reg_access(reg) &&
+			snd_hax_cache_read(reg) != -1)
+		value = snd_hax_cache_read(reg);
+	else
 		snd_hax_cache_write(reg, value);
-		val = value;
-	}
-	return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, val);
-#else
-	return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, value);
 #endif
+	return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, value);
 }
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
 EXPORT_SYMBOL(taiko_write);
