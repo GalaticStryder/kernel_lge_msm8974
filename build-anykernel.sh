@@ -189,7 +189,7 @@ case "$choice" in
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.3/bin/arm-eabi-
 		break;;
 	"Linaro-6.0")
-		export TOOLCHAIN="Linaro 5.3"
+		export TOOLCHAIN="Linaro 6.0"
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.3/bin/arm-eabi-
 		break;;
 esac
