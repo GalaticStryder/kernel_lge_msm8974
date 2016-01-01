@@ -173,7 +173,7 @@ echo "You are building $VERSION for $VARIANT..."
 echo ""
 
 echo "Pick Toolchain..."
-select choice in Linaro-4.8 Linaro-4.9 Linaro-5.3 Linaro-6.0
+select choice in Linaro-4.8 Linaro-4.9 Linaro-5.2 Linaro-6.0
 do
 case "$choice" in
 	"Linaro-4.8")
@@ -184,13 +184,13 @@ case "$choice" in
 		export TOOLCHAIN="Linaro 4.9"
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-4.9/bin/arm-eabi-
 		break;;
-	"Linaro-5.3")
-		export TOOLCHAIN="Linaro 5.3"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.3/bin/arm-eabi-
+	"Linaro-5.2")
+		export TOOLCHAIN="Linaro 5.2"
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.2/bin/arm-eabi-
 		break;;
 	"Linaro-6.0")
 		export TOOLCHAIN="Linaro 6.0"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.3/bin/arm-eabi-
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-6.0/bin/arm-eabi-
 		break;;
 esac
 done
