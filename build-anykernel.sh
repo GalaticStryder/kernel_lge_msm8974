@@ -117,7 +117,7 @@ echo ""
 
 # Versioning
 NAME="LambdaKernel"
-RELEASE="Esfinge"
+RELEASE="NewYear"
 BUILD_DATE=$(date -u +%m%d%Y)
 if [ "$STATE" = stable ]; then
 	TAG="Stable"
@@ -173,16 +173,24 @@ echo "You are building $VERSION for $VARIANT..."
 echo ""
 
 echo "Pick Toolchain..."
-select choice in ArchiToolchain-5.1 ArchiToolchain-4.9
+select choice in Linaro-4.8
 do
 case "$choice" in
-	"ArchiToolchain-5.1")
-		export TOOLCHAIN="Architoolchain 5.1 (Cortex A15)"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/architoolchain-5.1/bin/arm-eabi-
+	"Linaro-4.8")
+		export TOOLCHAIN="Linaro 4.8"
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-4.8/bin/arm-eabi-
 		break;;
-	"ArchiToolchain-4.9")
-		export TOOLCHAIN="Architoolchain 4.9 (Cortex A15)"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/architoolchain-4.9/bin/arm-eabi-
+	"Linaro-4.9")
+		export TOOLCHAIN="Linaro 4.9"
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-4.9/bin/arm-eabi-
+		break;;
+	"Linaro-5.3")
+		export TOOLCHAIN="Linaro 5.3"
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.3/bin/arm-eabi-
+		break;;
+	"Linaro-6.0")
+		export TOOLCHAIN="Linaro 5.3"
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.3/bin/arm-eabi-
 		break;;
 esac
 done
