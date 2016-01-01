@@ -432,7 +432,7 @@ static ssize_t lge_speaker_gain_store(struct kobject *kobj,
 	/* We have a mono speaker, so lval = rval */
 	lg_snd_ctrl_locked = 0;
   taiko_write(fauxsound_codec_ptr,
-    TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL, lval)
+    TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL, lval);
   taiko_write(fauxsound_codec_ptr,
     TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL, rval);
 	lg_snd_ctrl_locked = 1;
