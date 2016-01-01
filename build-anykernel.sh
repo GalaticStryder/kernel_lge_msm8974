@@ -173,7 +173,7 @@ echo "You are building $VERSION for $VARIANT..."
 echo ""
 
 echo "Pick Toolchain..."
-select choice in Linaro-4.8
+select choice in Linaro-4.8 Linaro-4.9 Linaro-5.3 Linaro-6.0
 do
 case "$choice" in
 	"Linaro-4.8")
