@@ -117,7 +117,7 @@ echo ""
 
 # Versioning
 NAME="LambdaKernel"
-RELEASE="NewYear"
+RELEASE="Esfinge"
 BUILD_DATE=$(date -u +%m%d%Y)
 if [ "$STATE" = stable ]; then
 	TAG="Stable"
