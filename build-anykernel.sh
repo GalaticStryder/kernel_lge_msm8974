@@ -87,15 +87,15 @@ function generate_md5 {
 DATE_START=$(date +"%s")
 
 echo -e "${red}"
-echo ""
-echo "   \    "
-echo "   /\   "
-echo "  /  \  "
-echo " /    \ "
-echo ""
+echo "                   \                    "
+echo "                   /\                   "
+echo "                  /  \                  "
+echo "                 /    \                 "
+echo ''
+echo " Welcome to Lambda Kernel build script! "
 echo -e "${restore}"
 
-echo "Build state..."
+echo "Which is the build tag?"
 select choice in Stable Beta Incremental
 do
 case "$choice" in
@@ -112,7 +112,7 @@ esac
 done
 
 echo ""
-echo "You have chosen $STATE!"
+echo "You have chosen the tag: $STATE!"
 echo ""
 
 # Versioning
@@ -137,7 +137,7 @@ if [ "$STATE" = incremental ]; then
 fi
 export LOCALVERSION=-`echo $VERSION`
 
-echo "Pick an LG G2 variant..."
+echo "Would you mind picking an LG G2 variant?"
 select choice in d800 d801 d802 d803 ls980 vs980
 do
 case "$choice" in
@@ -169,11 +169,11 @@ esac
 done
 
 echo ""
-echo "You are building $VERSION for $VARIANT..."
+echo "You are going to build $VERSION for the $VARIANT variant."
 echo ""
 
-echo "Pick Toolchain..."
-select choice in Linaro-4.8 Linaro-4.9 Linaro-5.2 Linaro-6.0
+echo "Which Linaro toolchain version you would like to use?"
+select choice in Linaro-4.8 Linaro-4.9 Linaro-5.2 Linaro-5.3 Linaro-6.0
 do
 case "$choice" in
 	"Linaro-4.8")
@@ -188,6 +188,10 @@ case "$choice" in
 		export TOOLCHAIN="Linaro 5.2"
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.2/bin/arm-eabi-
 		break;;
+	"Linaro-5.3")
+		export TOOLCHAIN="Linaro 5.3"
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.3/bin/arm-eabi-
+		break;;
 	"Linaro-6.0")
 		export TOOLCHAIN="Linaro 6.0"
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-6.0/bin/arm-eabi-
@@ -196,7 +200,7 @@ esac
 done
 
 echo ""
-echo "You have chosen $TOOLCHAIN!"
+echo "You have chosen to use $TOOLCHAIN."
 echo ""
 
 while read -p "Do you want to clean stuff (y/n)? " cchoice
@@ -243,13 +247,13 @@ case "$dchoice" in
 esac
 done
 
-echo -e "${green}"
-echo "-------------------"
-echo "Build Completed in:"
-echo "-------------------"
-echo -e "${restore}"
-
 DATE_END=$(date +"%s")
 DIFF=$(($DATE_END - $DATE_START))
-echo "Time: $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."
-echo
+echo -e "${red}"
+echo "                 \                  "
+echo "                 /\                 "
+echo "                /  \                "
+echo "               /    \               "
+echo ''
+echo "Completed in $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."
+echo -e "${restore}"
