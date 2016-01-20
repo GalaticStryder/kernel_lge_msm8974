@@ -138,7 +138,7 @@ fi
 export LOCALVERSION=-`echo $VERSION`
 
 echo "Would you mind picking an LG G2 variant?"
-select choice in d800 d801 d802 d803 ls980 vs980
+select choice in d800 d801 d802 d803 f320 l01f ls980 vs980
 do
 case "$choice" in
 	"d800")
@@ -157,6 +157,14 @@ case "$choice" in
 		VARIANT="d803"
 		DEFCONFIG="d803_defconfig"
 		break;;
+	"f320")
+		VARIANT="f320"
+		DEFCONFIG="f320_defconfig"
+		break;;
+	"l01f")
+		VARIANT="l01f"
+		DEFCONFIG="l01f_defconfig"
+		break;;
 	"ls980")
 		VARIANT="ls980"
 		DEFCONFIG="ls980_defconfig"
@@ -173,28 +181,16 @@ echo "You are going to build $VERSION for the $VARIANT variant."
 echo ""
 
 echo "Which Linaro toolchain version you would like to use?"
-select choice in Linaro-4.8 Linaro-4.9 Linaro-5.2 Linaro-5.3 Linaro-6.0
+select choice in Linaro-4.9 Linaro-5.3
 do
 case "$choice" in
-	"Linaro-4.8")
-		export TOOLCHAIN="Linaro 4.8"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-4.8/bin/arm-eabi-
-		break;;
 	"Linaro-4.9")
 		export TOOLCHAIN="Linaro 4.9"
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-4.9/bin/arm-eabi-
 		break;;
-	"Linaro-5.2")
-		export TOOLCHAIN="Linaro 5.2"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.2/bin/arm-eabi-
-		break;;
 	"Linaro-5.3")
 		export TOOLCHAIN="Linaro 5.3"
 		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.3/bin/arm-eabi-
-		break;;
-	"Linaro-6.0")
-		export TOOLCHAIN="Linaro 6.0"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-6.0/bin/arm-eabi-
 		break;;
 esac
 done
