@@ -8,13 +8,20 @@ rm -rf changelog_*
 
 clear
 
-echo ""
-echo "   \    "
-echo "   /\   "
-echo "  /  \  "
-echo " /    \ "
-echo ""
-echo "Changelog generator is starting..."
+# Bash Color
+green='\033[01;32m'
+red='\033[01;31m'
+blink_red='\033[05;31m'
+restore='\033[0m'
+
+echo -e "${red}"
+echo "                     \                      "
+echo "                     /\                     "
+echo "                    /  \                    "
+echo "                   /    \                   "
+echo ''
+echo " Welcome to Lambda Kernel changelog script! "
+echo -e "${restore}"
 
 # Check the date start range is set
 if [ -z "$sdate" ]; then
@@ -31,9 +38,8 @@ do
 cd $line
     # Test to see if the repo needs to have a changelog written
     log=$(git log --pretty="%an - %s" --no-merges --since=$sdate --date-order)
-    project="Lambda Kernel"
     if [ -z "$log" ]; then
-    echo "Nothing updated on $project changelog, skipping..."
+    echo "Nothing updated on Lambda Kernel changelog, skipping..."
     else
         # Write the changelog
         echo "Changelog is updated and written for $project..."
@@ -45,6 +51,6 @@ echo "$line" >> "$rdir"/changelog_$cdate.log
 echo "" >> "$rdir"/changelog_$cdate.log
     fi
 done
-echo ""
-echo " Changelog script for $project has finished."
-echo ""
+echo -e "${red}"
+echo "Changelog script for Lambda Kernel has finished."
+echo -e "${restore}"
