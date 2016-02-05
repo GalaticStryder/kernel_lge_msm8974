@@ -138,7 +138,7 @@ fi
 export LOCALVERSION=-`echo $VERSION`
 
 echo "Would you mind picking an LG G2 variant?"
-select choice in d800 d801 d802 d803 ls980 vs980
+select choice in d800 d801 d802 d803 l01f ls980 vs980
 do
 case "$choice" in
 	"d800")
@@ -156,6 +156,10 @@ case "$choice" in
 	"d803")
 		VARIANT="d803"
 		DEFCONFIG="d803_defconfig"
+		break;;
+	"l01f")
+		VARIANT="l01f"
+		DEFCONFIG="l01f_defconfig"
 		break;;
 	"ls980")
 		VARIANT="ls980"
