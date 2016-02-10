@@ -1,11 +1,11 @@
 #!/bin/bash
-
 #
-#  Build Script for Lambda Kernel
+#
+#  An automated build script for Lambda Kernel written in bash.
 #  Based off AK's and Render's build script - Danke!
 #
 
-# Bash Color
+# Bash color
 green='\033[01;32m'
 red='\033[01;31m'
 blink_red='\033[05;31m'
@@ -27,11 +27,11 @@ export CCACHE=ccache
 
 # Paths
 KERNEL_DIR=`pwd`
-REPACK_DIR="${HOME}/Desenvolvimento/kernel/anykernel"
-PATCH_DIR="${HOME}/Desenvolvimento/kernel/anykernel/patch"
-MODULES_DIR="${HOME}/Desenvolvimento/kernel/anykernel/modules"
-ZIP_MOVE="${HOME}/Desenvolvimento/kernel/source/store"
-ZIMAGE_DIR="${HOME}/Desenvolvimento/kernel/source/arch/arm/boot"
+REPACK_DIR="${KERNEL_DIR}/../anykernel"
+PATCH_DIR="${REPACK_DIR}/patch"
+MODULES_DIR="${REPACK_DIR}/modules"
+ZIP_MOVE="${KERNEL_DIR}/store"
+ZIMAGE_DIR="${KERNEL_DIR}/arch/arm/boot"
 
 # Functions
 function checkout_branches {
@@ -181,16 +181,16 @@ echo "You are going to build $VERSION for the $VARIANT variant."
 echo ""
 
 echo "Which Linaro toolchain version you would like to use?"
-select choice in Linaro-4.9 Linaro-5.3
+select choice in Linaro-4.9 Linaro-5.2
 do
 case "$choice" in
 	"Linaro-4.9")
 		export TOOLCHAIN="Linaro 4.9"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-4.9/bin/arm-eabi-
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/linaro/4.9/bin/arm-eabi-
 		break;;
-	"Linaro-5.3")
-		export TOOLCHAIN="Linaro 5.3"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/toolchains/linaro-5.3/bin/arm-eabi-
+	"Linaro-5.2")
+		export TOOLCHAIN="Linaro 5.2"
+		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/linaro/5.2/bin/arm-eabi-
 		break;;
 esac
 done
