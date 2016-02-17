@@ -16,8 +16,8 @@ Details
 Instructions
 -------------------------
 
-	git clone https://github.com/GalaticStryder/kernel_lge_msm8974 source -b rework
-	cd source
+	git clone https://github.com/GalaticStryder/kernel_lge_msm8974 lge_msm8974
+	cd lge_msm8974
 	./sync
 	./build-anykernel
 
@@ -36,4 +36,6 @@ Licence
 -------------------------
 
 This project is licensed under [GPL3](gpl-3.0.md).
-The original Linux readme has been moved to [LINUX-README](LINUX-README). Its license can be found in [COPYING](COPYING).
+
+The original Linux readme has been moved to [LINUX-README](LINUX-README).
+Its license can be found in [COPYING](COPYING).
