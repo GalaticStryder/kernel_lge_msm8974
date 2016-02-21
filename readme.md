@@ -19,6 +19,7 @@ Instructions
 	git clone https://github.com/GalaticStryder/kernel_lge_msm8974 lge_msm8974
 	cd lge_msm8974
 	./sync
+	mkdir store
 	./build-anykernel
 
 Mentions
