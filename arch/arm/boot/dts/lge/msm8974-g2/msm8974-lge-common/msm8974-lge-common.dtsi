@@ -200,3 +200,7 @@
 &gdsc_usb_hsic {
 	lge,use_workaround = <13>;
 };
+
+&msm_gpu {
+	qcom,l2pc-cpu-mask = <0x0000000F>;
+};
