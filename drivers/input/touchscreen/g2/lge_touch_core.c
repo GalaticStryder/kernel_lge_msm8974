@@ -2275,8 +2275,8 @@ static void touch_gesture_wakeup_func(struct work_struct *work_gesture_wakeup)
 
 #ifndef CONFIG_LGE_SECURITY_KNOCK_ON
 	if ((buf & 0x40) && touch_gesture_enable == LPWG_DOUBLE_TAP) {
-		input_report_key(ts->input_dev, KEY_POWER, BUTTON_PRESSED);
-		input_report_key(ts->input_dev, KEY_POWER, BUTTON_RELEASED);
+		input_report_key(ts->input_dev, KEY_WAKEUP, BUTTON_PRESSED);
+		input_report_key(ts->input_dev, KEY_WAKEUP, BUTTON_RELEASED);
 		input_sync(ts->input_dev);
 	}
 #endif
@@ -5707,7 +5707,7 @@ static int touch_probe(struct i2c_client *client, const struct i2c_device_id *id
 #endif
 #ifdef CUST_G2_TOUCH_WAKEUP_GESTURE
 	set_bit(EV_KEY, ts->input_dev->evbit);
-	set_bit(KEY_POWER, ts->input_dev->keybit);
+	set_bit(KEY_WAKEUP, ts->input_dev->keybit);
 #endif
 
 	if (ts->pdata->caps->button_support && ts->pdata->role->key_type != VIRTUAL_KEY) {
