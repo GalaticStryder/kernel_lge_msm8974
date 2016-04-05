@@ -568,8 +568,11 @@ dhd_sync_with_dongle(dhd_pub_t *dhd)
 
 	dhd_process_cid_mac(dhd, TRUE);
 
+	dhd_roam_preinit_ioctls(dhd);
 	ret = dhd_preinit_ioctls(dhd);
-
+#ifdef READ_CONFIG_FROM_FILE
+	dhd_preinit_config(dhd, 0);
+#endif
 	if (!ret)
 		dhd_process_cid_mac(dhd, FALSE);
 
