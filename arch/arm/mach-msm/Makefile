@@ -426,5 +426,6 @@ obj-$(CONFIG_PERFMAP) += perfmap.o
 obj-$(CONFIG_ARCH_MSM8974) += lge_moca_drv.o
 
 obj-$(CONFIG_MSM_LIMITER) += msm_limiter.o
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
 obj-$(CONFIG_BRICKED_HOTPLUG) += bricked_hotplug.o
 obj-$(CONFIG_BLU_PLUG) += blu_plug.o

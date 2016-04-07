@@ -1877,6 +1877,13 @@ config MSM_CPU_VOLTAGE_CONTROL
 	help
 	  This enables userspace CPU Voltage Control.
 
+config FORCE_FAST_CHARGE
+	bool "Force AC charge mode at will"
+	default y
+	help
+	  A simple sysfs interface to force adapters that
+	  are detected as USB to charge as AC.
+
 config MSM_AVS_HW
 	bool "Enable Adaptive Voltage Scaling (AVS)"
 	default n

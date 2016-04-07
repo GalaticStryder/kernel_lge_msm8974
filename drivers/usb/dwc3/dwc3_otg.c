@@ -25,6 +25,11 @@
 #include "io.h"
 #include "xhci.h"
 
+#ifdef CONFIG_FORCE_FAST_CHARGE
+#include <linux/mutex.h>
+#include <linux/fastchg.h>
+#endif
+
 #ifdef CONFIG_LGE_PM
 #include <mach/board_lge.h>
 #include <linux/power_supply.h>
@@ -35,6 +40,11 @@
 #ifdef CONFIG_MACH_LGE
 #define PARAMETER_OVERRIDE_X_REG (0xF8814)
 #define DEFAULT_HSPHY_INIT (0x00D195A4) /* qcom,dwc-hsphy-init */
+#endif
+
+#ifdef CONFIG_FORCE_FAST_CHARGE
+int usb_power_curr_now = 500;
+static DEFINE_MUTEX(fast_charge_lock);
 #endif
 #define VBUS_REG_CHECK_DELAY	(msecs_to_jiffies(1000))
 #define MAX_INVALID_CHRGR_RETRY 3
@@ -669,10 +679,35 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 	if (dotg->charger->chg_type == DWC3_CDP_CHARGER)
 		mA = DWC3_IDEV_CHG_MAX;
 
-	if (dotg->charger->max_power == mA)
+	if (dotg->charger->max_power == mA) {
+#ifdef CONFIG_FORCE_FAST_CHARGE
+		usb_power_curr_now = mA;
+#endif
 		return 0;
+	}
 
 	dev_info(phy->dev, "Avail curr from USB = %u\n", mA);
+
+#if defined(CONFIG_FORCE_FAST_CHARGE) && !defined(CONFIG_SMB349_VZW_FAST_CHG)
+	usb_power_curr_now = mA;
+
+	mutex_lock(&fast_charge_lock);
+	if (mA >= 500) {
+		if (force_fast_charge != force_fast_charge_temp)
+			force_fast_charge = force_fast_charge_temp;
+		dev_info(phy->dev, "Power plugged, FFC is set to = %d\n",
+				force_fast_charge);
+		smb349_thermal_mitigation_update(mA);
+	} else {
+		if (force_fast_charge != 0)
+			force_fast_charge_temp = force_fast_charge;
+		force_fast_charge = 0;
+		dev_info(phy->dev, "Power Unplugged, FFC is set to = %d\n",
+				force_fast_charge);
+		smb349_thermal_mitigation_update(300);
+	}
+	mutex_unlock(&fast_charge_lock);
+#endif
 
 /* B2-BSP-USB@lge.com make psy getter and move it above power_supply_type setter. 2014-02-06 */
 #ifdef CONFIG_LGE_PM
@@ -965,10 +1000,26 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 				switch (charger->chg_type) {
 				case DWC3_PROPRIETARY_CHARGER:
 #if defined(CONFIG_LGE_PM)
+#ifdef CONFIG_FORCE_FAST_CHARGE
+					if (force_fast_charge > 1)
+						if (fast_charge_level >
+								DWC3_IDEV_CHG_MAX)
+							dwc3_otg_set_power(phy,
+								DWC3_IDEV_CHG_MAX);
+						else
+							dwc3_otg_set_power(phy,
+								fast_charge_level);
+					else if (force_fast_charge > 0)
+						dwc3_otg_set_power(phy, 1200);
+					else
+						dwc3_otg_set_power(phy,
+							DWC3_IDEV_CHG_PROPRIETARY_MAX);
+#else
 					dwc3_otg_set_power(phy,
 							DWC3_IDEV_CHG_PROPRIETARY_MAX);
 					pm_runtime_put_sync(phy->dev);
 					break;
+#endif
 #endif
 				case DWC3_DCP_CHARGER:
 					dev_dbg(phy->dev, "lpm, DCP charger\n");
@@ -985,8 +1036,16 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					work = 1;
 					break;
 				case DWC3_SDP_CHARGER:
+#ifdef CONFIG_FORCE_FAST_CHARGE
+					if (force_fast_charge > 0)
+						dwc3_otg_set_power(phy, 900);
+					else
+						dwc3_otg_set_power(phy,
+								DWC3_IDEV_CHG_MIN);
+#else
 					dwc3_otg_set_power(phy,
-								IUNIT);
+								DWC3_IDEV_CHG_MIN);
+#endif
 					dwc3_otg_start_peripheral(&dotg->otg,
 									1);
 					phy->state = OTG_STATE_B_PERIPHERAL;
