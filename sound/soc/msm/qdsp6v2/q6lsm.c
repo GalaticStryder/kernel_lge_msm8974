@@ -744,7 +744,7 @@ int q6lsm_snd_model_buf_alloc(struct lsm_client *client, size_t len)
 		pr_debug("%s: Pad zeros sound model %d Total mem %d\n",
 				 __func__, pad_zero, total_mem);
 		client->sound_model.client =
-		    msm_ion_client_create(UINT_MAX, "lsm_client");
+		    msm_ion_client_create("lsm_client");
 		if (IS_ERR_OR_NULL(client->sound_model.client)) {
 			pr_err("%s: ION create client for AUDIO failed\n",
 			       __func__);
