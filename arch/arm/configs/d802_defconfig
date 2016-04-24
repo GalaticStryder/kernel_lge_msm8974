@@ -37,6 +37,11 @@ CONFIG_HAVE_IRQ_WORK=y
 CONFIG_IRQ_WORK=y
 
 #
+# Lambda ~ Touchscreen Drivers
+#
+CONFIG_STATE_NOTIFIER=y
+
+#
 # General setup
 #
 CONFIG_EXPERIMENTAL=y
