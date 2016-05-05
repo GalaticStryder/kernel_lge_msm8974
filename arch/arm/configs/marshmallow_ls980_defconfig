@@ -78,6 +78,15 @@ CONFIG_RD_LZ4=y
 # CONFIG_RD_LZO is not set
 
 #
+# Lambda ~ Timer Interrupt Frequency
+#
+# CONFIG_HZ_100 is not set
+# CONFIG_HZ_250 is not set
+CONFIG_HZ_300=y
+# CONFIG_HZ_1000 is not set
+CONFIG_HZ=300
+
+#
 # Lambda ~ Touchscreen Drivers
 #
 CONFIG_STATE_NOTIFIER=y
@@ -847,7 +856,6 @@ CONFIG_ARCH_NR_GPIO=0
 # CONFIG_PREEMPT_VOLUNTARY is not set
 CONFIG_PREEMPT=y
 CONFIG_PREEMPT_COUNT=y
-CONFIG_HZ=100
 # CONFIG_THUMB2_KERNEL is not set
 CONFIG_AEABI=y
 # CONFIG_OABI_COMPAT is not set
