@@ -49,8 +49,8 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	int rc = 0;
 
 	switch (cmd) {
-	case AUDIO_START: {
-		pr_err("%s[%p]: AUDIO_START session_id[%d]\n", __func__,
+	case AUDIO_START:
+		pr_err("%s[%pK]: AUDIO_START session_id[%d]\n", __func__,
 			audio, audio->ac->session);
 		if (audio->feedback == NON_TUNNEL_MODE) {
 			/* Configure PCM output block */
@@ -99,10 +99,8 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		pr_debug("%s:AUDIO_START sessionid[%d]enable[%d]\n", __func__,
 			audio->ac->session,
 			audio->enabled);
-		if (audio->stopped == 1)
-			audio->stopped = 0;
+		audio->stopped = 0;
 		break;
-	}
 	case AUDIO_GET_AMRWBPLUS_CONFIG_V2: {
 		if ((audio) && (arg) && (audio->codec_cfg)) {
 			if (copy_to_user((void *)arg, audio->codec_cfg,
@@ -134,7 +132,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	}
 	default:
-		pr_debug("%s[%p]: Calling utils ioctl\n", __func__, audio);
+		pr_debug("%s[%pK]: Calling utils ioctl\n", __func__, audio);
 		rc = audio->codec_ioctl(file, cmd, arg);
 	}
 	return rc;
