@@ -1677,7 +1677,7 @@ int __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 
 	VM_BUG_ON(!!pages != !!(gup_flags & FOLL_GET));
 
-	/* 
+	/*
 	 * Require read or write permissions.
 	 * If FOLL_FORCE is set, we only require the "MAY" flags.
 	 */
@@ -3193,10 +3193,6 @@ static int do_anonymous_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	pte_t entry;
 
 	pte_unmap(page_table);
-
-	/* File mapping without ->vm_ops ? */
-	if (vma->vm_flags & VM_SHARED)
-		return VM_FAULT_SIGBUS;
 
 	/* File mapping without ->vm_ops ? */
 	if (vma->vm_flags & VM_SHARED)
