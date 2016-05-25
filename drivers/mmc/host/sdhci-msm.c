@@ -1680,7 +1680,7 @@ static struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 	else
 		pdata->mpm_sdiowakeup_int = -1;
 
-	msm_host->mmc->wakeup_on_idle = true;
+	host->mmc->wakeup_on_idle = true;
 
 	return pdata;
 out:
@@ -3049,8 +3049,7 @@ static int __devinit sdhci_msm_probe(struct platform_device *pdev)
 			goto pltfm_free;
 		}
 
-		msm_host->pdata = sdhci_msm_populate_pdata(&pdev->dev,
-							   msm_host);
+		msm_host->pdata = sdhci_msm_populate_pdata(&pdev->dev, host);
 		if (!msm_host->pdata) {
 			dev_err(&pdev->dev, "DT parsing error\n");
 			goto pltfm_free;
