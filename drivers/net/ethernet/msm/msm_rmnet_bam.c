@@ -731,6 +731,8 @@ static void __init rmnet_setup(struct net_device *dev)
 	dev->needed_headroom = HEADROOM_FOR_BAM + HEADROOM_FOR_QOS ;
 	dev->needed_tailroom = TAILROOM;
 	random_ether_addr(dev->dev_addr);
+
+	dev->watchdog_timeo = 0;
 }
 
 static struct net_device *netdevs[RMNET_DEVICE_COUNT];
