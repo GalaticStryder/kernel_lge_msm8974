@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -17,7 +17,7 @@
 
 #include <linux/types.h>	/* u32 */
 
-#ifdef CONFIG_ARM_LPAE
+#if defined(CONFIG_PHYS_ADDR_T_64BIT) || defined(CONFIG_ARM_LPAE)
 
 /* Returns upper 4bits of 36bits physical address */
 #define SPS_GET_UPPER_ADDR(addr) ((addr & 0xF00000000ULL) >> 32)
@@ -114,7 +114,6 @@
 /* Hold memory for BAM DMUX */
 #define SPS_BAM_HOLD_MEM            (1UL << 8)
 
-
 /* BAM device management flags */
 
 /* BAM global device control is managed remotely */
@@ -181,7 +180,7 @@ enum sps_option {
 	SPS_O_IRQ_MTI   = 0x00020000,
 	/* NWD bit written with EOT for BAM2BAM producer pipe */
 	SPS_O_WRITE_NWD   = 0x00040000,
-	/* EOT set after pipe SW offset advanced */
+       /* EOT set after pipe SW offset advanced */
 	SPS_O_LATE_EOT   = 0x00080000,
 
 	/* Options to enable software features */
@@ -302,6 +301,7 @@ enum sps_callback_case {
 	SPS_CALLBACK_BAM_TIMER_IRQ,	    /* Inactivity timer */
 	SPS_CALLBACK_BAM_RES_REQ,	    /* Request resource */
 	SPS_CALLBACK_BAM_RES_REL,	    /* Release resource */
+	SPS_CALLBACK_BAM_POLL,	            /* To poll each pipe */
 };
 
 /*
@@ -1175,6 +1175,7 @@ int sps_set_config(struct sps_pipe *h, struct sps_connect *config);
 int sps_set_owner(struct sps_pipe *h, enum sps_owner owner,
 		  struct sps_satellite *connect);
 
+#ifdef CONFIG_SPS_SUPPORT_BAMDMA
 /**
  * Allocate a BAM DMA channel
  *
@@ -1222,7 +1223,27 @@ unsigned long sps_dma_get_bam_handle(void);
  *
  */
 void sps_dma_free_bam_handle(unsigned long h);
+#else
+static inline int sps_alloc_dma_chan(const struct sps_alloc_dma_chan *alloc,
+		       struct sps_dma_chan *chan)
+{
+	return -EPERM;
+}
 
+static inline int sps_free_dma_chan(struct sps_dma_chan *chan)
+{
+	return -EPERM;
+}
+
+static inline unsigned long sps_dma_get_bam_handle(void)
+{
+	return 0;
+}
+
+static inline void sps_dma_free_bam_handle(unsigned long h)
+{
+}
+#endif
 
 /**
  * Get number of free transfer entries for an SPS connection end point
@@ -1343,6 +1364,29 @@ int sps_ctrl_bam_dma_clk(bool clk_on);
  * Return: 0 on success, negative value on error
  */
 int sps_pipe_reset(unsigned long dev, u32 pipe);
+
+/*
+ * sps_pipe_disable - disable a pipe of a BAM.
+ * @dev:	BAM device handle
+ * @pipe:	pipe index
+ *
+ * This function disables a pipe of a BAM.
+ *
+ * Return: 0 on success, negative value on error
+ */
+int sps_pipe_disable(unsigned long dev, u32 pipe);
+
+/*
+ * sps_pipe_pending_desc - checking pending descriptor.
+ * @dev:	BAM device handle
+ * @pipe:	pipe index
+ * @pending:	indicate if there is any pending descriptor.
+ *
+ * This function checks if a pipe of a BAM has any pending descriptor.
+ *
+ * Return: 0 on success, negative value on error
+ */
+int sps_pipe_pending_desc(unsigned long dev, u32 pipe, bool *pending);
 
 /*
  * sps_bam_process_irq - process IRQ of a BAM.
@@ -1522,6 +1566,17 @@ static inline int sps_ctrl_bam_dma_clk(bool clk_on)
 }
 
 static inline int sps_pipe_reset(unsigned long dev, u32 pipe)
+{
+	return -EPERM;
+}
+
+static inline int sps_pipe_disable(unsigned long dev, u32 pipe)
+{
+	return -EPERM;
+}
+
+static inline int sps_pipe_pending_desc(unsigned long dev, u32 pipe,
+					bool *pending)
 {
 	return -EPERM;
 }

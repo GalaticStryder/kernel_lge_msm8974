@@ -27,7 +27,7 @@
 
 #include "sps_map.h"
 
-#ifdef CONFIG_ARM_LPAE
+#if defined(CONFIG_PHYS_ADDR_T_64BIT) || defined(CONFIG_ARM_LPAE)
 #define SPS_LPAE (true)
 #else
 #define SPS_LPAE (false)
@@ -432,4 +432,13 @@ void sps_map_de_init(void);
  * This function resets a BAM pipe.
  */
 void bam_pipe_reset(void *base, u32 pipe);
+
+/*
+ * bam_disable_pipe - disable a BAM pipe.
+ * @base:	BAM virtual address
+ * @pipe:	pipe index
+ *
+ * This function disables a BAM pipe.
+ */
+void bam_disable_pipe(void *base, u32 pipe);
 #endif	/* _SPSI_H_ */
