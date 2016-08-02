@@ -62,15 +62,19 @@ static int lowmem_adj[6] = {
 	1,
 	6,
 	12,
+	13,
+	15,
 };
-static int lowmem_adj_size = 4;
+static int lowmem_adj_size = 6;
 static int lowmem_minfree[6] = {
-	3 * 512,	/* 6MB */
-	2 * 1024,	/* 8MB */
-	4 * 1024,	/* 16MB */
-	16 * 1024,	/* 64MB */
+	 4 *  512,	/* Foreground App: 	16 MB	*/
+	 8 * 1024,	/* Visible App: 	32 MB	*/
+	16 * 1024,	/* Secondary Server: 	65 MB	*/
+	28 * 1024,	/* Hidden App: 		114 MB	*/
+	45 * 1024,	/* Content Provider: 	184 MB	*/
+	50 * 1024,	/* Empty App: 		204 MB	*/
 };
-static int lowmem_minfree_size = 4;
+static int lowmem_minfree_size = 6;
 static int lmk_fast_run = 1;
 
 static unsigned long lowmem_deathpending_timeout;
@@ -84,6 +88,9 @@ static unsigned long lowmem_deathpending_timeout;
 static atomic_t shift_adj = ATOMIC_INIT(0);
 static short adj_max_shift = 353;
 
+static int vm_pressure_adaptive_start = 85;
+#define VM_PRESSURE_ADAPTIVE_STOP	95
+
 /* User knob to enable/disable adaptive lmk feature */
 static int enable_adaptive_lmk;
 module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int,
@@ -96,7 +103,7 @@ module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int,
  * 90-94. Usually this is a pseudo minfree value, higher than the
  * highest configured value in minfree array.
  */
-static int vmpressure_file_min;
+static int vmpressure_file_min = 73728; /* (72 * 1024) * 4 = 294 MB */
 module_param_named(vmpressure_file_min, vmpressure_file_min, int,
 	S_IRUGO | S_IWUSR);
 
@@ -126,6 +133,8 @@ int adjust_minadj(short *min_score_adj)
 	return ret;
 }
 
+static unsigned long lmk_vm_pressure = 0;
+
 static int lmk_vmpressure_notifier(struct notifier_block *nb,
 			unsigned long action, void *data)
 {
@@ -133,10 +142,16 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	unsigned long pressure = action;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 
-	if (!enable_adaptive_lmk)
+	if (!enable_adaptive_lmk) {
+		if (lmk_vm_pressure > 0)
+			lmk_vm_pressure = 0;
 		return 0;
+	}
 
-	if (pressure >= 95) {
+	/* update lmk_vm_pressure state */
+	lmk_vm_pressure = action;
+
+	if (pressure >= VM_PRESSURE_ADAPTIVE_STOP) {
 		other_file = global_page_state(NR_FILE_PAGES) -
 			global_page_state(NR_SHMEM) -
 			total_swapcache_pages;
@@ -144,7 +159,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 
 		atomic_set(&shift_adj, 1);
 		trace_almk_vmpressure(pressure, other_free, other_file);
-	} else if (pressure >= 90) {
+	} else if (pressure >= vm_pressure_adaptive_start) {
 		if (lowmem_adj_size < array_size)
 			array_size = lowmem_adj_size;
 		if (lowmem_minfree_size < array_size)
@@ -184,7 +199,7 @@ static int test_task_flag(struct task_struct *p, int flag)
 {
 	struct task_struct *t;
 
-	for_each_thread(p, t) {
+	for_each_thread(p,t) {
 		task_lock(t);
 		if (test_tsk_thread_flag(t, flag)) {
 			task_unlock(t);
@@ -445,7 +460,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	selected_oom_score_adj = min_score_adj;
 
 	rcu_read_lock();
-
 #ifdef CONFIG_ANDROID_LMK_ADJ_RBTREE
 	for (tsk = pick_first_task();
 		tsk != pick_last_task();
@@ -544,6 +558,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     global_page_state(NR_SLAB_UNRECLAIMABLE) *
 				(long)(PAGE_SIZE / 1024),
 			     sc->gfp_mask);
+		if (lmk_vm_pressure >= vm_pressure_adaptive_start)
+			lowmem_print(1, "VM Pressure is %lu\n", lmk_vm_pressure);
+		else
+			lowmem_print(2, "VM Pressure is %lu\n", lmk_vm_pressure);
 
 		if (lowmem_debug_level >= 2 && selected_oom_score_adj == 0) {
 			show_mem(SHOW_MEM_FILTER_NODES);
@@ -700,7 +718,6 @@ void delete_from_adj_tree(struct task_struct *task)
 	spin_unlock(&lmk_lock);
 }
 
-
 static struct task_struct *pick_next_from_adj_tree(struct task_struct *task)
 {
 	struct rb_node *next;
@@ -712,7 +729,7 @@ static struct task_struct *pick_next_from_adj_tree(struct task_struct *task)
 	if (!next)
 		return NULL;
 
-	 return rb_entry(next, struct task_struct, adj_node);
+	return rb_entry(next, struct task_struct, adj_node);
 }
 
 static struct task_struct *pick_first_task(void)
@@ -759,6 +776,9 @@ module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 module_param_named(lmk_fast_run, lmk_fast_run, int, S_IRUGO | S_IWUSR);
+module_param_named(vm_pressure_adaptive_start, vm_pressure_adaptive_start, int,
+		   S_IRUGO | S_IWUSR);
+module_param_named(lmk_vm_pressure, lmk_vm_pressure, ulong, 0444);
 
 module_init(lowmem_init);
 module_exit(lowmem_exit);
