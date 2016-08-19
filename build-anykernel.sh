@@ -28,59 +28,77 @@ export CCACHE=ccache
 # Paths
 KERNEL_DIR=`pwd`
 REPACK_DIR="${KERNEL_DIR}/../anykernel"
+TOOLCHAINS_DIR="${KERNEL_DIR}/../toolchains"
+LINARO_DIR="${TOOLCHAINS_DIR}/linaro"
+DORIMANX_DIR="${TOOLCHAINS_DIR}/dorimanx"
 PATCH_DIR="${REPACK_DIR}/patch"
-MODULES_DIR="${REPACK_DIR}/modules"
+MODULES_DIR="${REPACK_DIR}/ramdisk/lib/modules"
 ZIP_MOVE="${KERNEL_DIR}/store"
 ZIMAGE_DIR="${KERNEL_DIR}/arch/arm/boot"
 
 # Functions
 function checkout_branches {
-		cd $REPACK_DIR
-		git checkout lambda
-		cd $KERNEL_DIR
+	cd $REPACK_DIR
+	git checkout infinito
+	cd $KERNEL_DIR
 }
 
-function clean_all {
-		rm -f $KERNEL_DIR/arch/arm/boot/*.dtb
-		rm -f $KERNEL_DIR/arch/arm/boot/*.cmd
-		rm -f $KERNEL_DIR/arch/arm/boot/zImage
-		rm -f $KERNEL_DIR/arch/arm/boot/Image
-		rm -rf $MODULES_DIR/*
-		cd $REPACK_DIR
-		rm -rf $KERNEL
-		rm -rf $DTBIMAGE
-		cd $KERNEL_DIR
-		echo
-		make clean && make mrproper
+function count_cpus {
+	echo "Building kernel with $THREAD argument...";
 }
 
-function make_kernel {
-		echo
-		make $DEFCONFIG
-		make $THREAD
-		cp -vr $ZIMAGE_DIR/$KERNEL $REPACK_DIR
+function prepare_all {
+	cd $REPACK_DIR
+	rm -rf $KERNEL
+	rm -rf $DTBIMAGE
+	if [ ! -d $MODULES_DIR ]; then
+		mkdir -p $MODULES_DIR;
+	fi;
+	for i in $(find "$MODULES_DIR"/ -name "*.ko"); do
+		rm -f "$i";
+	done;
+	cd $KERNEL_DIR
+	rm -f $KERNEL_DIR/arch/arm/boot/*.dtb
+	rm -f $KERNEL_DIR/arch/arm/boot/*.cmd
+	rm -f $KERNEL_DIR/arch/arm/boot/zImage
+	rm -f $KERNEL_DIR/arch/arm/boot/Image
+	make clean && make mrproper
+	echo
+	echo "Everything is ready to start..."
 }
 
-function make_modules {
-		rm `echo $MODULES_DIR"/*"`
-		find $KERNEL_DIR -name '*.ko' -exec cp -v {} $MODULES_DIR \;
+function make_me {
+	echo
+	make $DEFCONFIG
+	make $THREAD
+	cp -vr $ZIMAGE_DIR/$KERNEL $REPACK_DIR
+	make modules $THREAD
 }
 
 function make_dtb {
-		$REPACK_DIR/tools/dtbToolCM -2 -o $REPACK_DIR/$DTBIMAGE -s 2048 -p scripts/dtc/ arch/arm/boot/
+	$REPACK_DIR/tools/dtbToolCM -2 -o $REPACK_DIR/$DTBIMAGE -s 2048 -p scripts/dtc/ arch/arm/boot/
+}
+
+function copy_modules {
+	for i in $(find "$KERNEL_DIR" -name '*.ko'); do
+		cp -av "$i" $MODULES_DIR/;
+	done;
+	chmod 755 $MODULES_DIR/*
+	$STRIP --strip-unneeded $MODULES_DIR/* 2>/dev/null
+	$STRIP --strip-debug $MODULES_DIR/* 2>/dev/null
 }
 
 function make_zip {
-		cd $REPACK_DIR
-		zip -r9 "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip *
-		mv "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip $ZIP_MOVE
-		cd $KERNEL_DIR
+	cd $REPACK_DIR
+	zip -x@zipexclude -r9 "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip *
+	mv "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip $ZIP_MOVE
+	cd $KERNEL_DIR
 }
 
 function generate_md5 {
-		cd $ZIP_MOVE
-		md5sum "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip > "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip.md5
-		cd $KERNEL_DIR
+	cd $ZIP_MOVE
+	md5sum "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip > "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip.md5
+	cd $KERNEL_DIR
 }
 
 
@@ -117,7 +135,7 @@ echo ""
 
 # Versioning
 NAME="LambdaKernel"
-RELEASE="Fábula"
+RELEASE="Infinito"
 BUILD_DATE=$(date -u +%m%d%Y)
 if [ "$STATE" = stable ]; then
 	TAG="Stable"
@@ -125,7 +143,11 @@ if [ "$STATE" = stable ]; then
 fi
 if [ "$STATE" = beta ]; then
 	TAG="Beta"
-	export VERSION=$NAME-$RELEASE-$TAG
+	echo "Could you assign a beta number?"
+	read -e tag_number
+	TAG_NUMBER="$tag_number"
+	echo ""
+	export VERSION=$NAME-$RELEASE-$TAG-N$TAG_NUMBER
 fi
 if [ "$STATE" = incremental ]; then
 	TAG="Incremental"
@@ -133,7 +155,11 @@ if [ "$STATE" = incremental ]; then
 	read -e tag_number
 	TAG_NUMBER="$tag_number"
 	echo ""
-	export VERSION=$NAME-$RELEASE-$TAG-N$TAG_NUMBER
+	echo "What is the incremental comment?"
+	read -e tag_comment
+	TAG_COMMENT="$tag_comment"
+	echo ""
+	export VERSION=$NAME-$RELEASE-$TAG-N$TAG_NUMBER-$TAG_COMMENT
 fi
 export LOCALVERSION=-`echo $VERSION`
 
@@ -180,17 +206,20 @@ echo ""
 echo "You are going to build $VERSION for the $VARIANT variant."
 echo ""
 
-echo "Which Linaro toolchain version you would like to use?"
-select choice in Linaro-4.9 Linaro-5.2
+echo "Which toolchain version you would like to use?"
+select choice in Linaro-4.9 Dorimanx-5.3
 do
 case "$choice" in
 	"Linaro-4.9")
 		export TOOLCHAIN="Linaro 4.9"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/linaro/4.9/bin/arm-eabi-
+		export CROSS_COMPILE="${LINARO_DIR}/4.9/bin/arm-eabi-"
 		break;;
-	"Linaro-5.2")
-		export TOOLCHAIN="Linaro 5.2"
-		export CROSS_COMPILE=${HOME}/Desenvolvimento/kernel/linaro/5.2/bin/arm-eabi-
+	"Dorimanx-5.3")
+		export TOOLCHAIN="Dorimanx 5.3"
+		export CROSS_COMPILE="${DORIMANX_DIR}/bin/arm-eabi-"
+		export SYSROOT="${DORIMANX_DIR}/arm-LG-linux-gnueabi/sysroot/"
+		export CC="${DORIMANX_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
+		export STRIP="${DORIMANX_DIR}/bin/arm-eabi-strip"
 		break;;
 esac
 done
@@ -199,35 +228,19 @@ echo ""
 echo "You have chosen to use $TOOLCHAIN."
 echo ""
 
-while read -p "Do you want to clean stuff (y/n)? " cchoice
-do
-case "$cchoice" in
-	y|Y )
-		clean_all
-		echo
-		echo "All cleaned."
-		break
-		;;
-	n|N )
-		break
-		;;
-	* )
-		echo
-		echo "Invalid try again!"
-		echo
-		;;
-esac
-done
-
 echo
 
 while read -p "Do you want to build kernel (y/n)? " dchoice
 do
 case "$dchoice" in
 	y|Y)
-		make_kernel
+		prepare_all
+		echo
+		checkout_branches
+		count_cpus
+		make_me
 		make_dtb
-		make_modules
+		copy_modules
 		make_zip
 		generate_md5
 		break
