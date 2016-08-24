@@ -269,8 +269,8 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 
 	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 
-	if (level > pwr->num_pwrlevels - 2)
-		level = pwr->num_pwrlevels - 2;
+	if (level > pwr->num_pwrlevels - 1)
+		level = pwr->num_pwrlevels - 1;
 
 	pwr->thermal_pwrlevel = level;
 
@@ -469,7 +469,14 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	if (level < 0)
 		goto done;
 
-	pwr->thermal_pwrlevel = level;
+	if (level < 5)
+		level = 5;
+
+	/* Hack to avoid 450MHz as maximum clock */
+	if (level == 1)
+		pwr->thermal_pwrlevel = level - 1;
+	else
+		pwr->thermal_pwrlevel = level;
 
 	/*
 	 * if the thermal limit is lower than the current setting,
@@ -1234,15 +1241,21 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 	}
 	pwr->num_pwrlevels = pdata->num_levels;
 
-	/* Initialize the user and thermal clock constraints */
+	/*
+	 * Frequency table references for initialization
+	 * of constraints.
+	 * Maximum -> max_pwrlevel -> 533MHz
+	 * Initial -> init_pwrlevel -> 320MHz
+	 * Active  -> active_pwrlevel -> 200MHz
+	 * Minimum -> min_pwrlevel -> 100MHz
+	 */
+	pwr->max_pwrlevel = 0; /* 533MHz */
+	pwr->min_pwrlevel = pdata->num_levels - 2; /* 100MHz */
+	pwr->thermal_pwrlevel = 0; /* 533MHz */
 
-	pwr->max_pwrlevel = 0;
-	pwr->min_pwrlevel = pdata->num_levels - 2;
-	pwr->thermal_pwrlevel = 0;
-
-	pwr->active_pwrlevel = pdata->init_level;
-	pwr->default_pwrlevel = pdata->init_level;
-	pwr->init_pwrlevel = pdata->init_level;
+	pwr->active_pwrlevel = pdata->num_levels - 3; /* 200MHz */
+	pwr->default_pwrlevel = pwr->min_pwrlevel; /* 100MHz */
+	pwr->init_pwrlevel = pdata->num_levels - 4; /* 320MHz */
 	for (i = 0; i < pdata->num_levels; i++) {
 		pwr->pwrlevels[i].gpu_freq =
 		(pdata->pwrlevel[i].gpu_freq > 0) ?
