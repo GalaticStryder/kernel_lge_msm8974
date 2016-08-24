@@ -1121,4 +1121,11 @@ source "drivers/input/touchscreen/g2/Kconfig"
 
 endif
 
+config STATE_NOTIFIER
+	bool "State Notifier Driver"
+	depends on TOUCHSCREEN_SYNAPTICS_G2
+	default y
+	help
+	  Allows monitoring the current display state.
+
 endif

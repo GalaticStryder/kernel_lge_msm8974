@@ -236,7 +236,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata, int enable)
 					__func__, ret);
 			goto error;
 		}
-#if defined(CONFIG_MACH_MSM8974_G3) 
+#if defined(CONFIG_MACH_MSM8974_G3)
 		mdss_dsi_panel_io(pdata, 0);
 #endif
 
@@ -502,7 +502,7 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata)
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
 
-#if defined(CONFIG_MACH_MSM8974_G3) 
+#if defined(CONFIG_MACH_MSM8974_G3)
 
 	mdelay(5);
 	mdss_dsi_panel_io(pdata, 0);
@@ -1939,10 +1939,10 @@ int dsi_panel_device_register(struct device_node *pan_node,
 			pr_err("request disp_en gpio failed, rc=%d\n",
 						rc);
                 gpio_free(ctrl_pdata->dsv_ena);
-            
+
 				return -ENODEV;
 		}
-        
+
 		//gpio_direction_output(ctrl_pdata->dsv_ena, 1);
         gpio_set_value(ctrl_pdata->dsv_ena, 1);
 	}

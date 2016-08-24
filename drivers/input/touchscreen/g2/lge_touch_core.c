@@ -30,6 +30,9 @@
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 #include <linux/earlysuspend.h>
 #endif
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
 #include <linux/jiffies.h>
 #include <linux/sysdev.h>
 #include <linux/types.h>
@@ -149,6 +152,9 @@ static int fb_notifier_callback(struct notifier_block *self,
 		int *blank = (int *)evdata->data;
 		if (*blank == FB_BLANK_UNBLANK) {
 			TOUCH_INFO_MSG("FB_BLANK_UNBLANK \n");
+		#ifdef CONFIG_STATE_NOTIFIER
+			state_resume();
+		#endif
 		#ifdef CUST_G2_TOUCH
 			if(f54_window_crack_check_mode)
 				mdelay(200);
@@ -158,6 +164,9 @@ static int fb_notifier_callback(struct notifier_block *self,
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			TOUCH_INFO_MSG("FB_BLANK_POWERDOWN \n");
 			fb_blank_called = 1;
+			#ifdef CONFIG_STATE_NOTIFIER
+			state_suspend();
+			#endif
 			#if !defined(CONFIG_LGE_SECURITY_KNOCK_ON)
 			touch_lcd_suspend(&ts->client->dev);
 			#endif
