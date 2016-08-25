@@ -84,6 +84,7 @@
 		qcom,bus-width = <8>;
 		qcom,msm-bus,active-only = <0>;
 		qcom,nonremovable;
+		qcom,wakeup-on-idle;
 
 		status = "ok";
 	};
@@ -265,7 +266,7 @@
 		qcom,dat1-mpm-int = <44>;
 		revision = "rev_c...";
 		status = "ok";
-	};	
+	};
 };
 
 &sdcc2 {

@@ -84,6 +84,7 @@
 		qcom,bus-width = <8>;
 		qcom,msm-bus,active-only = <0>;
 		qcom,nonremovable;
+		qcom,wakeup-on-idle;
 
 		status = "ok";
 	};
@@ -322,7 +323,7 @@
 		qcom,dat1-mpm-int = <44>;
 		revision = "rev_d...";
 		status = "ok";
-	};	
+	};
 
 	memory_hole: qcom,msm-mem-hole {
 		compatible = "qcom,msm-mem-hole";
