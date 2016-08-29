@@ -33,6 +33,23 @@ ifeq ($(CONFIG_MMU),)
 MMUEXT		:= -nommu
 endif
 
+# Extended optimization set for ARM devices,
+# more precisely the Cortex-A15 with NEON support.
+ifeq ($(CONFIG_FAST_LANE_ARM),y)
+FAST_LANE_ARM_OPT := -mtune=cortex-a15 \
+	-march=armv7-a \
+	-mfpu=neon-vfpv4 \
+	-marm \
+	-munaligned-access \
+	-mvectorize-with-neon-quad
+FAST_LANE_OPT_FLAGS := -g0 \
+	-DNDEBUG \
+	-ftree-vectorize \
+	-funsafe-math-optimizations
+	$(FAST_LANE_ARM_OPT)
+KBUILD_CFLAGS	+= $(FAST_LANE_OPT_FLAGS)
+endif
+
 ifeq ($(CONFIG_FRAME_POINTER),y)
 KBUILD_CFLAGS	+=-fno-omit-frame-pointer -mapcs -mno-sched-prolog
 endif
@@ -82,12 +99,7 @@ arch-$(CONFIG_CPU_32v3)		:=-D__LINUX_ARM_ARCH__=3 -march=armv3
 # generating code for Krait, which is compatible with the instruction set of the
 # Cortex-A15, because GCC will warn us about ambiguous ISA restrictions caused
 # by seemingly conflicting -march and -mcpu options.
-# If $(CC) does not support the -mcpu=cortex-a15 option, fall back on passing
-# -march=armv7-a to specify the ISA restriction, though this is suboptimal. To
-# keep things simpler, we don't bother with a fallback option if the compiler
-# doesn't even support -march=armv7-a, since in that situation we would have
-# bigger problems.
-arch-$(CONFIG_ARCH_MSM_KRAIT)	:=-D__LINUX_ARM_ARCH__=7 $(call cc-option,-mcpu=cortex-a15,-march=armv7-a)
+arch-$(CONFIG_ARCH_MSM_KRAIT)	:=-D__LINUX_ARM_ARCH__=7 -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon
 
 # This selects how we optimise for the processor.
 tune-$(CONFIG_CPU_ARM610)	:=-mtune=arm610

@@ -37,6 +37,12 @@ CONFIG_HAVE_IRQ_WORK=y
 CONFIG_IRQ_WORK=y
 
 #
+# Lambda ~ 3Xtreme Optimization
+#
+CONFIG_FAST_LANE=y
+CONFIG_FAST_LANE_ARM=y
+
+#
 # Lambda ~ Touchscreen Drivers
 #
 CONFIG_STATE_NOTIFIER=y
