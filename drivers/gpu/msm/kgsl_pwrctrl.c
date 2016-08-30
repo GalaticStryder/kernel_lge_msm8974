@@ -469,7 +469,8 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	if (level < 0)
 		goto done;
 
-	if (level < 5)
+	/* Maximum clock can't be lower than 100MHz. */
+	if (level > 5)
 		level = 5;
 
 	/* Hack to avoid 450MHz as maximum clock */
