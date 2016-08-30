@@ -134,7 +134,7 @@ echo "You have chosen the tag: $STATE!"
 echo ""
 
 # Versioning
-NAME="LambdaKernel"
+NAME="Lambda"
 RELEASE="Infinito"
 BUILD_DATE=$(date -u +%m%d%Y)
 if [ "$STATE" = stable ]; then
@@ -206,7 +206,7 @@ echo ""
 echo "You are going to build $VERSION for the $VARIANT variant."
 echo ""
 
-echo "Which toolchain version you would like to use?"
+echo "Which toolchain you would like to use?"
 select choice in Linaro-4.9 Dorimanx-5.3
 do
 case "$choice" in
@@ -230,7 +230,7 @@ echo ""
 
 echo
 
-while read -p "Do you want to build kernel (y/n)? " dchoice
+while read -p "Are you ready to start (y/n)? " dchoice
 do
 case "$dchoice" in
 	y|Y)
@@ -245,12 +245,12 @@ case "$dchoice" in
 		generate_md5
 		break
 		;;
-	n|N )
+	n|N)
 		break
 		;;
 	* )
 		echo
-		echo "Invalid try again!"
+		echo "Stop peeing yourself, coward!"
 		echo
 		;;
 esac
