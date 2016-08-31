@@ -186,7 +186,7 @@ static int pm_power_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		val->intval = smb349_chg->chg_current_ma;
+		val->intval = smb349_chg->chg_current_ma * 1000;
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = (int)smb349_chg->present;
@@ -495,7 +495,7 @@ static int pm_power_set_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		if (val->intval) {
-			if (smb349_chg->chg_current_ma != val->intval)
+			if (smb349_chg->chg_current_ma * 1000 != val->intval)
 				return -EINVAL;
 		}
 		break;
