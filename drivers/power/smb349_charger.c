@@ -2590,7 +2590,7 @@ static int pm_power_get_property(struct power_supply *psy,
 		val->intval = (int)smb349_chg->ac_present;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		val->intval = smb349_chg->chg_current_ma;
+		val->intval = smb349_chg->chg_current_ma * 1000;
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 #ifdef CONFIG_SMB349_VZW_FAST_CHG
