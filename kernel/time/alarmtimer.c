@@ -28,7 +28,7 @@
 
 #include <mach/cpuidle.h>
 
-#define ALARM_DELTA 120
+#define ALARM_DELTA 180 /* 3 minutes */
 
 /**
  * struct alarm_base - Alarm timer bases
@@ -115,9 +115,9 @@ void set_power_on_alarm(long secs, bool enable)
 	alarm_time = power_on_alarm - alarm_delta;
 
 	/*
-	 *Substract ALARM_DELTA from actual alarm time
-	 *to power up the device before actual alarm
-	 *expiration
+	 * Substract ALARM_DELTA from actual alarm time
+	 * to power up the device before actual alarm
+	 * expiration.
 	 */
 	if ((alarm_time - ALARM_DELTA) > rtc_secs)
 		alarm_time -= ALARM_DELTA;
