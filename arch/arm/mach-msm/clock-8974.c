@@ -1456,7 +1456,6 @@ static struct clk_freq_tbl ftbl_gcc_ce2_clk[] = {
 	F( 50000000,  gpll0,  12,   0,   0),
 	F(100000000,  gpll0,   6,   0,   0),
 	F(150000000,  gpll0,   4,   0,   0),
-	F(200000000,  gpll0,   2,   0,   0),
 	F_END
 };
 
@@ -1477,7 +1476,7 @@ static struct rcg_clk ce2_clk_src = {
 	.c = {
 		.dbg_name = "ce2_clk_src",
 		.ops = &clk_ops_rcg,
-		VDD_DIG_FMAX_MAP2(LOW, 50000000, NOMINAL, 200000000),
+		VDD_DIG_FMAX_MAP2(LOW, 50000000, NOMINAL, 150000000),
 		CLK_INIT(ce2_clk_src.c),
 	},
 };
