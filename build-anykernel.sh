@@ -4,6 +4,7 @@
 #  An automated build script for Lambda Kernel written in bash.
 #  Based off AK's and Render's build script - Danke!
 #
+export SCRIPT_VERSION="2.1 (Smart Snake)"
 
 # Bash color
 green='\033[01;32m'
@@ -37,6 +38,26 @@ ZIP_MOVE="${KERNEL_DIR}/store"
 ZIMAGE_DIR="${KERNEL_DIR}/arch/arm/boot"
 
 # Functions
+function check_folders {
+	if [ ! -d $REPACK_DIR ]; then
+		echo "Could not find anykernel folder. Aborting...";
+		echo "Read the readme.md for instructions.";
+		echo "";
+		exit;
+	fi;
+	if [ ! -d $TOOLCHAINS_DIR ]; then
+		echo "Could not find toolchains folder. Aborting...";
+		echo "Read the readme.md for instructions.";
+		echo "";
+		exit;
+	fi;
+	if [ ! -d $ZIP_MOVE ]; then
+		echo "Could not find store folder. Creating..."
+		mkdir -p $ZIP_MOVE;
+		echo ""
+	fi;
+}
+
 function checkout_branches {
 	cd $REPACK_DIR
 	git checkout infinito
@@ -44,7 +65,7 @@ function checkout_branches {
 }
 
 function count_cpus {
-	echo "Building kernel with $THREAD argument...";
+	echo "Building kernel with $THREAD argument..."
 }
 
 function prepare_all {
@@ -72,7 +93,6 @@ function make_me {
 	make $DEFCONFIG
 	make $THREAD
 	cp -vr $ZIMAGE_DIR/$KERNEL $REPACK_DIR
-	make modules $THREAD
 }
 
 function make_dtb {
@@ -110,11 +130,13 @@ echo "                   /\                   "
 echo "                  /  \                  "
 echo "                 /    \                 "
 echo ''
-echo " Welcome to Lambda Kernel build script! "
+echo -e " Welcome to Lambda Kernel build script  " "${restore}"
+echo -e "${green}" "Version: $SCRIPT_VERSION "
 echo -e "${restore}"
+check_folders
 
 echo "Which is the build tag?"
-select choice in Stable Beta Incremental
+select choice in Stable Beta Experimental
 do
 case "$choice" in
 	"Stable")
@@ -123,8 +145,8 @@ case "$choice" in
 	"Beta")
 		export STATE="beta"
 		break;;
-	"Incremental")
-		export STATE="incremental"
+	"Experimental")
+		export STATE="experimental"
 		break;;
 esac
 done
@@ -149,13 +171,13 @@ if [ "$STATE" = beta ]; then
 	echo ""
 	export VERSION=$NAME-$RELEASE-$TAG-N$TAG_NUMBER
 fi
-if [ "$STATE" = incremental ]; then
-	TAG="Incremental"
-	echo "Could you assign an incremental number?"
+if [ "$STATE" = experimental ]; then
+	TAG="Experimental"
+	echo "Could you assign an experimental number?"
 	read -e tag_number
 	TAG_NUMBER="$tag_number"
 	echo ""
-	echo "What is the incremental comment?"
+	echo "What is the experimental comment?"
 	read -e tag_comment
 	TAG_COMMENT="$tag_comment"
 	echo ""
@@ -168,35 +190,35 @@ select choice in d800 d801 d802 d803 f320 l01f ls980 vs980
 do
 case "$choice" in
 	"d800")
-		VARIANT="d800"
+		VARIANT="D800"
 		DEFCONFIG="d800_defconfig"
 		break;;
 	"d801")
-		VARIANT="d801"
+		VARIANT="D801"
 		DEFCONFIG="d801_defconfig"
 		break;;
 	"d802")
-		VARIANT="d802"
+		VARIANT="D802"
 		DEFCONFIG="d802_defconfig"
 		break;;
 	"d803")
-		VARIANT="d803"
+		VARIANT="D803"
 		DEFCONFIG="d803_defconfig"
 		break;;
 	"f320")
-		VARIANT="f320"
+		VARIANT="F320"
 		DEFCONFIG="f320_defconfig"
 		break;;
 	"l01f")
-		VARIANT="l01f"
+		VARIANT="L01F"
 		DEFCONFIG="l01f_defconfig"
 		break;;
 	"ls980")
-		VARIANT="ls980"
+		VARIANT="LS980"
 		DEFCONFIG="ls980_defconfig"
 		break;;
 	"vs980")
-		VARIANT="vs980"
+		VARIANT="VS980"
 		DEFCONFIG="vs980_defconfig"
 		break;;
 esac
@@ -246,7 +268,11 @@ case "$dchoice" in
 		break
 		;;
 	n|N)
-		break
+		echo
+		echo "This can't be happening... Tell me you're OK,"
+		echo "Snake! Snaaaake!"
+		echo
+		exit
 		;;
 	* )
 		echo
