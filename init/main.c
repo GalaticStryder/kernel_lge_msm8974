@@ -496,8 +496,8 @@ asmlinkage void __init start_kernel(void)
 	tick_init();
 	boot_cpu_init();
 	page_address_init();
-	printk(KERN_NOTICE "%s", linux_banner);
 	printk(KERN_NOTICE "Lambda Kernel is initializing\n");
+	printk(KERN_NOTICE "%s", linux_banner);
 	setup_arch(&command_line);
 	/*
 	 * Set up the the initial canary ASAP:
