@@ -66,16 +66,6 @@ static void __ref up_all(void)
 	down_timer = 0;
 }
 
-/* Put offline each possible CPU down to min_online threshold */
-static void down_all(void)
-{
-	unsigned int cpu;
-
-	for_each_online_cpu(cpu)
-		if (cpu && num_online_cpus() > min_online)
-			cpu_down(cpu);
-}
-
 /* Iterate through possible CPUs and bring online the first offline found */
 static void __ref up_one(void)
 {
@@ -153,18 +143,18 @@ static void load_timer(struct work_struct *work)
 {
 	unsigned int cpu;
 	unsigned int avg_load = 0;
-	
+
 	if (down_timer < down_timer_cnt)
 		down_timer++;
 
 	if (up_timer < up_timer_cnt)
 		up_timer++;
-	
+
 	for_each_online_cpu(cpu)
 		avg_load += cpufreq_quick_get_util(cpu);
-		
+
 	avg_load /= num_online_cpus();
-	
+
 #if DEBUG
 	pr_debug("%s: avg_load: %u, num_online_cpus: %u\n", __func__, avg_load, num_online_cpus());
 	pr_debug("%s: up_timer: %u, down_timer: %u\n", __func__, up_timer, down_timer);
@@ -230,10 +220,11 @@ static int set_up_threshold(const char *val, const struct kernel_param *kp)
 	ret = kstrtouint(val, 10, &i);
 	if (ret)
 		return -EINVAL;
+
 	if (i < 1 || i > 100)
 		return -EINVAL;
 
-	ret = param_set_uint(val, kp);
+	up_threshold = i;
 
 	return ret;
 }
@@ -254,15 +245,12 @@ static int set_min_online(const char *val, const struct kernel_param *kp)
 	ret = kstrtouint(val, 10, &i);
 	if (ret)
 		return -EINVAL;
+
 	if (i < 1 || i > max_online || i > num_possible_cpus())
 		return -EINVAL;
 
-	ret = param_set_uint(val, kp);
-	
-	if (ret == 0) {
-			up_all();
-	}
-	
+	min_online = i;
+
 	return ret;
 }
 
@@ -282,16 +270,12 @@ static int set_max_online(const char *val, const struct kernel_param *kp)
 	ret = kstrtouint(val, 10, &i);
 	if (ret)
 		return -EINVAL;
+
 	if (i < 1 || i < min_online || i > num_possible_cpus())
 		return -EINVAL;
 
-	ret = param_set_uint(val, kp);
-	
-	if (ret == 0) {
-		down_all();
-		up_all();
-	}
-	
+	max_online = i;
+
 	return ret;
 }
 
@@ -311,18 +295,15 @@ static int set_max_cores_screenoff(const char *val, const struct kernel_param *k
 	ret = kstrtouint(val, 10, &i);
 	if (ret)
 		return -EINVAL;
+
 	if (i < 1 || i > max_online || i > num_possible_cpus())
 		return -EINVAL;
-	if (i > max_online)
-		max_cores_screenoff = max_online;
 
-	ret = param_set_uint(val, kp);
-	
-	if (ret == 0) {
-		down_all();
-		up_all();
-	}
-	
+	if (i > max_online)
+		i = max_online;
+
+	max_cores_screenoff = i;
+
 	return ret;
 }
 
@@ -342,13 +323,14 @@ static int set_down_timer_cnt(const char *val, const struct kernel_param *kp)
 	ret = kstrtouint(val, 10, &i);
 	if (ret)
 		return -EINVAL;
+
 	if (i < 1 || i > 50)
 		return -EINVAL;
 		
 	if (i < up_timer_cnt)
-		down_timer_cnt = up_timer_cnt;
+		i = up_timer_cnt;
 
-	ret = param_set_uint(val, kp);
+	down_timer_cnt = i;
 	
 	return ret;
 }
@@ -369,10 +351,11 @@ static int set_up_timer_cnt(const char *val, const struct kernel_param *kp)
 	ret = kstrtouint(val, 10, &i);
 	if (ret)
 		return -EINVAL;
+
 	if (i < 1 || i > 50)
 		return -EINVAL;
 
-	ret = param_set_uint(val, kp);
+	up_timer_cnt = i;
 
 	return ret;
 }
@@ -402,7 +385,7 @@ static int dyn_hp_init(void)
 		pr_err("%s: Failed to register state notifier callback\n",
 			__func__);
 #endif
-	
+
 	dyn_workq = alloc_workqueue("dyn_hotplug_workqueue", WQ_HIGHPRI | WQ_FREEZABLE, 0);
 	if (!dyn_workq)
 		return -ENOMEM;
@@ -435,28 +418,30 @@ static void __ref dyn_hp_exit(void)
 	pr_info("%s: deactivated\n", __func__);
 }
 
+/* enabled */
 static int set_enabled(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 	unsigned int i;
-	int blu = 0;
 
 	ret = kstrtouint(val, 10, &i);
 	if (ret)
 		return -EINVAL;
-	if (i < 0 || i > 1)
-		return 0;
-		
-	if (i == blu_plug_enabled)
-		return i;
 
-	ret = param_set_uint(val, kp);
+	if (i < 0 || i > 1)
+		return -EINVAL;
+
+	if (i == blu_plug_enabled)
+		return ret;
+
 	blu_plug_enabled = i;
-	if ((blu_plug_enabled == 1))
-		blu = dyn_hp_init();
-	if ((blu_plug_enabled == 0))
+
+	if (blu_plug_enabled)
+		ret = dyn_hp_init();
+	else
 		dyn_hp_exit();
-	return i;
+
+	return ret;
 }
 
 static struct kernel_param_ops enabled_ops = {
