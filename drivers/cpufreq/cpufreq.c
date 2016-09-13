@@ -2160,7 +2160,7 @@ int cpufreq_set_freq(unsigned int max_freq, unsigned int min_freq,
 			unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
-	unsigned int ret = 0;
+	int ret = 0;
 
 	if (!max_freq && !min_freq)
 		return ret;
@@ -2202,7 +2202,7 @@ EXPORT_SYMBOL(cpufreq_set_freq);
  *	cpufreq_get_max - get policy max freq of a cpu
  *	@cpu: CPU whose max frequency needs to be known
  */
-int cpufreq_get_max(unsigned int cpu)
+unsigned int cpufreq_get_max(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	unsigned int freq = per_cpu(cpufreq_policy_save, cpu).max;
@@ -2220,7 +2220,7 @@ EXPORT_SYMBOL(cpufreq_get_max);
  *	cpufreq_get_min - get policy min freq of a cpu
  *	@cpu: CPU whose min frequency needs to be known
  */
-int cpufreq_get_min(unsigned int cpu)
+unsigned int cpufreq_get_min(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	unsigned int freq = per_cpu(cpufreq_policy_save, cpu).min;
@@ -2238,7 +2238,7 @@ EXPORT_SYMBOL(cpufreq_get_min);
  *	cpuinfo_get_max - get real max freq of a cpu
  *	@cpu: CPU whose max frequency needs to be known
  */
-int cpuinfo_get_max(unsigned int cpu)
+unsigned int cpuinfo_get_max(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	unsigned int freq = per_cpu(cpufreq_policy_save, cpu).max_freq;
@@ -2256,7 +2256,7 @@ EXPORT_SYMBOL(cpuinfo_get_max);
  *	cpuinfo_get_min - get real min freq of a cpu
  *	@cpu: CPU whose min frequency needs to be known
  */
-int cpuinfo_get_min(unsigned int cpu)
+unsigned int cpuinfo_get_min(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 	unsigned int freq = per_cpu(cpufreq_policy_save, cpu).min_freq;
@@ -2278,7 +2278,7 @@ EXPORT_SYMBOL(cpuinfo_get_min);
 int cpufreq_set_gov(char *target_gov, unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
-	unsigned int ret = 0;
+	int ret = 0;
 
 	get_online_cpus();
 	if (!cpu_online(cpu)) {
@@ -2321,6 +2321,24 @@ char *cpufreq_get_gov(unsigned int cpu)
 	return val;
 }
 EXPORT_SYMBOL(cpufreq_get_gov);
+
+/*
+ *	cpufreq_quick_get_util - get the CPU utilization
+ *	@cpu: CPU whose load needs to be known
+ */
+unsigned int cpufreq_quick_get_util(unsigned int cpu)
+{
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+	unsigned int load = 0;
+
+	if (policy) {
+		load = policy->util;
+		cpufreq_cpu_put(policy);
+	}
+
+	return load;
+}
+EXPORT_SYMBOL(cpufreq_quick_get_util);
 #endif
 
 static int cpufreq_cpu_callback(struct notifier_block *nfb,
