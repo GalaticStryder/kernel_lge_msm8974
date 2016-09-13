@@ -557,6 +557,23 @@ static struct kobj_attribute live_cur_freq =
 	__ATTR(live_cur_freq, 0444,
 		get_live_cur_freq, NULL);
 
+static ssize_t get_cur_load(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	int cnt = 0, cpu;
+
+	for_each_possible_cpu(cpu)
+		cnt += snprintf(buf + cnt, PAGE_SIZE - cnt,
+				"%d:%u ", cpu, cpufreq_quick_get_util(cpu));
+
+	cnt += snprintf(buf + cnt, PAGE_SIZE - cnt, "\n");
+	return cnt;
+}
+
+static struct kobj_attribute cur_load =
+	__ATTR(cur_load, 0444,
+		get_cur_load, NULL);
+
 static ssize_t msm_limiter_version_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -596,6 +613,7 @@ static struct attribute *msm_limiter_attrs[] =
 		&live_max_freq.attr,
 		&live_min_freq.attr,
 		&live_cur_freq.attr,
+		&cur_load.attr,
 		&msm_limiter_version.attr,
 		NULL,
 	};
