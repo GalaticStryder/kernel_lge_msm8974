@@ -55,7 +55,7 @@ static struct workqueue_struct *dyn_workq;
 static struct notifier_block notify;
 
 /* Bring online each possible CPU up to max_online cores */
-static __ref void up_all(void)
+static void __ref up_all(void)
 {
 	unsigned int cpu;
 
@@ -77,7 +77,7 @@ static void down_all(void)
 }
 
 /* Iterate through possible CPUs and bring online the first offline found */
-static __ref void up_one(void)
+static void __ref up_one(void)
 {
 	unsigned int cpu;
 
@@ -395,6 +395,7 @@ static int dyn_hp_init(void)
 		return 0;
 		pr_info("%s: disabled\n", __func__);
 	}
+
 #ifdef CONFIG_STATE_NOTIFIER
 	notify.notifier_call = state_notifier_callback;
 	if (state_register_client(&notify))
@@ -414,13 +415,22 @@ static int dyn_hp_init(void)
 	return 0;
 }
 
-static void dyn_hp_exit(void)
+static void __ref dyn_hp_exit(void)
 {
+	int cpu;
+
 	cancel_delayed_work_sync(&dyn_work);
+
 #ifdef CONFIG_STATE_NOTIFIER
 	state_unregister_client(&notify);
 #endif
+
 	destroy_workqueue(dyn_workq);
+
+	/* Wake up all the sibling cores */
+	for_each_possible_cpu(cpu)
+		if (!cpu_online(cpu))
+			cpu_up(cpu);
 	
 	pr_info("%s: deactivated\n", __func__);
 }
