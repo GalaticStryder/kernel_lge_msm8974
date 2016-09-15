@@ -195,6 +195,14 @@ struct wcd9xxx {
 	const struct wcd9xxx_codec_type *codec_type;
 };
 
+#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
+int wcd9xxx_reg_read_safe(struct wcd9xxx_core_resource *core_res,
+			  unsigned short reg);
+#ifdef CONFIG_MACH_LGE
+extern int lge_snd_pa_ctrl_locked;
+#endif
+#endif
+
 int wcd9xxx_interface_reg_read(struct wcd9xxx *wcd9xxx, unsigned short reg);
 int wcd9xxx_interface_reg_write(struct wcd9xxx *wcd9xxx, unsigned short reg,
 		u8 val);

@@ -508,3 +508,9 @@ config SND_SOC_ES325_SLIM
 	default n
 	help
 		Audience es325 Dual Mic Noise Reduction
+
+config SOUND_CONTROL_HAX_3_GPL
+	tristate "GPL Sound Control 3.x"
+	default y
+	help
+	  Controls the WCD93XX chipset tunables to allow userspace fine tuning.
