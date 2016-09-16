@@ -25,10 +25,10 @@ echo -e "${restore}"
 
 # Check the date start range is set
 if [ -z "$sdate" ]; then
-    echo ""
     echo "Failed!"
     echo "Add a date in mm/dd/yyyy format to count from..."
     echo ""
+    exit
 fi
 
 # Find the directories to log
@@ -43,7 +43,7 @@ cd $line
     echo "Nothing updated on Lambda Kernel changelog, skipping..."
     else
         # Write the changelog
-        echo "Changelog is updated and written for $project..."
+        echo "Changelog was updated and written for $project..."
         echo "Project: $project" >> "$rdir"/changelog_$cdate.log
         echo "$log" | while read line
         do
@@ -52,11 +52,5 @@ echo "$line" >> "$rdir"/changelog_$cdate.log
 echo "" >> "$rdir"/changelog_$cdate.log
     fi
 done
-echo -e "${red}"
-echo "                 \                  "
-echo "                 /\                 "
-echo "                /  \                "
-echo "               /    \               "
-echo ''
-echo "Changelog for $project has been written to "$rdir"/changelog_$cdate.log"
-echo -e "${restore}"
+echo ""
+echo -e ${green}"Changelog for $project has been written to changelog_$cdate.log"${restore}
