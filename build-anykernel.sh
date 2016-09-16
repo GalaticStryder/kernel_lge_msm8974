@@ -4,7 +4,7 @@
 #  An automated build script for Lambda Kernel written in bash.
 #  Based off AK's and Render's build script - Danke!
 #
-export SCRIPT_VERSION="2.1 (Smart Snake)"
+export SCRIPT_VERSION="2.2 (Lame it on Xopata)"
 
 # Bash color
 green='\033[01;32m'
@@ -60,7 +60,7 @@ function check_folders {
 
 function checkout_branches {
 	cd $REPACK_DIR
-	git checkout infinito
+	git checkout $ANYBRANCH
 	cd $KERNEL_DIR
 }
 
@@ -153,7 +153,41 @@ done
 
 echo ""
 echo "You have chosen the tag: $STATE!"
+
+echo
+
+echo "Marshmallow -> Type M"
+echo "Nougat -> Type N"
 echo ""
+while read -p "Please, select the Android version (M/N)? " achoice
+do
+case "$achoice" in
+	m|M)
+		echo
+		echo "Building marshmallow compatible kernel..."
+		ANDROID="Marhsmallow"
+		ANYBRANCH="marshmallow"
+		echo
+		break
+		;;
+	n|N)
+		echo
+		echo "Building nougat compatible kernel..."
+		ANDROID="Nougat"
+		ANYBRANCH="nougat"
+		echo
+		break
+		;;
+	* )
+		echo
+		echo "Assuming marshmallow as Android version..."
+		ANDROID="Marhsmallow"
+		ANYBRANCH="marshmallow"
+		echo
+		break
+		;;
+esac
+done
 
 # Versioning
 NAME="Lambda"
@@ -161,7 +195,7 @@ RELEASE="Infinito"
 BUILD_DATE=$(date -u +%m%d%Y)
 if [ "$STATE" = stable ]; then
 	TAG="Stable"
-	export VERSION=$NAME-$RELEASE-$TAG
+	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG
 fi
 if [ "$STATE" = beta ]; then
 	TAG="Beta"
@@ -169,7 +203,7 @@ if [ "$STATE" = beta ]; then
 	read -e tag_number
 	TAG_NUMBER="$tag_number"
 	echo ""
-	export VERSION=$NAME-$RELEASE-$TAG-N$TAG_NUMBER
+	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG-N$TAG_NUMBER
 fi
 if [ "$STATE" = experimental ]; then
 	TAG="Experimental"
@@ -181,7 +215,7 @@ if [ "$STATE" = experimental ]; then
 	read -e tag_comment
 	TAG_COMMENT="$tag_comment"
 	echo ""
-	export VERSION=$NAME-$RELEASE-$TAG-N$TAG_NUMBER-$TAG_COMMENT
+	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG-N$TAG_NUMBER-$TAG_COMMENT
 fi
 export LOCALVERSION=-`echo $VERSION`
 
@@ -191,35 +225,67 @@ do
 case "$choice" in
 	"d800")
 		VARIANT="D800"
-		DEFCONFIG="d800_defconfig"
+		if [ "$ANDROID" = Nougat ]; then
+			DEFCONFIG="nougat_d800_defconfig"
+		else
+			DEFCONFIG="marshmallow_d800_defconfig"
+		fi
 		break;;
 	"d801")
 		VARIANT="D801"
-		DEFCONFIG="d801_defconfig"
+		if [ "$ANDROID" = Nougat ]; then
+			DEFCONFIG="nougat_d801_defconfig"
+		else
+			DEFCONFIG="marshmallow_d801_defconfig"
+		fi
 		break;;
 	"d802")
 		VARIANT="D802"
-		DEFCONFIG="d802_defconfig"
+		if [ "$ANDROID" = Nougat ]; then
+			DEFCONFIG="nougat_d802_defconfig"
+		else
+			DEFCONFIG="marshmallow_d802_defconfig"
+		fi
 		break;;
 	"d803")
 		VARIANT="D803"
-		DEFCONFIG="d803_defconfig"
+		if [ "$ANDROID" = Nougat ]; then
+			DEFCONFIG="nougat_d803_defconfig"
+		else
+			DEFCONFIG="marshmallow_d803_defconfig"
+		fi
 		break;;
 	"f320")
 		VARIANT="F320"
-		DEFCONFIG="f320_defconfig"
+		if [ "$ANDROID" = Nougat ]; then
+			DEFCONFIG="nougat_f320_defconfig"
+		else
+			DEFCONFIG="marshmallow_f320_defconfig"
+		fi
 		break;;
 	"l01f")
 		VARIANT="L01F"
-		DEFCONFIG="l01f_defconfig"
+		if [ "$ANDROID" = Nougat ]; then
+			DEFCONFIG="nougat_l01f_defconfig"
+		else
+			DEFCONFIG="marshmallow_l01f_defconfig"
+		fi
 		break;;
 	"ls980")
 		VARIANT="LS980"
-		DEFCONFIG="ls980_defconfig"
+		if [ "$ANDROID" = Nougat ]; then
+			DEFCONFIG="nougat_ls980_defconfig"
+		else
+			DEFCONFIG="marshmallow_ls980_defconfig"
+		fi
 		break;;
 	"vs980")
 		VARIANT="VS980"
-		DEFCONFIG="vs980_defconfig"
+		if [ "$ANDROID" = Nougat ]; then
+			DEFCONFIG="nougat_vs980_defconfig"
+		else
+			DEFCONFIG="marshmallow_vs980_defconfig"
+		fi
 		break;;
 esac
 done
@@ -229,6 +295,7 @@ echo "You are going to build $VERSION for the $VARIANT variant."
 echo ""
 
 echo "Which toolchain you would like to use?"
+echo -e ${red}"WARNING: Linaro 4.9 is not supported anymore, use it as a template only!"${restore}
 select choice in Linaro-4.9 Dorimanx-5.3
 do
 case "$choice" in
@@ -248,11 +315,10 @@ done
 
 echo ""
 echo "You have chosen to use $TOOLCHAIN."
-echo ""
 
 echo
 
-while read -p "Are you ready to start (y/n)? " dchoice
+while read -p "Are you ready to start (Y/N)? " dchoice
 do
 case "$dchoice" in
 	y|Y)

@@ -9,9 +9,9 @@ Information
 -------------------------
 
 - Linux version: **3.4.112**
-- Linaro LTS toolchain: **GCC 4.9**
 - Dorimanx's toolchain: **GCC 5.3**
-- **AnyKernel2** packager
+- Android version: **Marhsmallow**/**Nougat**
+- Packager: **AnyKernel2**
 
 Dependencies
 -------------------------
@@ -50,41 +50,48 @@ Since you need to **compile** the Kernel yourself when _chrooting_ in the core o
 Compilation
 -------------------------
 
-Create a development folder if you don't have it already.
+Create a development folder if you don't have one yet.
 
-	mkdir Development && cd Development
+	mkdir Development && cd Development # Name it as you'd like, this is not hardcoded.
 
 Create the kernel folder inside the development folder.
 
-	mkdir kernel
+	mkdir -p kernel/lambda # To avoid conflicts with any other kernel you might already have.
+	cd kernel/lambda
 
-Clone the kernel repository.
+Clone this kernel repository.
 
 	git clone https://github.com/GalaticStryder/kernel_lge_msm8974 lge_msm8974
 
-Before going any further, you'll need to download the utilities and toolchains.
+Before going any further, you'll need to download the __anykernel__ packager.
 
 	git clone https://github.com/GalaticStryder/anykernel_lge_msm8974 anykernel
-	mkdir toolchains
-	cd toolchains
-	git clone https://github.com/Christopher83/arm-cortex_a15-linux-gnueabihf-linaro_4.9 linaro/4.9
-	# OBS: Dorimanx's toolchain is hosted in his own LG G2 kernel, you'll need a little extra pain to get it, although I'll explain further.
 
-Now, you can go back to the kernel directory and then step forward for compilation.
+And then, download the **GCC compiler**. Also known as **toolchain**.
 
-	cd ../lge_msm8974
-	mkdir store # This is where the builds will be stored.
-	./build-anykernel
+A fair advise, the current state of **Lambda Kernel** on this particular device will not allow the usage of old toolchains. Though you can use this **Linaro 4.9** __example__ to download your own **custom** toolchain.
 
-Follow the on-screen guide to compile your variant.
+	mkdir -p toolchains/linaro/4.9
+	git clone https://github.com/Christopher83/arm-cortex_a15-linux-gnueabihf-linaro_4.9 toolchains/linaro/4.9 # Don't follow this command at all!
 
-If you want to use Dorimanx's toolchain, you'll need to:
+Modify the **build-anykernel** script to point to your custom toolchain following the Linaro 4.9 **example** as well.
 
+The **"right"** toolchain we use for this particular device comes from @dorimanx, you must use it as of now.
+
+	# OBS: Dorimanx's toolchain is hosted in his own LG G2 kernel.
+	cd lge_msm8974
 	git remote add dorimanx https://github.com/dorimanx/DORIMANX_LG_STOCK_LP_KERNEL
 	git fetch dorimanx master
-	git checkout dorimanx/master
+	git checkout dorimanx/master # This will get into dorimanx kernel tree.
 	cp -R android-toolchain/ ../toolchains/
 	mv ../toolchains/android-toolchain ../toolchains/dorimanx # This is just a renaming method.
+	git checkout lambda # This will get into lambda kernel tree back again.
+
+Finally everything will be settled down and ready to compile. Run:
+
+	./build-anykernel
+
+Follow the on-screen guide to compile your variant for a given Android version.
 
 Mentions
 -------------------------

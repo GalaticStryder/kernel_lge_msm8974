@@ -32,6 +32,7 @@ if [ -z "$sdate" ]; then
 fi
 
 # Find the directories to log
+project="Lambda Kernel"
 echo "Starting date picking based on the input date..."
 find $rdir -name .git | sed 's/\/.git//g' | sed 'N;$!P;$!D;$d' | while read line
 do
@@ -52,5 +53,10 @@ echo "" >> "$rdir"/changelog_$cdate.log
     fi
 done
 echo -e "${red}"
-echo "Changelog script for Lambda Kernel has finished."
+echo "                 \                  "
+echo "                 /\                 "
+echo "                /  \                "
+echo "               /    \               "
+echo ''
+echo "Changelog for $project has been written to "$rdir"/changelog_$cdate.log"
 echo -e "${restore}"
