@@ -29,9 +29,11 @@
 #define SOUND_CONTROL_MINOR_VERSION	8
 
 #ifdef CONFIG_MACH_LGE
-static int lge_snd_ctrl_locked = 0;
+/* Set STweaks interface disabled by befault. */
 static int lge_stweaks_control = 0;
-int lge_snd_pa_ctrl_locked = 0;
+/* Lock controllers for LG interface. */
+static int lge_snd_ctrl_locked = 1;
+int lge_snd_pa_ctrl_locked = 1;
 #endif
 
 extern struct snd_soc_codec *fauxsound_codec_ptr;
@@ -41,6 +43,7 @@ static int wcd9xxx_hw_revision = 1;
 extern int wcd9xxx_hw_revision;
 #endif
 
+/* Unlock controllers for regular interface. */
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
 
@@ -58,7 +61,7 @@ int taiko_write(struct snd_soc_codec *codec, unsigned int reg,
  * In-call microphone: 3
  * Camera microphone: 3
  */
-static int cached_regs[] = {5, 5, -1, -1, 2, 2, -1, -1, -1, -1,
+static int cached_regs[] = {-1, -1, -1, -1, 2, 2, -1, -1, -1, -1,
 			4, -1, -1, -1, -1, -1, 3, 3, -1, -1,
 			-1, -1, -1, -1, -1};
 #else
@@ -244,6 +247,7 @@ int snd_hax_reg_access(unsigned int reg)
 	int ret = 1;
 
 	switch (reg) {
+#if 0 /* Causes controller to stall on LA.BF.1.1.3 HALs. */
 		/* Analog power amplifier */
 		case TAIKO_A_RX_HPH_L_GAIN:
 		case TAIKO_A_RX_HPH_R_GAIN:
@@ -253,6 +257,7 @@ int snd_hax_reg_access(unsigned int reg)
 #endif
 		case TAIKO_A_RX_HPH_L_STATUS:
 		case TAIKO_A_RX_HPH_R_STATUS:
+#endif
 #ifdef CONFIG_MACH_LGE
 			if (lge_snd_ctrl_locked > 0)
 				ret = 0;
