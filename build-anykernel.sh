@@ -1,10 +1,13 @@
 #!/bin/bash
 #
+# Copyright - Ícaro Hoff <icarohoff@gmail.com>
 #
-#  An automated build script for Lambda Kernel written in bash.
-#  Based off AK's and Render's build script - Danke!
+#              \
+#              /\
+#             /  \
+#            /    \
 #
-export SCRIPT_VERSION="2.2 (Lame it on Xopata)"
+export SCRIPT_VERSION="2.3 (Jumpy Mountain Poney)"
 
 # Bash color
 green='\033[01;32m'
@@ -196,6 +199,7 @@ BUILD_DATE=$(date -u +%m%d%Y)
 if [ "$STATE" = stable ]; then
 	TAG="Stable"
 	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG
+	export LOCALVERSION=-$NAME-$RELEASE-$TAG
 fi
 if [ "$STATE" = beta ]; then
 	TAG="Beta"
@@ -204,6 +208,7 @@ if [ "$STATE" = beta ]; then
 	TAG_NUMBER="$tag_number"
 	echo ""
 	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG-N$TAG_NUMBER
+	export LOCALVERSION=-$NAME-$RELEASE-$TAG-N$TAG_NUMBER
 fi
 if [ "$STATE" = experimental ]; then
 	TAG="Experimental"
@@ -216,8 +221,8 @@ if [ "$STATE" = experimental ]; then
 	TAG_COMMENT="$tag_comment"
 	echo ""
 	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG-N$TAG_NUMBER-$TAG_COMMENT
+	export LOCALVERSION=-$NAME-$RELEASE-$TAG-N$TAG_NUMBER-$TAG_COMMENT
 fi
-export LOCALVERSION=-`echo $VERSION`
 
 echo "Would you mind picking an LG G2 variant?"
 select choice in d800 d801 d802 d803 f320 l01f ls980 vs980
@@ -296,15 +301,15 @@ echo ""
 
 echo "Which toolchain you would like to use?"
 echo -e ${red}"WARNING: Linaro 4.9 is not supported anymore, use it as a template only!"${restore}
-select choice in Linaro-4.9 Dorimanx-5.3
+select choice in Linaro-4.9 Dorimanx-5.4
 do
 case "$choice" in
 	"Linaro-4.9")
 		export TOOLCHAIN="Linaro 4.9"
 		export CROSS_COMPILE="${LINARO_DIR}/4.9/bin/arm-eabi-"
 		break;;
-	"Dorimanx-5.3")
-		export TOOLCHAIN="Dorimanx 5.3"
+	"Dorimanx-5.4")
+		export TOOLCHAIN="Dorimanx 5.4"
 		export CROSS_COMPILE="${DORIMANX_DIR}/bin/arm-eabi-"
 		export SYSROOT="${DORIMANX_DIR}/arm-LG-linux-gnueabi/sysroot/"
 		export CC="${DORIMANX_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"

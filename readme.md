@@ -9,8 +9,8 @@ Information
 -------------------------
 
 - Linux version: **3.4.112**
-- Dorimanx's toolchain: **GCC 5.3**
-- Android version: **Marhsmallow**/**Nougat**
+- Dorimanx's toolchain: **GCC 5.4**
+- Android targets: **Marhsmallow** - **Nougat**
 - Packager: **AnyKernel2**
 
 Dependencies
@@ -69,17 +69,18 @@ Before going any further, you'll need to download the __anykernel__ packager.
 
 And then, download the **GCC compiler**. Also known as **toolchain**.
 
-A fair advise, the current state of **Lambda Kernel** on this particular device will not allow the usage of old toolchains. Though you can use this **Linaro 4.9** __example__ to download your own **custom** toolchain.
+A fair advise, the current state of **Lambda Kernel** on this particular device will not allow the usage of old toolchains. Though you can use this **Linaro 4.9** __example__ to download your own **custom** toolchain. If I were you I'd just skip to the next instruction block.
 
 	mkdir -p toolchains/linaro/4.9
 	git clone https://github.com/Christopher83/arm-cortex_a15-linux-gnueabihf-linaro_4.9 toolchains/linaro/4.9 # Don't follow this command at all!
 
 Modify the **build-anykernel** script to point to your custom toolchain following the Linaro 4.9 **example** as well.
 
-The **"right"** toolchain we use for this particular device comes from @dorimanx, you must use it as of now.
+The **"right"** toolchain we use for this particular device comes from **@dorimanx**, you **must** use it as of now.
 
 	# OBS: Dorimanx's toolchain is hosted in his own LG G2 kernel.
 	cd lge_msm8974
+	mkdir -p ../toolchains
 	git remote add dorimanx https://github.com/dorimanx/DORIMANX_LG_STOCK_LP_KERNEL
 	git fetch dorimanx master
 	git checkout dorimanx/master # This will get into dorimanx kernel tree.
@@ -87,7 +88,7 @@ The **"right"** toolchain we use for this particular device comes from @dorimanx
 	mv ../toolchains/android-toolchain ../toolchains/dorimanx # This is just a renaming method.
 	git checkout lambda # This will get into lambda kernel tree back again.
 
-Finally everything will be settled down and ready to compile. Run:
+Finally everything will be settled down and ready to compile. **Run**:
 
 	./build-anykernel
 
