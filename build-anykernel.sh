@@ -36,7 +36,7 @@ TOOLCHAINS_DIR="${KERNEL_DIR}/../toolchains"
 LINARO_DIR="${TOOLCHAINS_DIR}/linaro"
 DORIMANX_DIR="${TOOLCHAINS_DIR}/dorimanx"
 PATCH_DIR="${REPACK_DIR}/patch"
-MODULES_DIR="${REPACK_DIR}/modules"
+MODULES_DIR="${REPACK_DIR}/ramdisk/lib/modules"
 ZIP_MOVE="${KERNEL_DIR}/store"
 ZIMAGE_DIR="${KERNEL_DIR}/arch/arm/boot"
 
@@ -204,7 +204,6 @@ BUILD_DATE=$(date -u +%m%d%Y)
 if [ "$STATE" = stable ]; then
 	TAG="Stable"
 	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG
-	export LOCALVERSION=-$NAME-$RELEASE-$TAG
 fi
 if [ "$STATE" = beta ]; then
 	TAG="Beta"
@@ -213,7 +212,6 @@ if [ "$STATE" = beta ]; then
 	TAG_NUMBER="$tag_number"
 	echo ""
 	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG-N$TAG_NUMBER
-	export LOCALVERSION=-$NAME-$RELEASE-$TAG-N$TAG_NUMBER
 fi
 if [ "$STATE" = experimental ]; then
 	TAG="Experimental"
@@ -226,7 +224,6 @@ if [ "$STATE" = experimental ]; then
 	TAG_COMMENT="$tag_comment"
 	echo ""
 	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG-N$TAG_NUMBER-$TAG_COMMENT
-	export LOCALVERSION=-$NAME-$RELEASE-$TAG-N$TAG_NUMBER-$TAG_COMMENT
 fi
 
 echo "Would you mind picking an LG G2 variant?"
@@ -302,6 +299,9 @@ done
 
 echo ""
 echo "You are going to build $VERSION for the $VARIANT variant."
+# Export localversion after all dependencies.
+export LOCALVERSION=-$NAME-$RELEASE-$TAG-$VARIANT
+echo "Using the Linux tag: $LOCALVERSION."
 echo ""
 
 echo "Which toolchain you would like to use?"
