@@ -7,7 +7,7 @@
 #             /  \
 #            /    \
 #
-export SCRIPT_VERSION="2.3 (Jumpy Mountain Poney)"
+export SCRIPT_VERSION="2.4 (TWS: Two-Week Scheduler)"
 
 # Bash color
 green='\033[01;32m'
@@ -36,7 +36,7 @@ TOOLCHAINS_DIR="${KERNEL_DIR}/../toolchains"
 LINARO_DIR="${TOOLCHAINS_DIR}/linaro"
 DORIMANX_DIR="${TOOLCHAINS_DIR}/dorimanx"
 PATCH_DIR="${REPACK_DIR}/patch"
-MODULES_DIR="${REPACK_DIR}/ramdisk/lib/modules"
+MODULES_DIR="${REPACK_DIR}/modules"
 ZIP_MOVE="${KERNEL_DIR}/store"
 ZIMAGE_DIR="${KERNEL_DIR}/arch/arm/boot"
 
@@ -109,6 +109,11 @@ function copy_modules {
 	chmod 755 $MODULES_DIR/*
 	$STRIP --strip-unneeded $MODULES_DIR/* 2>/dev/null
 	$STRIP --strip-debug $MODULES_DIR/* 2>/dev/null
+}
+
+function changelog {
+	sh changelog.sh > /dev/null 2>&1 # Suppressed, 47!
+	cp changelog.txt $REPACK_DIR/ramdisk/sbin/changelog.txt
 }
 
 function make_zip {
@@ -329,11 +334,13 @@ case "$dchoice" in
 	y|Y)
 		prepare_all
 		echo
+		echo "Flowing..."
 		checkout_branches
 		count_cpus
 		make_me
 		make_dtb
 		copy_modules
+		changelog
 		make_zip
 		generate_md5
 		break

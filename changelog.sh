@@ -1,10 +1,16 @@
-#!/bin/sh
-
-sdate=${1}
-cdate=`date +"%m_%d_%Y"`
+#!/bin/bash
+#
+# Copyright - Ícaro Hoff <icarohoff@gmail.com>
+#
+#              \
+#              /\
+#             /  \
+#            /    \
+#
+sdate=${1};
 rdir=`pwd`
 
-rm -rf changelog_*
+rm changelog.txt
 
 clear
 
@@ -23,17 +29,15 @@ echo ''
 echo " Welcome to Lambda Kernel changelog script! "
 echo -e "${restore}"
 
-# Check the date start range is set
 if [ -z "$sdate" ]; then
-    echo "Failed!"
-    echo "Add a date in mm/dd/yyyy format to count from..."
-    echo ""
-    exit
+    echo "Counting from 2 weeks ago as per release schedule."
+    echo "You can specify a date in this format: mm/dd/yyyy."
+    echo "Example: ./changelog 05/05/2005"
+    sdate=`date --date="2 weeks ago" +"%m/%d/%Y"`
 fi
 
 # Find the directories to log
 project="Lambda Kernel"
-echo "Starting date picking based on the input date..."
 find $rdir -name .git | sed 's/\/.git//g' | sed 'N;$!P;$!D;$d' | while read line
 do
 cd $line
@@ -44,13 +48,13 @@ cd $line
     else
         # Write the changelog
         echo "Changelog was updated and written for $project..."
-        echo "Project: $project" >> "$rdir"/changelog_$cdate.log
+        echo "Project: $project" >> "$rdir"/changelog.txt
         echo "$log" | while read line
         do
-echo "$line" >> "$rdir"/changelog_$cdate.log
+echo "$line" >> "$rdir"/changelog.txt
         done
-echo "" >> "$rdir"/changelog_$cdate.log
+echo "" >> "$rdir"/changelog.txt
     fi
 done
 echo ""
-echo -e ${green}"Changelog for $project has been written to changelog_$cdate.log"${restore}
+echo -e ${green}"Changelog for $project has been written."${restore}

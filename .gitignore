@@ -91,3 +91,4 @@ arch/arm/mach-msm/smd_rpc_sym.c
 kernel/hz.bc
 /store/
 ozip/boot.img
+changelog.txt
