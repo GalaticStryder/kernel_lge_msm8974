@@ -209,7 +209,7 @@ case "$achoice" in
 	m|M)
 		echo
 		echo "Building marshmallow compatible kernel..."
-		ANDROID="Marhsmallow"
+		ANDROID="Marshmallow"
 		ANYBRANCH="marshmallow"
 		echo
 		break
@@ -225,7 +225,7 @@ case "$achoice" in
 	* )
 		echo
 		echo "Assuming marshmallow as Android version..."
-		ANDROID="Marhsmallow"
+		ANDROID="Marshmallow"
 		ANYBRANCH="marshmallow"
 		echo
 		break
