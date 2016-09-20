@@ -7,7 +7,7 @@
 #             /  \
 #            /    \
 #
-export SCRIPT_VERSION="2.4 (TWS: Two-Week Scheduler)"
+export SCRIPT_VERSION="2.5 (Device Tree Sluts)"
 
 # Bash color
 green='\033[01;32m'
@@ -20,8 +20,6 @@ clear
 
 # Resources
 THREAD="-j$(grep -c ^processor /proc/cpuinfo)"
-KERNEL="zImage"
-DTBIMAGE="dtb"
 
 # Variables
 export ARCH=arm
@@ -67,14 +65,10 @@ function checkout_branches {
 	cd $KERNEL_DIR
 }
 
-function count_cpus {
-	echo "Building kernel with $THREAD argument..."
-}
-
 function prepare_all {
 	cd $REPACK_DIR
-	rm -rf $KERNEL
-	rm -rf $DTBIMAGE
+	rm -f zImage
+	rm -f dt.img
 	if [ ! -d $MODULES_DIR ]; then
 		mkdir -p $MODULES_DIR;
 	fi;
@@ -82,24 +76,26 @@ function prepare_all {
 		rm -f "$i";
 	done;
 	cd $KERNEL_DIR
-	rm -f $KERNEL_DIR/arch/arm/boot/*.dtb
-	rm -f $KERNEL_DIR/arch/arm/boot/*.cmd
-	rm -f $KERNEL_DIR/arch/arm/boot/zImage
-	rm -f $KERNEL_DIR/arch/arm/boot/Image
+	rm -f arch/arm/boot/*.dtb
+	rm -f arch/arm/boot/*.cmd
+	rm -f arch/arm/boot/zImage
+	rm -f arch/arm/boot/Image
 	make clean && make mrproper
 	echo
 	echo "Everything is ready to start..."
 }
 
-function make_me {
+function make_zImage {
+	cd $KERNEL_DIR # Just in case!
 	echo
 	make $DEFCONFIG
-	make $THREAD
-	cp -vr $ZIMAGE_DIR/$KERNEL $REPACK_DIR
+	make zImage-dtb $THREAD
+	make modules $THREAD
+	cp -f arch/arm/boot/zImage $REPACK_DIR/zImage
 }
 
-function make_dtb {
-	$REPACK_DIR/tools/dtbToolCM -2 -o $REPACK_DIR/$DTBIMAGE -s 2048 -p scripts/dtc/ arch/arm/boot/
+function create_dtimg {
+	$REPACK_DIR/tools/dtbToolCM -v -s 2048 -o $REPACK_DIR/dt.img arch/arm/boot/
 }
 
 function copy_modules {
@@ -131,7 +127,6 @@ function generate_md5 {
 
 
 DATE_START=$(date +"%s")
-
 echo -e "${red}"
 echo "                   \                    "
 echo "                   /\                   "
@@ -299,7 +294,6 @@ done
 
 echo ""
 echo "You are going to build $VERSION for the $VARIANT variant."
-# Export localversion after all dependencies.
 export LOCALVERSION=-$NAME-$RELEASE-$TAG-$VARIANT
 echo "Using the Linux tag: $LOCALVERSION."
 echo ""
@@ -336,9 +330,9 @@ case "$dchoice" in
 		echo
 		echo "Flowing..."
 		checkout_branches
-		count_cpus
-		make_me
-		make_dtb
+		echo "Building kernel with $THREAD argument..."
+		make_zImage
+		create_dtimg
 		copy_modules
 		changelog
 		make_zip
