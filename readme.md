@@ -69,6 +69,8 @@ You can also punch everything into one single command, compat or declare the ebu
 Compilation
 -------------------------
 
+###### Obligatory
+
 Create a development folder if you don't have one yet.
 
 	mkdir Development && cd Development # Name it as you'd like, this is not hardcoded.
@@ -78,22 +80,34 @@ Create the kernel folder inside the development folder.
 	mkdir -p kernel/lambda # To avoid conflicts with any other kernel you might already have.
 	cd kernel/lambda
 
-Clone this kernel repository.
+We have an automated downloader script to get everything needed per **Android** version to be checked out after sync. Currently, anykernel is the only repo that benefits of this branch selector since the kernel is **common** for all both **Android** versions.
 
-	git clone https://github.com/GalaticStryder/kernel_lge_msm8974 lge_msm8974
+	curl https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/886ff1cc57a0f19b7af71a22e3d14861ad394be0/sync-lambda.sh | sh
 
-Before going any further, you'll need to download the __anykernel__ packager.
+###### Optional
 
-	git clone https://github.com/GalaticStryder/anykernel_lge_msm8974 anykernel
+This script uses **HTTPS** protocol. It's also possible that you want to use **git**. You'll need to **wget** the script locally and edit to use that protocol.
 
-And then, download the **GCC compiler**. Also known as **toolchain**.
+	wget https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/886ff1cc57a0f19b7af71a22e3d14861ad394be0/sync-lambda.sh
+	chmod sync-lambda.sh
+	$EDITOR sync-lambda.sh
 
-A fair advise, the current state of **Lambda Kernel** on this particular device will not allow the usage of old toolchains. Though you can use this **Linaro 4.9** __example__ to download your own **custom** toolchain. If I were you I'd just skip to the next instruction block.
+Change the __https://github.com/__ to __git@github.com:__ in both cloning processes.
+
+###### Obligatory
+
+And then finally, download the **GCC compiler**. Also known as **toolchain**.
+
+###### Example
+
+A fair advise, the current state of **Lambda Kernel** on this particular device **will not** allow the usage of old toolchains. Though you can use this **Linaro 4.9** __example__ to download your own **custom** toolchain. If I were you I'd just skip to the next instruction block.
 
 	mkdir -p toolchains/linaro/4.9
 	git clone https://github.com/Christopher83/arm-cortex_a15-linux-gnueabihf-linaro_4.9 toolchains/linaro/4.9 # Don't follow this command at all!
 
 Modify the **build-anykernel** script to point to your custom toolchain following the Linaro 4.9 **example** as well.
+
+###### Obligatory
 
 The **"right"** toolchain we use for this particular device comes from **@dorimanx**, you **must** use it as of now.
 
@@ -111,19 +125,21 @@ Finally everything will be settled down and ready to compile, just **run**:
 
 	./build-anykernel.sh
 
-Follow the on-screen guide to compile your variant for a given Android version.
+Follow the on-screen guide to compile your variant for a given **Android** version compatibility.
 
-Mentions
+Contributors
 -------------------------
 
+The developers and users that helped with the __**Lambda Kernel project**__.
+
 - savoca
+- blastagator
 - myfluxi
 - dorimanx
-- bbedward
+- bamonkey
 - alucard24
 - neobuddy89
 - sultanxda
-- humberos
 - showp1984
 - faux123
 
