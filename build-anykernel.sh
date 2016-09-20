@@ -76,7 +76,6 @@ function ccache_setup {
 }
 
 function clean_ccache {
-	echo
 	echo -e ${red}"WARNING: If you are compiling between variants, clean it!"${restore}
 	while read -t 15 -p "Would you like to clean ccache (Y/N)? " cchoice
 	do
@@ -91,6 +90,7 @@ function clean_ccache {
 		n|N)
 			echo
 			echo "Using stored ccache nodes..."
+			echo
 			break
 			;;
 		* )
@@ -360,11 +360,11 @@ echo "You have chosen to use $TOOLCHAIN."
 
 echo
 
+clean_ccache
 while read -p "Are you ready to start (Y/N)? " dchoice
 do
 case "$dchoice" in
 	y|Y)
-		clean_ccache
 		prepare_all
 		echo
 		echo "Flowing..."
