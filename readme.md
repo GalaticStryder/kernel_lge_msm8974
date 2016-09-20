@@ -28,6 +28,10 @@ It's worth installing **ncurses** in case you want to change the configuration f
 
 	sudo dnf install ncurses-devel
 
+You might also need some compression and device tree tools like lz4, ccache and dtc.
+
+	sudo dnf install lz4 lz4-devel dtc ccache
+
 ###### Ubuntu/Debian
 
 I don't use Ubuntu but the dependencies are generically the same with a couple differences in naming or versioning. In Ubuntu, you will need to setup source dependencies by going to **System Settings > Software and Update** and then checking the box for source code. The basic set of programs needed might be achieved with the following command.
@@ -43,10 +47,24 @@ If you're running Arch Linux you probably already have the dependencies needed, 
 
 If you really follow the K.I.S.S. principle you'll probably only need the **base-devel** and it's present in 99% of the installations.
 
+As of now, fully cacche support must be present to compile the kernel as well as the device tree parser. Also, if the host kernel was not compressed with lz4, you might not have that package installed, install it if you don't.
+
+	sudo pacman -S dtc ccache lz4
+
 ###### Unconventional
 
 Distributions of **GNU/Linux** that I call _unconventional_: **Funtoo**, **Gentoo**, **Sabayon** and **Slackware**. They can also be called as source based distros.
 Since you need to **compile** the Kernel yourself when _chrooting_ in the core of the system, the dependencies were already pulled and compiled during the installation.
+
+Here's a brief exchange of the tools you'll need on **Gentoo**:
+
+	su
+	emerge --sync
+	emerge ccache # Located in dev-util/ccache.
+	emerge lz4 # Located in app-arch/lz4.
+	emerge dtc # Located in sys-apps/dtc.
+
+You can also punch everything into one single command, compat or declare the ebuild path at will. It's up to you.
 
 Compilation
 -------------------------
