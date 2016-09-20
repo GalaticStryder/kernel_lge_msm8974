@@ -30,10 +30,10 @@ It's worth installing **ncurses** in case you want to change the configuration f
 
 ###### Ubuntu/Debian
 
-I don't use Ubuntu but the dependencies are generically the same with a couple differences in naming or versioning. The basic set of programs needed might be achieved with the following command.
+I don't use Ubuntu but the dependencies are generically the same with a couple differences in naming or versioning. In Ubuntu you will need to setup Source dependencies by going to System Settings > Software and Update and then checking the box for Source code. The basic set of programs needed might be achieved with the following command.
 
-	sudo apt-get install build-essential libncurses5 libncurses5-dev libelf-dev binutils-dev build-dep
-
+	sudo apt-get install build-essential libncurses5 libncurses5-dev libelf-dev binutils-dev liblz4-tool ccache device-tree-compiler open-jdk-8-jdk git
+	sudo apt-get build-dep build-essential libncurses5 libncurses5-dev libelf-dev binutils-dev #this step may be needed for VM enviroments.
 ###### Arch Linux
 
 If you're running Arch Linux you probably already have the dependencies needed, in any case you can install them running:
@@ -90,7 +90,7 @@ The **"right"** toolchain we use for this particular device comes from **@dorima
 
 Finally everything will be settled down and ready to compile. **Run**:
 
-	./build-anykernel
+	./build-anykernel #add .sh to the end of this if using Ubuntu.
 
 Follow the on-screen guide to compile your variant for a given Android version.
 
