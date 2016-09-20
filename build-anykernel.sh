@@ -7,7 +7,7 @@
 #             /  \
 #            /    \
 #
-export SCRIPT_VERSION="2.5 (Device Tree Sluts)"
+export SCRIPT_VERSION="2.6 (Kashimira ist Marracache)"
 
 # Bash color
 green='\033[01;32m'
@@ -24,8 +24,6 @@ THREAD="-j$(grep -c ^processor /proc/cpuinfo)"
 # Variables
 export ARCH=arm
 export SUBARCH=arm
-export KBUILD_BUILD_USER=galatic
-export CCACHE=ccache
 
 # Paths
 KERNEL_DIR=`pwd`
@@ -52,6 +50,11 @@ function check_folders {
 		echo "";
 		exit;
 	fi;
+	if [ ! -d $CCACHE_DIR ]; then
+		echo "Could not find the ccache directory. Creating..."
+		mkdir -p $CCACHE_DIR;
+		echo ""
+	fi;
 	if [ ! -d $ZIP_MOVE ]; then
 		echo "Could not find store folder. Creating..."
 		mkdir -p $ZIP_MOVE;
@@ -63,6 +66,40 @@ function checkout_branches {
 	cd $REPACK_DIR
 	git checkout $ANYBRANCH
 	cd $KERNEL_DIR
+}
+
+function ccache_setup {
+	export USE_CCACHE="1" # Force the use of cache.
+	echo "Cache information:"
+	ccache -s
+	echo
+}
+
+function clean_ccache {
+	echo
+	echo -e ${red}"WARNING: If you are compiling between variants, clean it!"${restore}
+	while read -t 15 -p "Would you like to clean ccache (Y/N)? " cchoice
+	do
+	case "$cchoice" in
+		y|Y)
+			echo
+			echo "Cleaning ccache and stats..."
+			ccache -C -z
+			echo
+			break
+			;;
+		n|N)
+			echo
+			echo "Using stored ccache nodes..."
+			break
+			;;
+		* )
+			echo
+			echo "Please, type Y or N."
+			echo
+			;;
+	esac
+	done
 }
 
 function prepare_all {
@@ -137,6 +174,7 @@ echo -e " Welcome to Lambda Kernel build script  " "${restore}"
 echo -e "${green}" "Version: $SCRIPT_VERSION "
 echo -e "${restore}"
 check_folders
+ccache_setup
 
 echo "Which is the build tag?"
 select choice in Stable Beta Experimental
@@ -309,7 +347,7 @@ case "$choice" in
 		break;;
 	"Dorimanx-5.4")
 		export TOOLCHAIN="Dorimanx 5.4"
-		export CROSS_COMPILE="${DORIMANX_DIR}/bin/arm-eabi-"
+		export CROSS_COMPILE="ccache ${DORIMANX_DIR}/bin/arm-eabi-"
 		export SYSROOT="${DORIMANX_DIR}/arm-LG-linux-gnueabi/sysroot/"
 		export CC="${DORIMANX_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
 		export STRIP="${DORIMANX_DIR}/bin/arm-eabi-strip"
@@ -326,6 +364,7 @@ while read -p "Are you ready to start (Y/N)? " dchoice
 do
 case "$dchoice" in
 	y|Y)
+		clean_ccache
 		prepare_all
 		echo
 		echo "Flowing..."
