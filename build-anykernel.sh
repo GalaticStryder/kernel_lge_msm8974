@@ -24,8 +24,6 @@ THREAD="-j$(grep -c ^processor /proc/cpuinfo)"
 # Variables
 export ARCH=arm
 export SUBARCH=arm
-export KBUILD_BUILD_USER=galatic
-export CCACHE=ccache
 
 # Paths
 KERNEL_DIR=`pwd`
