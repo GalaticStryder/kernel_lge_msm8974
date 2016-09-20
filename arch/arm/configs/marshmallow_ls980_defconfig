@@ -61,23 +61,6 @@ CONFIG_RD_LZ4=y
 # CONFIG_RD_LZO is not set
 
 #
-# Lambda ~ LZ4/LZO Compression Algorithms
-#
-CONFIG_HAVE_KERNEL_LZ4=y
-# CONFIG_HAVE_KERNEL_LZO is not set
-CONFIG_KERNEL_LZ4=y
-# CONFIG_KERNEL_LZO is not set
-CONFIG_LZ4_COMPRESS=y
-# CONFIG_LZ4HC_COMPRESS is not set
-CONFIG_LZ4_DECOMPRESS=y
-# CONFIG_LZO_COMPRESS is not set
-# CONFIG_LZO_DECOMPRESS=y is not set
-CONFIG_DECOMPRESS_LZ4=y
-# CONFIG_DECOMPRESS_LZO is not set
-CONFIG_RD_LZ4=y
-# CONFIG_RD_LZO is not set
-
-#
 # Lambda ~ Timer Interrupt Frequency
 #
 # CONFIG_HZ_100 is not set
