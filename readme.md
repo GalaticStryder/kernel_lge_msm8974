@@ -80,7 +80,7 @@ Create the kernel folder inside the development folder.
 	mkdir -p kernel/lambda # To avoid conflicts with any other kernel you might already have.
 	cd kernel/lambda
 
-We have an automated downloader script to get everything needed per **Android** version to be checked out after sync. Currently, anykernel is the only repo that benefits of this branch selector since the kernel is **common** for all both **Android** versions.
+We have an automated downloader script to get everything needed per **Android** version to be checked out after sync. Currently, anykernel is the only repo that benefits of this branch selector since the kernel is **common** for both **Android** versions.
 
 	curl https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/886ff1cc57a0f19b7af71a22e3d14861ad394be0/sync-lambda.sh | sh
 
@@ -92,7 +92,7 @@ This script uses **HTTPS** protocol. It's also possible that you want to use **g
 	chmod sync-lambda.sh
 	$EDITOR sync-lambda.sh
 
-Change the __https://github.com/__ to __git@github.com:__ in both cloning processes.
+Change the "https://github.com/" to "git@github.com:" in both cloning processes.
 
 ###### Obligatory
 
@@ -127,10 +127,15 @@ Finally everything will be settled down and ready to compile, just **run**:
 
 Follow the on-screen guide to compile your variant for a given **Android** version compatibility.
 
+###### Hints
+
+When you're asked about **ccache**, __always__ type **Y** to clean it if you're going to flash that image (.zip). Otherwise, you'll end up running cached generated images instead of the runtime ones.
+This will avoid issue **#2** detailed in the **issues** tab.
+
 Contributors
 -------------------------
 
-The developers and users that helped with the __**Lambda Kernel project**__.
+The developers and users that helped with the **Lambda Kernel** project.
 
 - savoca
 - blastagator

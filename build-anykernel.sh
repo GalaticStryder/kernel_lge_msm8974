@@ -76,8 +76,9 @@ function ccache_setup {
 }
 
 function clean_ccache {
-	echo -e ${red}"WARNING: If you are compiling between variants, clean it!"${restore}
-	while read -t 15 -p "Would you like to clean ccache (Y/N)? " cchoice
+	echo -e ${green}"Type Y here if you are going to flash the generated image (.zip)."${restore}
+	echo -e ${red}"Type N here if you are just compiling to test the code and look for errors."${restore}
+	while read -p "Would you like to clean ccache (Y/N)? " cchoice
 	do
 	case "$cchoice" in
 		y|Y)
@@ -90,13 +91,16 @@ function clean_ccache {
 		n|N)
 			echo
 			echo "Using stored ccache nodes..."
+			echo "Don't flash the image (.zip) in this case!"
 			echo
 			break
 			;;
 		* )
 			echo
-			echo "Please, type Y or N."
+			echo "Cleaning ccache and stats..."
+			ccache -C -z
 			echo
+			break
 			;;
 	esac
 	done
@@ -126,8 +130,7 @@ function make_zImage {
 	cd $KERNEL_DIR # Just in case!
 	echo
 	make $DEFCONFIG
-	make zImage-dtb $THREAD
-	make modules $THREAD
+	make $THREAD
 	cp -f arch/arm/boot/zImage $REPACK_DIR/zImage
 }
 
