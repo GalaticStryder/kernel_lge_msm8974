@@ -212,6 +212,7 @@ static void *tripndroid_init_queue(struct request_queue *q)
 	td->fifo_expire[ASYNC][READ] = async_read_expire;
 	td->fifo_expire[ASYNC][WRITE] = async_write_expire;
 	td->fifo_batch = fifo_batch;
+	td->writes_starved = writes_starved;
 
 	return td;
 }
