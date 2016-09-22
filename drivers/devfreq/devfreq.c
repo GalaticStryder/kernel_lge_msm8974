@@ -1054,23 +1054,23 @@ static ssize_t show_trans_table(struct device *dev, struct device_attribute *att
 }
 
 static ssize_t show_time_in_state(struct device *dev, struct device_attribute *attr,
-                                char *buf)
+				char *buf)
 {
 	struct devfreq *devfreq = to_devfreq(dev);
-
-        ssize_t len = 0;
-        int i, err;
+	ssize_t len = 0;
+	int i, err;
 	unsigned int max_state = devfreq->profile->max_state;
 
-        err = devfreq_update_status(devfreq, devfreq->previous_freq);
-        if (err)
-                return 0;
+	err = devfreq_update_status(devfreq, devfreq->previous_freq);
 
-		for (i = 0; i < max_state; i++) {
-                len += sprintf(buf + len, "%u %u\n", devfreq->profile->freq_table[i],
-                        jiffies_to_msecs(devfreq->time_in_state[i]));
-        }
-        return len;
+	if (err)
+		return 0;
+
+	for (i = 0; i < max_state; i++) {
+		len += sprintf(buf + len, "%u %u\n", devfreq->profile->freq_table[i],
+				jiffies_to_msecs(devfreq->time_in_state[i]));
+	}
+	return len;
 }
 
 static struct device_attribute devfreq_attrs[] = {
