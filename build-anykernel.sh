@@ -31,6 +31,7 @@ REPACK_DIR="${KERNEL_DIR}/../anykernel"
 TOOLCHAINS_DIR="${KERNEL_DIR}/../toolchains"
 LINARO_DIR="${TOOLCHAINS_DIR}/linaro"
 DORIMANX_DIR="${TOOLCHAINS_DIR}/dorimanx"
+DORIMANX6_DIR="${TOOLCHAINS_DIR}/dorimanx-6.x"
 PATCH_DIR="${REPACK_DIR}/patch"
 MODULES_DIR="${REPACK_DIR}/ramdisk/lib/modules"
 ZIP_MOVE="${KERNEL_DIR}/store"
@@ -341,7 +342,7 @@ echo ""
 
 echo "Which toolchain you would like to use?"
 echo -e ${red}"WARNING: Linaro 4.9 is not supported anymore, use it as a template only!"${restore}
-select choice in Linaro-4.9 Dorimanx-5.4
+select choice in Linaro-4.9 Dorimanx-5.4 Dorimanx-6.1
 do
 case "$choice" in
 	"Linaro-4.9")
@@ -354,6 +355,13 @@ case "$choice" in
 		export SYSROOT="${DORIMANX_DIR}/arm-LG-linux-gnueabi/sysroot/"
 		export CC="${DORIMANX_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
 		export STRIP="${DORIMANX_DIR}/bin/arm-eabi-strip"
+		break;;
+	"Dorimanx-6.1")
+		export TOOLCHAIN="Dorimanx 6.1"
+		export CROSS_COMPILE="ccache ${DORIMANX6_DIR}/bin/arm-eabi-"
+		export SYSROOT="${DORIMANX6_DIR}/arm-LG-linux-gnueabi/sysroot/"
+		export CC="${DORIMANX6_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
+		export STRIP="${DORIMANX6_DIR}/bin/arm-eabi-strip"
 		break;;
 esac
 done
