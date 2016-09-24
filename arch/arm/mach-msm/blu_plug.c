@@ -21,7 +21,9 @@
 #include <linux/sched.h>
 #include <linux/timer.h>
 #include <linux/cpufreq.h>
-#include <linux/fb.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
 #include <linux/delay.h>
 #include <linux/slab.h>
 
@@ -51,8 +53,9 @@ static unsigned int plug_threshold[MAX_ONLINE] = {[0 ... MAX_ONLINE-1] = DEF_PLU
 static struct delayed_work dyn_work;
 static struct workqueue_struct *dyn_workq;
 static struct work_struct suspend, resume;
+#ifdef CONFIG_STATE_NOTIFIER
 static struct notifier_block notify;
-
+#endif
 
 /* Bring online each possible CPU up to max_online cores */
 static inline void up_all(void)
@@ -199,30 +202,27 @@ static __ref void dyn_lcd_resume(struct work_struct *work)
 	queue_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(delay));
 }
 
-static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
+#ifdef CONFIG_STATE_NOTIFIER
+static int state_notifier_callback(struct notifier_block *this,
+				unsigned long event, void *data)
 {
-	struct fb_event *evdata = data;
-	int *blank;
+	if (!blu_plug_enabled)
+		return NOTIFY_OK;
 
-	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
-		blank = evdata->data;
-		switch (*blank) {
-			case FB_BLANK_UNBLANK:
-				//display on
-				queue_work_on(0, dyn_workq, &resume);
-				break;
-			case FB_BLANK_POWERDOWN:
-			case FB_BLANK_HSYNC_SUSPEND:
-			case FB_BLANK_VSYNC_SUSPEND:
-			case FB_BLANK_NORMAL:
-				//display off
-				queue_work_on(0, dyn_workq, &suspend);
-				break;
-		}
+	switch (event) {
+		case STATE_NOTIFIER_ACTIVE:
+			queue_work_on(0, dyn_workq, &resume);
+			break;
+		case STATE_NOTIFIER_SUSPEND:
+			queue_work_on(0, dyn_workq, &suspend);
+			break;
+		default:
+			break;
 	}
 
-	return 0;
+	return NOTIFY_OK;
 }
+#endif
 
 /******************** Module parameters *********************/
 
@@ -400,9 +400,12 @@ static int dyn_hp_init(void)
 		return 0;
 		pr_info("%s: disabled\n", __func__);
 	}
-	notify.notifier_call = fb_notifier_callback;
-	if (fb_register_client(&notify) != 0)
-		pr_info("%s: Failed to register FB notifier callback\n", __func__);
+#ifdef CONFIG_STATE_NOTIFIER
+	notify.notifier_call = state_notifier_callback;
+	if (state_register_client(&notify))
+		pr_err("%s: Failed to register state notifier callback\n",
+			__func__);
+#endif
 	
 	dyn_workq = alloc_workqueue("dyn_hotplug_workqueue", WQ_HIGHPRI | WQ_FREEZABLE, 0);
 	if (!dyn_workq)
@@ -421,7 +424,9 @@ static int dyn_hp_init(void)
 static void dyn_hp_exit(void)
 {
 	cancel_delayed_work_sync(&dyn_work);
-	fb_unregister_client(&notify);
+#ifdef CONFIG_STATE_NOTIFIER
+	state_unregister_client(&notify);
+#endif
 	destroy_workqueue(dyn_workq);
 	
 	pr_info("%s: deactivated\n", __func__);

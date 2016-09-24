@@ -11,6 +11,5 @@ unsigned int cpufreq_get_max(unsigned int cpu);
 unsigned int cpufreq_get_min(unsigned int cpu);
 unsigned int cpuinfo_get_max(unsigned int cpu);
 unsigned int cpuinfo_get_min(unsigned int cpu);
-unsigned int cpufreq_quick_get_util(unsigned int cpu);
 
 #endif /* __LINUX_MSM_LIMITER_H */
