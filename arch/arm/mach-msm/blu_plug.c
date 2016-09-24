@@ -52,13 +52,10 @@ static unsigned int plug_threshold[MAX_ONLINE] = {[0 ... MAX_ONLINE-1] = DEF_PLU
 
 static struct delayed_work dyn_work;
 static struct workqueue_struct *dyn_workq;
-static struct work_struct suspend, resume;
-#ifdef CONFIG_STATE_NOTIFIER
 static struct notifier_block notify;
-#endif
 
 /* Bring online each possible CPU up to max_online cores */
-static inline void up_all(void)
+static __ref void up_all(void)
 {
 	unsigned int cpu;
 
@@ -70,7 +67,7 @@ static inline void up_all(void)
 }
 
 /* Put offline each possible CPU down to min_online threshold */
-static inline void down_all(void)
+static void down_all(void)
 {
 	unsigned int cpu;
 
@@ -80,7 +77,7 @@ static inline void down_all(void)
 }
 
 /* Iterate through possible CPUs and bring online the first offline found */
-static inline void up_one(void)
+static __ref void up_one(void)
 {
 	unsigned int cpu;
 
@@ -152,7 +149,7 @@ out:
  * If the average load is below up_threshold offline one more CPU if the
  * down_timer has expired.
  */
-static __ref void load_timer(struct work_struct *work)
+static void load_timer(struct work_struct *work)
 {
 	unsigned int cpu;
 	unsigned int avg_load = 0;
@@ -181,28 +178,26 @@ static __ref void load_timer(struct work_struct *work)
 	queue_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(delay));
 }
 
+#ifdef CONFIG_STATE_NOTIFIER
+static void blu_plug_suspend(void)
+{
+	int cpu;
 
-/* On suspend put offline all cores except cpu0*/
-static void dyn_lcd_suspend(struct work_struct *work)
-{	
-	unsigned int cpu;
-	
 	cancel_delayed_work_sync(&dyn_work);
 
-	for_each_online_cpu(cpu)
-		if (cpu && num_online_cpus() > max_cores_screenoff)
+	for_each_possible_cpu(cpu) {
+		if (cpu != 0 && cpu_online(cpu)
+			&& num_online_cpus() > max_cores_screenoff)
 			cpu_down(cpu);
+	}
 }
 
-/* On resume bring online CPUs until max_online to prevent lags */
-static __ref void dyn_lcd_resume(struct work_struct *work)
+static void blu_plug_resume(void)
 {
 	up_all();
-	
-	queue_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(delay));
+	queue_delayed_work_on(0, dyn_workq, &dyn_work, delay);
 }
 
-#ifdef CONFIG_STATE_NOTIFIER
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
@@ -211,10 +206,10 @@ static int state_notifier_callback(struct notifier_block *this,
 
 	switch (event) {
 		case STATE_NOTIFIER_ACTIVE:
-			queue_work_on(0, dyn_workq, &resume);
+			blu_plug_resume();
 			break;
 		case STATE_NOTIFIER_SUSPEND:
-			queue_work_on(0, dyn_workq, &suspend);
+			blu_plug_suspend();
 			break;
 		default:
 			break;
@@ -251,7 +246,7 @@ static struct kernel_param_ops up_threshold_ops = {
 module_param_cb(up_threshold, &up_threshold_ops, &up_threshold, 0644);
 
 /* min_online */
-static __ref int set_min_online(const char *val, const struct kernel_param *kp)
+static int set_min_online(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 	unsigned int i;
@@ -279,7 +274,7 @@ static struct kernel_param_ops min_online_ops = {
 module_param_cb(min_online, &min_online_ops, &min_online, 0644);
 
 /* max_online */
-static __ref int set_max_online(const char *val, const struct kernel_param *kp)
+static int set_max_online(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 	unsigned int i;
@@ -308,7 +303,7 @@ static struct kernel_param_ops max_online_ops = {
 module_param_cb(max_online, &max_online_ops, &max_online, 0644);
 
 /* max_cores_screenoff */
-static __ref int set_max_cores_screenoff(const char *val, const struct kernel_param *kp)
+static int set_max_cores_screenoff(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 	unsigned int i;
@@ -411,8 +406,6 @@ static int dyn_hp_init(void)
 	if (!dyn_workq)
 		return -ENOMEM;
 
-	INIT_WORK(&resume, dyn_lcd_resume);
-	INIT_WORK(&suspend, dyn_lcd_suspend);
 	INIT_DELAYED_WORK(&dyn_work, load_timer);
 	queue_delayed_work_on(0, dyn_workq, &dyn_work, msecs_to_jiffies(INIT_DELAY));
 
