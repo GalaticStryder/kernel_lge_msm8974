@@ -1084,10 +1084,9 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 
 	DBG(cdev, "mtp_read(%d)\n", count);
 
-#ifdef CONFIG_USB_G_LGE_ANDROID
 	if (!dev->ep_out)
 		return -EINVAL;
-#endif
+
 	len = ALIGN(count, dev->ep_out->maxpacket);
 
 	if (len > mtp_rx_req_len)
@@ -1177,6 +1176,9 @@ static ssize_t mtp_write(struct file *fp, const char __user *buf,
 	int ret;
 
 	DBG(cdev, "mtp_write(%d)\n", count);
+
+	if (!dev->ep_in)
+		return -EINVAL;
 
 	spin_lock_irq(&dev->lock);
 	if (dev->state == STATE_CANCELED) {
