@@ -31,15 +31,15 @@
 
 #define MPDEC_TAG			"bricked_hotplug"
 #define HOTPLUG_ENABLED			0
-#define MSM_MPDEC_STARTDELAY		20000
-#define MSM_MPDEC_DELAY			130
+#define MSM_MPDEC_STARTDELAY		15000
+#define MSM_MPDEC_DELAY			100
 #define DEFAULT_MIN_CPUS_ONLINE		1
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
 #define DEFAULT_SUSPEND_DEFER_TIME	10
 #define DEFAULT_DOWN_LOCK_DUR		500
 
-#define MSM_MPDEC_IDLE_FREQ		422400
+#define MSM_MPDEC_IDLE_FREQ		499200
 
 enum {
 	MSM_MPDEC_DISABLED = 0,
@@ -259,7 +259,7 @@ static void bricked_hotplug_suspend(void)
 	mutex_unlock(&hotplug.bricked_hotplug_mutex);
 
 	if (hotplug.max_cpus_online_susp > 1) {
-		pr_info(MPDEC_TAG": Screen -> off\n");
+		pr_info(MPDEC_TAG": Screen is off\n");
 		return;
 	}
 
@@ -271,7 +271,7 @@ static void bricked_hotplug_suspend(void)
 			cpu_down(cpu);
 	}
 
-	pr_info(MPDEC_TAG": Screen -> off. Deactivated bricked hotplug. | Mask=[%d%d%d%d]\n",
+	pr_info(MPDEC_TAG": Screen is off: Deactivated bricked hotplug. | Mask=[%d%d%d%d]\n",
 			cpu_online(0), cpu_online(1), cpu_online(2), cpu_online(3));
 }
 
@@ -306,7 +306,7 @@ static void __ref bricked_hotplug_resume(void)
 	/* Resume hotplug workqueue if required */
 	if (required_reschedule) {
 		queue_delayed_work(hotplug_wq, &hotplug_work, 0);
-		pr_info(MPDEC_TAG": Screen -> on. Activated bricked hotplug. | Mask=[%d%d%d%d]\n",
+		pr_info(MPDEC_TAG": Screen is on: Activated bricked hotplug. | Mask=[%d%d%d%d]\n",
 				cpu_online(0), cpu_online(1), cpu_online(2), cpu_online(3));
 	}
 }
@@ -572,7 +572,7 @@ static ssize_t __ref store_min_cpus_online(struct device *dev,
 				continue;
 			cpu_up(cpu);
 		}
-		pr_info(MPDEC_TAG": min_cpus_online set to %u. Affected CPUs were hotplugged!\n", input);
+		pr_info(MPDEC_TAG": min_cpus_online set to %u: Affected CPUs were hotplugged!\n", input);
 	}
 
 	return count;
@@ -604,7 +604,7 @@ static ssize_t store_max_cpus_online(struct device *dev,
 				continue;
 			cpu_down(cpu);
 		}
-		pr_info(MPDEC_TAG": max_cpus set to %u. Affected CPUs were unplugged!\n", input);
+		pr_info(MPDEC_TAG": max_cpus_online set to %u: Affected CPUs were unplugged!\n", input);
 	}
 
 	return count;
@@ -794,7 +794,7 @@ static int __init msm_mpdec_init(void)
 		return ret;
 	}
 
-	pr_info(MPDEC_TAG": %s init complete.", __func__);
+	pr_info(MPDEC_TAG": %s init completed.", __func__);
 
 	return ret;
 }
