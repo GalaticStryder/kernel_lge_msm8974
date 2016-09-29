@@ -654,7 +654,7 @@ int f2fs_map_blocks(struct inode *inode, struct f2fs_map_blocks *map,
 	unsigned int maxblocks = map->m_len;
 	struct dnode_of_data dn;
 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
-	int mode = create ? ALLOC_NODE : LOOKUP_NODE_RA;
+	int mode = create ? ALLOC_NODE : LOOKUP_NODE;
 	pgoff_t pgofs, end_offset, end;
 	int err = 0, ofs = 1;
 	unsigned int ofs_in_node, last_ofs_in_node;
@@ -775,6 +775,7 @@ skip:
 		err = reserve_new_blocks(&dn, prealloc);
 		if (err)
 			goto sync_out;
+		allocated = dn.node_changed;
 
 		map->m_len += dn.ofs_in_node - ofs_in_node;
 		if (prealloc && dn.ofs_in_node != last_ofs_in_node + 1) {
@@ -1251,18 +1252,16 @@ write:
 			available_free_memory(sbi, BASE_CHECK))))
 		goto redirty_out;
 
-	/* Dentry blocks are controlled by checkpoint */
-	if (S_ISDIR(inode->i_mode)) {
-		if (unlikely(f2fs_cp_error(sbi)))
-			goto redirty_out;
-		err = do_write_data_page(&fio);
-		goto done;
-	}
-
 	/* we should bypass data pages to proceed the kworkder jobs */
 	if (unlikely(f2fs_cp_error(sbi))) {
 		SetPageError(page);
 		goto out;
+	}
+
+	/* Dentry blocks are controlled by checkpoint */
+	if (S_ISDIR(inode->i_mode)) {
+		err = do_write_data_page(&fio);
+		goto done;
 	}
 
 	if (!wbc->for_reclaim)
@@ -1302,16 +1301,8 @@ out:
 
 redirty_out:
 	redirty_page_for_writepage(wbc, page);
-	return AOP_WRITEPAGE_ACTIVATE;
-}
-
-static int __f2fs_writepage(struct page *page, struct writeback_control *wbc,
-			void *data)
-{
-	struct address_space *mapping = data;
-	int ret = mapping->a_ops->writepage(page, wbc);
-	mapping_set_error(mapping, ret);
-	return ret;
+	unlock_page(page);
+	return err;
 }
 
 /*
@@ -1320,8 +1311,7 @@ static int __f2fs_writepage(struct page *page, struct writeback_control *wbc,
  * warm/hot data page.
  */
 static int f2fs_write_cache_pages(struct address_space *mapping,
-			struct writeback_control *wbc, writepage_t writepage,
-			void *data)
+					struct writeback_control *wbc)
 {
 	int ret = 0;
 	int done = 0;
@@ -1334,10 +1324,9 @@ static int f2fs_write_cache_pages(struct address_space *mapping,
 	int cycled;
 	int range_whole = 0;
 	int tag;
-	int step = 0;
 
 	pagevec_init(&pvec, 0);
-next:
+
 	if (wbc->range_cyclic) {
 		writeback_index = mapping->writeback_index; /* prev offset */
 		index = writeback_index;
@@ -1392,9 +1381,6 @@ continue_unlock:
 				goto continue_unlock;
 			}
 
-			if (step == is_cold_data(page))
-				goto continue_unlock;
-
 			if (PageWriteback(page)) {
 				if (wbc->sync_mode != WB_SYNC_NONE)
 					f2fs_wait_on_page_writeback(page,
@@ -1407,16 +1393,11 @@ continue_unlock:
 			if (!clear_page_dirty_for_io(page))
 				goto continue_unlock;
 
-			ret = (*writepage)(page, wbc, data);
+			ret = mapping->a_ops->writepage(page, wbc);
 			if (unlikely(ret)) {
-				if (ret == AOP_WRITEPAGE_ACTIVATE) {
-					unlock_page(page);
-					ret = 0;
-				} else {
-					done_index = page->index + 1;
-					done = 1;
-					break;
-				}
+				done_index = page->index + 1;
+				done = 1;
+				break;
 			}
 
 			if (--wbc->nr_to_write <= 0 &&
@@ -1427,11 +1408,6 @@ continue_unlock:
 		}
 		pagevec_release(&pvec);
 		cond_resched();
-	}
-
-	if (step < 1) {
-		step++;
-		goto next;
 	}
 
 	if (!cycled && !done) {
@@ -1451,9 +1427,7 @@ static int f2fs_write_data_pages(struct address_space *mapping,
 {
 	struct inode *inode = mapping->host;
 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
-	bool locked = false;
 	int ret;
-	long diff;
 
 	/* deal with chardevs and other special file */
 	if (!mapping->a_ops->writepage)
@@ -1478,20 +1452,14 @@ static int f2fs_write_data_pages(struct address_space *mapping,
 
 	trace_f2fs_writepages(mapping->host, wbc, DATA);
 
-	diff = nr_pages_to_write(sbi, DATA, wbc);
-
-	if (!S_ISDIR(inode->i_mode) && wbc->sync_mode == WB_SYNC_ALL) {
-		mutex_lock(&sbi->writepages);
-		locked = true;
-	}
-	ret = f2fs_write_cache_pages(mapping, wbc, __f2fs_writepage, mapping);
-	f2fs_submit_merged_bio_cond(sbi, inode, NULL, 0, DATA, WRITE);
-	if (locked)
-		mutex_unlock(&sbi->writepages);
+	ret = f2fs_write_cache_pages(mapping, wbc);
+	/*
+	 * if some pages were truncated, we cannot guarantee its mapping->host
+	 * to detect pending bios.
+	 */
+	f2fs_submit_merged_bio(sbi, DATA, WRITE);
 
 	remove_dirty_inode(inode);
-
-	wbc->nr_to_write = max((long)0, wbc->nr_to_write - diff);
 	return ret;
 
 skip_write:

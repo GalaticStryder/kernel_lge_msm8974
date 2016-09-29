@@ -653,12 +653,23 @@ static void move_data_page(struct inode *inode, block_t bidx, int gc_type)
 			.page = page,
 			.encrypted_page = NULL,
 		};
+		bool is_dirty = PageDirty(page);
+		int err;
+
+retry:
 		set_page_dirty(page);
 		f2fs_wait_on_page_writeback(page, DATA, true);
 		if (clear_page_dirty_for_io(page))
 			inode_dec_dirty_pages(inode);
+
 		set_cold_data(page);
-		do_write_data_page(&fio);
+
+		err = do_write_data_page(&fio);
+		if (err == -ENOMEM && is_dirty) {
+			congestion_wait(BLK_RW_ASYNC, HZ/50);
+			goto retry;
+		}
+
 		clear_cold_data(page);
 	}
 out:
@@ -780,7 +791,7 @@ static int do_garbage_collect(struct f2fs_sb_info *sbi,
 	struct blk_plug plug;
 	unsigned int segno = start_segno;
 	unsigned int end_segno = start_segno + sbi->segs_per_sec;
-	int seg_freed = 0;
+	int sec_freed = 0;
 	unsigned char type = IS_DATASEG(get_seg_entry(sbi, segno)->type) ?
 						SUM_TYPE_DATA : SUM_TYPE_NODE;
 
@@ -798,6 +809,10 @@ static int do_garbage_collect(struct f2fs_sb_info *sbi,
 	blk_start_plug(&plug);
 
 	for (segno = start_segno; segno < end_segno; segno++) {
+
+		if (get_valid_blocks(sbi, segno, 1) == 0)
+			continue;
+
 		/* find segment summary of victim */
 		sum_page = find_get_page(META_MAPPING(sbi),
 					GET_SUM_BLOCK(sbi, segno));
@@ -832,22 +847,20 @@ static int do_garbage_collect(struct f2fs_sb_info *sbi,
 
 	blk_finish_plug(&plug);
 
-	if (gc_type == FG_GC) {
-		while (start_segno < end_segno)
-			if (get_valid_blocks(sbi, start_segno++, 1) == 0)
-				seg_freed++;
-	}
+	if (gc_type == FG_GC &&
+		get_valid_blocks(sbi, start_segno, sbi->segs_per_sec) == 0)
+		sec_freed = 1;
 
 	stat_inc_call_count(sbi->stat_info);
 
-	return seg_freed;
+	return sec_freed;
 }
 
 int f2fs_gc(struct f2fs_sb_info *sbi, bool sync)
 {
 	unsigned int segno;
 	int gc_type = sync ? FG_GC : BG_GC;
-	int sec_freed = 0, seg_freed;
+	int sec_freed = 0;
 	int ret = -EINVAL;
 	struct cp_control cpc;
 	struct gc_inode_list gc_list = {
@@ -883,9 +896,8 @@ gc_more:
 		goto stop;
 	ret = 0;
 
-	seg_freed = do_garbage_collect(sbi, segno, &gc_list, gc_type);
-
-	if (gc_type == FG_GC && seg_freed == sbi->segs_per_sec)
+	if (do_garbage_collect(sbi, segno, &gc_list, gc_type) &&
+			gc_type == FG_GC)
 		sec_freed++;
 
 	if (gc_type == FG_GC)

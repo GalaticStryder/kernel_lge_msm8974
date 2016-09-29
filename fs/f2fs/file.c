@@ -378,7 +378,7 @@ static loff_t f2fs_seek_block(struct file *file, loff_t offset, int whence)
 
 	for (; data_ofs < isize; data_ofs = (loff_t)pgofs << PAGE_SHIFT) {
 		set_new_dnode(&dn, inode, NULL, NULL, 0);
-		err = get_dnode_of_data(&dn, pgofs, LOOKUP_NODE_RA);
+		err = get_dnode_of_data(&dn, pgofs, LOOKUP_NODE);
 		if (err && err != -ENOENT) {
 			goto fail;
 		} else if (err == -ENOENT) {
@@ -634,7 +634,7 @@ free_partial:
 	return err;
 }
 
-int f2fs_truncate(struct inode *inode, bool lock)
+int f2fs_truncate(struct inode *inode)
 {
 	int err;
 
@@ -651,7 +651,7 @@ int f2fs_truncate(struct inode *inode, bool lock)
 			return err;
 	}
 
-	err = truncate_blocks(inode, i_size_read(inode), lock);
+	err = truncate_blocks(inode, i_size_read(inode), true);
 	if (err)
 		return err;
 
@@ -717,7 +717,7 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
 
 		if (attr->ia_size <= i_size_read(inode)) {
 			truncate_setsize(inode, attr->ia_size);
-			err = f2fs_truncate(inode, true);
+			err = f2fs_truncate(inode);
 			if (err)
 				return err;
 			f2fs_balance_fs(F2FS_I_SB(inode), true);

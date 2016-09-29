@@ -215,7 +215,7 @@ enum {
 #define BATCHED_TRIM_BLOCKS(sbi)	\
 		(BATCHED_TRIM_SEGMENTS(sbi) << (sbi)->log_blocks_per_seg)
 #define DEF_CP_INTERVAL			60	/* 60 secs */
-#define DEF_IDLE_INTERVAL		120	/* 2 mins */
+#define DEF_IDLE_INTERVAL		5	/* 5 secs */
 
 struct cp_control {
 	int reason;
@@ -820,7 +820,6 @@ struct f2fs_sb_info {
 	struct mutex cp_mutex;			/* checkpoint procedure lock */
 	struct rw_semaphore cp_rwsem;		/* blocking FS operations */
 	struct rw_semaphore node_write;		/* locking node writes */
-	struct mutex writepages;		/* mutex for writepages() */
 	wait_queue_head_t cp_wait;
 	unsigned long last_time[MAX_TIME];	/* to store time in jiffies */
 	long interval_time[MAX_TIME];		/* to store thresholds */
@@ -1196,6 +1195,10 @@ static inline void dec_valid_block_count(struct f2fs_sb_info *sbi,
 static inline void inc_page_count(struct f2fs_sb_info *sbi, int count_type)
 {
 	percpu_counter_inc(&sbi->nr_pages[count_type]);
+
+	if (count_type == F2FS_DIRTY_DATA || count_type == F2FS_INMEM_PAGES)
+		return;
+
 	set_sbi_flag(sbi, SBI_IS_DIRTY);
 }
 
@@ -1809,7 +1812,7 @@ static inline void f2fs_kvfree(void *ptr)
 int f2fs_sync_file(struct file *, loff_t, loff_t, int);
 void truncate_data_blocks(struct dnode_of_data *);
 int truncate_blocks(struct inode *, u64, bool);
-int f2fs_truncate(struct inode *, bool);
+int f2fs_truncate(struct inode *);
 int f2fs_getattr(struct vfsmount *, struct dentry *, struct kstat *);
 int f2fs_setattr(struct dentry *, struct iattr *);
 int truncate_hole(struct inode *, pgoff_t, pgoff_t);
@@ -1851,7 +1854,7 @@ struct page *init_inode_metadata(struct inode *, struct inode *,
 			const struct qstr *, struct page *);
 void update_parent_metadata(struct inode *, struct inode *, unsigned int);
 int room_for_filename(const void *, int, int);
-void f2fs_drop_nlink(struct inode *, struct inode *, struct page *);
+void f2fs_drop_nlink(struct inode *, struct inode *);
 struct f2fs_dir_entry *f2fs_find_entry(struct inode *, struct qstr *,
 							struct page **);
 struct f2fs_dir_entry *f2fs_parent_dir(struct inode *, struct page **);
