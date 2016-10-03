@@ -7,7 +7,7 @@
 #             /  \
 #            /    \
 #
-export SCRIPT_VERSION="2.6 (Kashimira ist Marracache)"
+export SCRIPT_VERSION="2.8 (Mixed Maxxtumm Tape)"
 
 # Bash color
 green='\033[01;32m'
@@ -30,10 +30,9 @@ KERNEL_DIR=`pwd`
 REPACK_DIR="${KERNEL_DIR}/../anykernel"
 TOOLCHAINS_DIR="${KERNEL_DIR}/../toolchains"
 LINARO_DIR="${TOOLCHAINS_DIR}/linaro"
-DORIMANX_DIR="${TOOLCHAINS_DIR}/dorimanx"
+DORIMANX5_DIR="${TOOLCHAINS_DIR}/dorimanx-5.x"
 DORIMANX6_DIR="${TOOLCHAINS_DIR}/dorimanx-6.x"
 PATCH_DIR="${REPACK_DIR}/patch"
-MODULES_DIR="${REPACK_DIR}/ramdisk/lib/modules"
 ZIP_MOVE="${KERNEL_DIR}/store"
 ZIMAGE_DIR="${KERNEL_DIR}/arch/arm/boot"
 
@@ -50,11 +49,6 @@ function check_folders {
 		echo "Read the readme.md for instructions.";
 		echo "";
 		exit;
-	fi;
-	if [ ! -d $CCACHE_DIR ]; then
-		echo "Could not find the ccache directory. Creating..."
-		mkdir -p $CCACHE_DIR;
-		echo ""
 	fi;
 	if [ ! -d $ZIP_MOVE ]; then
 		echo "Could not find store folder. Creating..."
@@ -111,12 +105,6 @@ function prepare_all {
 	cd $REPACK_DIR
 	rm -f zImage
 	rm -f dt.img
-	if [ ! -d $MODULES_DIR ]; then
-		mkdir -p $MODULES_DIR;
-	fi;
-	for i in $(find "$MODULES_DIR"/ -name "*.ko"); do
-		rm -f "$i";
-	done;
 	cd $KERNEL_DIR
 	rm -f arch/arm/boot/*.dtb
 	rm -f arch/arm/boot/*.cmd
@@ -137,15 +125,6 @@ function make_zImage {
 
 function create_dtimg {
 	$REPACK_DIR/tools/dtbToolCM -v -s 2048 -o $REPACK_DIR/dt.img arch/arm/boot/
-}
-
-function copy_modules {
-	for i in $(find "$KERNEL_DIR" -name '*.ko'); do
-		cp -av "$i" $MODULES_DIR/;
-	done;
-	chmod 755 $MODULES_DIR/*
-	$STRIP --strip-unneeded $MODULES_DIR/* 2>/dev/null
-	$STRIP --strip-debug $MODULES_DIR/* 2>/dev/null
 }
 
 function changelog {
@@ -178,7 +157,7 @@ echo -e " Welcome to Lambda Kernel build script  " "${restore}"
 echo -e "${green}" "Version: $SCRIPT_VERSION "
 echo -e "${restore}"
 check_folders
-ccache_setup
+#ccache_setup
 
 echo "Which is the build tag?"
 select choice in Stable Beta Experimental
@@ -351,14 +330,14 @@ case "$choice" in
 		break;;
 	"Dorimanx-5.4")
 		export TOOLCHAIN="Dorimanx 5.4"
-		export CROSS_COMPILE="ccache ${DORIMANX_DIR}/bin/arm-eabi-"
-		export SYSROOT="${DORIMANX_DIR}/arm-LG-linux-gnueabi/sysroot/"
-		export CC="${DORIMANX_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
-		export STRIP="${DORIMANX_DIR}/bin/arm-eabi-strip"
+		export CROSS_COMPILE="${DORIMANX5_DIR}/bin/arm-eabi-"
+		export SYSROOT="${DORIMANX5_DIR}/arm-LG-linux-gnueabi/sysroot/"
+		export CC="${DORIMANX5_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
+		export STRIP="${DORIMANX5_DIR}/bin/arm-eabi-strip"
 		break;;
 	"Dorimanx-6.1")
 		export TOOLCHAIN="Dorimanx 6.1"
-		export CROSS_COMPILE="ccache ${DORIMANX6_DIR}/bin/arm-eabi-"
+		export CROSS_COMPILE="${DORIMANX6_DIR}/bin/arm-eabi-"
 		export SYSROOT="${DORIMANX6_DIR}/arm-LG-linux-gnueabi/sysroot/"
 		export CC="${DORIMANX6_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
 		export STRIP="${DORIMANX6_DIR}/bin/arm-eabi-strip"
@@ -371,7 +350,7 @@ echo "You have chosen to use $TOOLCHAIN."
 
 echo
 
-clean_ccache
+#clean_ccache
 while read -p "Are you ready to start (Y/N)? " dchoice
 do
 case "$dchoice" in
@@ -383,7 +362,6 @@ case "$dchoice" in
 		echo "Building kernel with $THREAD argument..."
 		make_zImage
 		create_dtimg
-		copy_modules
 		changelog
 		make_zip
 		generate_md5
