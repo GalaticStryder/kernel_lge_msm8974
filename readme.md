@@ -9,7 +9,7 @@ Information
 -------------------------
 
 - Linux version: **3.4.112**
-- Dorimanx's toolchain: **GCC 5.4**
+- Dorimanx's toolchain: **GCC 5.4** - **GCC 6.1**
 - Android targets: **Marhsmallow** - **Nougat**
 - Packager: **AnyKernel2**
 
@@ -28,15 +28,15 @@ It's worth installing **ncurses** in case you want to change the configuration f
 
 	sudo dnf install ncurses-devel
 
-You might also need some compression and device tree tools like lz4, ccache and dtc.
+You might also need some compression and device tree tools like lz4 and dtc.
 
-	sudo dnf install lz4 lz4-devel dtc ccache
+	sudo dnf install lz4 lz4-devel dtc
 
 ###### Ubuntu/Debian
 
 I don't use Ubuntu but the dependencies are generically the same with a couple differences in naming or versioning. In Ubuntu, you will need to setup source dependencies by going to **System Settings > Software and Update** and then checking the box for source code. The basic set of programs needed might be achieved with the following command.
 
-	sudo apt-get install build-essential libncurses5 libncurses5-dev libelf-dev binutils-dev liblz4-tool ccache device-tree-compiler open-jdk-8-jdk git
+	sudo apt-get install build-essential libncurses5 libncurses5-dev libelf-dev binutils-dev liblz4-tool device-tree-compiler open-jdk-8-jdk git
 	sudo apt-get build-dep build-essential libncurses5 libncurses5-dev libelf-dev binutils-dev # This step may be needed for VM environments.
 	
 ###### Arch Linux
@@ -49,7 +49,7 @@ If you really follow the K.I.S.S. principle you'll probably only need the **base
 
 As of now, fully cacche support must be present to compile the kernel as well as the device tree parser. Also, if the host kernel was not compressed with lz4, you might not have that package installed, install it if you don't.
 
-	sudo pacman -S dtc ccache lz4
+	sudo pacman -S dtc lz4
 
 ###### Unconventional
 
@@ -60,7 +60,6 @@ Here's a brief exchange of the tools you'll need on **Gentoo**:
 
 	su
 	emerge --sync
-	emerge ccache # Located in dev-util/ccache.
 	emerge lz4 # Located in app-arch/lz4.
 	emerge dtc # Located in sys-apps/dtc.
 
@@ -68,6 +67,8 @@ You can also punch everything into one single command, compat or declare the ebu
 
 Compilation
 -------------------------
+
+To make the **guide** easier, I've created some headers for: **obligatory**, **optional** and **example** steps. Make sure you're reading everything carefully and following those headers.
 
 ###### Obligatory
 
@@ -109,7 +110,7 @@ Modify the **build-anykernel** script to point to your custom toolchain followin
 
 ###### Obligatory
 
-The **"right"** toolchain we use for this particular device comes from **@dorimanx**, you **must** use it as of now.
+The **"right"** toolchain we use for this particular device comes from **@dorimanx**, you **must** use it as of now. The current version is **GCC 6.1**.
 
 	# OBS: Dorimanx's toolchain is hosted in his own LG G2 kernel.
 	cd lge_msm8974
@@ -118,19 +119,31 @@ The **"right"** toolchain we use for this particular device comes from **@dorima
 	git fetch dorimanx master
 	git checkout dorimanx/master # This will get into dorimanx kernel tree.
 	cp -R android-toolchain/ ../toolchains/
-	mv ../toolchains/android-toolchain ../toolchains/dorimanx # This is just a renaming method.
+	mv ../toolchains/android-toolchain ../toolchains/dorimanx-6.x # This is just a renaming method.
 	git checkout lambda # This will get into lambda kernel tree back again.
 
-Finally everything will be settled down and ready to compile, just **run**:
+If you want to use an **older** version of his toolchain, you can checkout his tree at any point in git history that contains that specific version.
+
+###### Example
+
+Go to dorimanx kernel tree as you did **above**.
+
+	git checkout dorimanx/master # This will get into dorimanx kernel tree again.
+
+The master branch uses always the latest **GCC** version. To get the older one in place, take a look at the commit history and copy the commit **SHA** and check it out.
+
+	git checkout 993282bdb9eb4156a724c07782bf058f42d6470e # This is GCC 5.4 by the way.
+	cp -R android-toolchain/ ../toolchains/
+	mv ../toolchains/android-toolchain ../toolchains/dorimanx-5.x # This is just a renaming method.
+	git checkout lambda # This will get into lambda kernel tree back again.
+
+###### Obligatory
+
+Finally, everything will be settled down and ready to compile, just **run**:
 
 	./build-anykernel.sh
 
 Follow the on-screen guide to compile your variant for a given **Android** version compatibility.
-
-###### Hints
-
-When you're asked about **ccache**, __always__ type **Y** to clean it if you're going to flash that image (.zip). Otherwise, you'll end up running cached generated images instead of the runtime ones.
-This will avoid issue **#2** detailed in the **issues** tab.
 
 Contributors
 -------------------------
