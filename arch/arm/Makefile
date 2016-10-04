@@ -100,6 +100,7 @@ arch-$(CONFIG_CPU_32v3)		:=-D__LINUX_ARM_ARCH__=3 -march=armv3
 # Cortex-A15, because GCC will warn us about ambiguous ISA restrictions caused
 # by seemingly conflicting -march and -mcpu options.
 arch-$(CONFIG_ARCH_MSM_KRAIT)	:=-D__LINUX_ARM_ARCH__=7 -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon
+arch-$(CONFIG_MSM_CORTEX_A7)	:=-D__LINUX_ARM_ARCH__=7 -mcpu=cortex-a15 -mtune=cortex-a15
 
 # This selects how we optimise for the processor.
 tune-$(CONFIG_CPU_ARM610)	:=-mtune=arm610
