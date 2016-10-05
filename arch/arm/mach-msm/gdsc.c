@@ -457,7 +457,7 @@ static struct of_device_id gdsc_match_table[] __initdata = {
 	{}
 };
 
-static struct platform_driver gdsc_driver = {
+static struct platform_driver gdsc_driver __refdata = {
 	.probe		= gdsc_probe,
 	.remove		= __devexit_p(gdsc_remove),
 	.driver		= {

@@ -105,7 +105,7 @@ static struct of_device_id msm_ext_buck_table[] __initdata = {
 	{},
 };
 
-static struct platform_driver msm_ext_buck_driver = {
+static struct platform_driver msm_ext_buck_driver __refdata = {
 	.probe = msm_ext_buck_probe,
 	.driver = {
 		.name = "ext-buck-control",

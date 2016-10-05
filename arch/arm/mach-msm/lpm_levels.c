@@ -1123,7 +1123,7 @@ static struct of_device_id cpu_modes_mtch_tbl[] __initdata = {
 	{},
 };
 
-static struct platform_driver cpu_modes_driver = {
+static struct platform_driver cpu_modes_driver __refdata = {
 	.probe = lpm_cpu_probe,
 	.driver = {
 		.name = "cpu-modes",
@@ -1137,7 +1137,7 @@ static struct of_device_id system_modes_mtch_tbl[] __initdata = {
 	{},
 };
 
-static struct platform_driver system_modes_driver = {
+static struct platform_driver system_modes_driver __refdata = {
 	.probe = lpm_system_probe,
 	.driver = {
 		.name = "system-modes",
@@ -1151,7 +1151,7 @@ static struct of_device_id lpm_levels_match_table[] __initdata = {
 	{},
 };
 
-static struct platform_driver lpm_levels_driver = {
+static struct platform_driver lpm_levels_driver __refdata = {
 	.probe = lpm_probe,
 	.driver = {
 		.name = "lpm-levels",
