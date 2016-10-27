@@ -9,8 +9,11 @@ config DCACHE_WORD_ACCESS
        bool
 
 config FS_SYNC
-	bool "Add fsync sysfs node"
+	bool "Filesystem Sync"
 	default n
+	help
+	  A simple switcher to make FS sync opt-out to increase
+	  read/write performance.
 
 if BLOCK
 
