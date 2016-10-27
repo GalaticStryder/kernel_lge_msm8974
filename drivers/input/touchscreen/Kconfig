@@ -1122,16 +1122,18 @@ source "drivers/input/touchscreen/g2/Kconfig"
 endif
 
 config STATE_NOTIFIER
-	bool "State Notifier Driver"
+	bool "State Notifier"
 	depends on TOUCHSCREEN_SYNAPTICS_G2
-	default y
+	default n
 	help
-	  Allows monitoring the current display state.
+	  Allows monitoring the current display state based on
+	  the panel hookers. It works as an API for many
+	  other Kernel space drivers.
 
 config TOUCHSCREEN_SWEEP2SLEEP
-	bool "Sweep2Sleep Driver"
+	bool "Sweep2Sleep"
 	depends on STATE_NOTIFIER
-	default y
+	default n
 	help
 	  Works as an extension for the State Notifier driver,
 	  once the screen is off it will suspend the driver.
