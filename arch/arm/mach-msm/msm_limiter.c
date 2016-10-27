@@ -22,8 +22,8 @@
 #define MSM_LIMITER_MINOR		4
 
 /* Recommended to set below values from userspace. */
-#define FREQ_CONTROL			1
-#define DEBUG_MODE			1
+#define FREQ_CONTROL			0
+#define DEBUG_MODE			0
 #define MPD_ENABLED			0
 
 /*
@@ -45,7 +45,11 @@
 #else
 #define DEFAULT_SUSP_MAX_FREQUENCY	1728000
 #endif
+#ifdef CONFIG_MSM_CPU_OVERCLOCK
+#define DEFAULT_RESUME_MAX_FREQUENCY	2803200
+#else
 #define DEFAULT_RESUME_MAX_FREQUENCY	2265600
+#endif
 #define DEFAULT_MIN_FREQUENCY		300000
 
 static struct notifier_block notif;
