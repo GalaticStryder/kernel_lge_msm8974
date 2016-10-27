@@ -3008,57 +3008,62 @@ config KRAIT_REGULATOR
 
 config HAS_MACH_MEMUTILS
 	default n
-	bool "Motorola MSM memcpy enhancements"
+	bool "Motorola Memory Enhancements"
 	help
-	  Faster memcpy performance for Krait architectures.
+	  Faster memcpy performance for Krait architectures from Motorola.
 
 config MSM_LIMITER
-	bool "MSM Frequency Limiter Driver"
+	bool "MSM Limiter"
 	default n
 	help
-	  The MSM frequency limiter driver controls the max frequency limit for each CPU
-	  according to the desired value on suspend/resume routines.
+	  The MSM Limiter driver controls the maximum and minimum frequency limit
+	  for each CPU according to the desired value on suspend/resume routines.
 
 config MSM_CPU_OVERCLOCK
 	bool "Out-of-the-box CPU overclock"
 	depends on CPU_FREQ_MSM
 	default n
 	help
-	  Forces CPU initialization frequency to use the maximum frequency defined in the device tree table.
+	  Forces CPU initialization frequency to use the maximum frequency defined in the
+	  device tree table. This makes the device boot faster but offers a great potential
+	  to burn out the processor if the system is overloaded during the first boot.
 
 config MSM_HOTPLUG
-	bool "MSM hotplug driver"
+	bool "MSM Hotplug"
 	depends on HOTPLUG_CPU
 	default n
 	help
-	  The MSM hotplug driver controls the plugging of additional cores
+	  The MSM Hotplug driver controls the plugging of additional cores
 	  based on the current CPU load.
 
 config BRICKED_HOTPLUG
-	bool "Kernel based MPDecision"
+	bool "Bricked Hotplug"
 	depends on MSM_RUN_QUEUE_STATS
 	default n
 	help
-	  This enables kernel based multi core control based on load.
+	  This enables a Kernel based multi-core control based on load. It's often
+	  called MSM MPDecision.
 
 config BLU_PLUG
-	bool "Dynamic hotplug driver"
+	bool "Dynamic Hotplug"
 	depends on HOTPLUG_CPU
 	default n
 	help
-	  The Dynamic hotplug driver automatically online/offline CPUs proportional to system load.
+	  The Dynamic Hotplug driver automatically plugs CPUs proportionallly
+	  to the current system load.
 
 config MSM_CPU_VOLTAGE_CONTROL
-	bool "Userspace CPU Voltage Control"
+	bool "CPU Voltage Control"
 	default n
 	help
-	  This enables userspace CPU Voltage Control.
+	  This enables userspace CPU Voltage Control per frequency step.
 
 config FORCE_FAST_CHARGE
-	bool "Force AC charge mode at will"
+	bool "Force Fast Charge"
 	default n
 	help
-	  A simple sysfs interface to force adapters that
-	  are detected as USB to charge as AC.
+	  A simple sysfs interface to force adapters detected
+	  as USB to charge as AC. It also has options to set custom
+	  charging voltages at will.
 
 endif
