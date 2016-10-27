@@ -210,6 +210,19 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	INIT_WORK(&cpu_work->work, set_cpu_work);
 	init_completion(&cpu_work->complete);
 
+	/*
+	 * If the configuration CONFIG_MSM_CPU_OVERCLOCK is not set,
+	 * force the device to lock the CPU initialization frequency at
+	 * the optimal value, 2.2GHz for the MSM8974 SoC.
+	 */
+#ifdef CONFIG_MSM_CPU_OVERCLOCK
+	policy->max = 2803200;
+	policy->min = 300000;
+#else
+	policy->max = 2265600;
+	policy->min = 300000;
+#endif
+
 	if (cpufreq_frequency_table_cpuinfo(policy, table))
 		pr_err("cpufreq: failed to get policy min/max\n");
 
