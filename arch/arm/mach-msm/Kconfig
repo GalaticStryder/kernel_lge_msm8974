@@ -3019,6 +3019,13 @@ config MSM_LIMITER
 	  The MSM frequency limiter driver controls the max frequency limit for each CPU
 	  according to the desired value on suspend/resume routines.
 
+config MSM_CPU_OVERCLOCK
+	bool "Out-of-the-box CPU overclock"
+	depends on CPU_FREQ_MSM
+	default n
+	help
+	  Forces CPU initialization frequency to use the maximum frequency defined in the device tree table.
+
 config MSM_HOTPLUG
 	bool "MSM hotplug driver"
 	depends on HOTPLUG_CPU
