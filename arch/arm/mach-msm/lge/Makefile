@@ -11,7 +11,7 @@ obj-$(CONFIG_MACH_LGE) += lge_charging_scenario_v1_7.o
 else
 obj-$(CONFIG_MACH_LGE) += lge_charging_scenario.o
 endif
-obj-$(CONFIG_WIFI_CONTROL_FUNC) += wifi_bcm_lge.o
+obj-$(CONFIG_WIFI_CONTROL_FUNC) += board-wifi-bcm.o
 obj-$(CONFIG_LGE_HANDLE_PANIC) += lge_handle_panic.o
 obj-$(CONFIG_MACH_LGE) += lge_gpio_debug.o
 

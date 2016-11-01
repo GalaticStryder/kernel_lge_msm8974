@@ -204,16 +204,6 @@ static void msmsdcc_pm_qos_update_latency(struct msmsdcc_host *host, int vote)
 	else
 		pm_qos_update_request(&host->pm_qos_req_dma,
 					PM_QOS_DEFAULT_VALUE);
-	/* LGE_CHANGE_S, [WiFi][hayun.kim@lge.com], 2013-06-12, dma qos control */
-	#if defined(CONFIG_BCMDHD) || defined (CONFIG_BCMDHD_MODULE)
-	{
-		extern void bcm_wifi_req_dma_qos(int vote);
-		if (host->mmc && host->mmc->card && mmc_card_sdio(host->mmc->card)) {
-			bcm_wifi_req_dma_qos(vote);
-		}
-	}
-	#endif
-	/* LGE_CHANGE_S, [WiFi][hayun.kim@lge.com], 2013-06-12, dma qos control */
 }
 
 #ifdef CONFIG_MMC_MSM_SPS_SUPPORT
