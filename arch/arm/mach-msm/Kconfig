@@ -3036,6 +3036,13 @@ config MSM_HOTPLUG
 	  The MSM Hotplug driver controls the plugging of additional cores
 	  based on the current CPU load.
 
+config AUTOSMP
+	bool "AutoSMP Hotplug"
+	depends on SMP && HOTPLUG_CPU
+	help
+	  Automatically hotplugs the multiple CPU cores based on
+	  CPU load and suspend state.
+
 config BRICKED_HOTPLUG
 	bool "Bricked Hotplug"
 	depends on MSM_RUN_QUEUE_STATS
