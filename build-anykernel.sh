@@ -129,7 +129,11 @@ function make_zImage {
 }
 
 function create_dtimg {
-	$REPACK_DIR/tools/dtbToolCM -v -s 2048 -o $REPACK_DIR/dt.img arch/arm/boot/
+	# If there's no zImage, compilation clearly failed.
+	# Avoid building the device tree image in this case.
+	if [ -f $REPACK_DIR/zImage ]; then
+		$REPACK_DIR/tools/dtbToolCM -v -s 2048 -o $REPACK_DIR/dt.img arch/arm/boot/ > /dev/null 2>&1 # Suppressed, 47!
+	fi;
 }
 
 function changelog {
