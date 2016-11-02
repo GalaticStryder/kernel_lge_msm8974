@@ -1,9 +1,10 @@
 /*
  * Bricked Hotplug Driver
  *
+ * Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
  * Copyright (c) 2013-2014, Dennis Rassmann <showp1984@gmail.com>
  * Copyright (c) 2013-2014, Pranav Vashi <neobuddy89@gmail.com>
- * Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, Ícaro Hoff <icarohoff@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -31,15 +32,14 @@
 
 #define MPDEC_TAG			"bricked_hotplug"
 #define HOTPLUG_ENABLED			0
-#define MSM_MPDEC_STARTDELAY		15000
-#define MSM_MPDEC_DELAY			100
+#define MSM_MPDEC_DELAY			130
+#define MSM_MPDEC_IDLE_FREQ		729600
+#define MSM_MPDEC_STARTDELAY		20000
 #define DEFAULT_MIN_CPUS_ONLINE		1
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
 #define DEFAULT_SUSPEND_DEFER_TIME	10
 #define DEFAULT_DOWN_LOCK_DUR		500
-
-#define MSM_MPDEC_IDLE_FREQ		499200
 
 enum {
 	MSM_MPDEC_DISABLED = 0,
@@ -82,7 +82,7 @@ static struct cpu_hotplug {
 	.bricked_enabled = HOTPLUG_ENABLED,
 };
 
-static unsigned int NwNs_Threshold[8] = {12, 0, 25, 7, 30, 10, 0, 18};
+static unsigned int NwNs_Threshold[8] = {20, 0, 26, 16, 36, 18, 0, 20};
 static unsigned int TwTs_Threshold[8] = {140, 0, 140, 190, 140, 190, 0, 190};
 
 struct down_lock {
@@ -810,5 +810,6 @@ module_exit(msm_mpdec_exit);
 
 MODULE_AUTHOR("Dennis Rassmann <showp1984@gmail.com>");
 MODULE_AUTHOR("Pranav Vashi <neobuddy89@gmail.com>");
+MODULE_AUTHOR("Ícaro Hoff <icarohoff@gmail.com>");
 MODULE_DESCRIPTION("Bricked Hotplug Driver");
 MODULE_LICENSE("GPLv2");
