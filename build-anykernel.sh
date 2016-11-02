@@ -7,12 +7,17 @@
 #             /  \
 #            /    \
 #
-export SCRIPT_VERSION="2.8 (Mixed Maxxtumm Tape)"
+export SCRIPT_VERSION="2.9 (Namasthe Khan Khan)"
 
-# Bash color
-green='\033[01;32m'
+# Colorize
 red='\033[01;31m'
+green='\033[01;32m'
+yellow='\033[01;33m'
+blue='\033[01;34m'
 blink_red='\033[05;31m'
+blink_green='\033[05;32m'
+blink_yellow='\033[05;33m'
+blink_blue='\033[05;34m'
 restore='\033[0m'
 
 # Clean
@@ -134,28 +139,37 @@ function changelog {
 
 function make_zip {
 	cd $REPACK_DIR
-	zip -x@zipexclude -r9 "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip *
-	mv "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip $ZIP_MOVE
-	cd $KERNEL_DIR
+	if [ -f zImage ]; then
+		zip -x@zipexclude -r9 "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip *;
+		mv "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip $ZIP_MOVE;
+		export COMPILATION="success"
+	else
+		echo ""
+		echo -e ${red}"Kernel image not found, compilation failed."${restore}
+		export COMPILATION="sucks"
+	fi;
+	cd $KERNEL_DIR;
 }
 
 function generate_md5 {
-	cd $ZIP_MOVE
-	md5sum "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip > "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip.md5
-	cd $KERNEL_DIR
+	if [ "$COMPILATION" = success ]; then
+		cd $ZIP_MOVE
+		md5sum "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip > "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip.md5
+		cd $KERNEL_DIR
+	fi;
 }
 
 
 DATE_START=$(date +"%s")
-echo -e "${red}"
+echo -e "${blue}"
 echo "                   \                    "
 echo "                   /\                   "
 echo "                  /  \                  "
 echo "                 /    \                 "
-echo ''
-echo -e " Welcome to Lambda Kernel build script  " "${restore}"
-echo -e "${green}" "Version: $SCRIPT_VERSION "
 echo -e "${restore}"
+echo -e "${blink_blue}" "This is the ultimate Kernel build script, $USER. " "${restore}"
+echo -e "${blink_green}" "Version: $SCRIPT_VERSION " "${restore}"
+echo ""
 check_folders
 #ccache_setup
 
@@ -180,15 +194,15 @@ echo "You have chosen the tag: $STATE!"
 
 echo
 
-echo "Marshmallow -> Type M"
-echo "Nougat -> Type N"
+echo -e ${blue}"Marshmallow -> Type M"${restore}
+echo -e ${green}"Nougat -> Type N"${restore}
 echo ""
 while read -p "Please, select the Android version (M/N)? " achoice
 do
 case "$achoice" in
 	m|M)
 		echo
-		echo "Building marshmallow compatible kernel..."
+		echo -e ${blue}"Building marshmallow compatible kernel..."${restore}
 		ANDROID="Marshmallow"
 		ANYBRANCH="marshmallow"
 		echo
@@ -196,7 +210,7 @@ case "$achoice" in
 		;;
 	n|N)
 		echo
-		echo "Building nougat compatible kernel..."
+		echo -e ${green}"Building nougat compatible kernel..."${restore}
 		ANDROID="Nougat"
 		ANYBRANCH="nougat"
 		echo
@@ -204,7 +218,7 @@ case "$achoice" in
 		;;
 	* )
 		echo
-		echo "Assuming marshmallow as Android version..."
+		echo -e ${blue}"Assuming marshmallow as Android version..."${restore}
 		ANDROID="Marshmallow"
 		ANYBRANCH="marshmallow"
 		echo
@@ -314,13 +328,13 @@ esac
 done
 
 echo ""
-echo "You are going to build $VERSION for the $VARIANT variant."
+echo -e ${blue}"You are going to build $VERSION for the $VARIANT variant."${restore}
 export LOCALVERSION=-$NAME-$RELEASE-$TAG-$VARIANT
-echo "Using the Linux tag: $LOCALVERSION."
+echo -e ${blue}"Using the Linux tag: $LOCALVERSION."${restore}
 echo ""
 
 echo "Which toolchain you would like to use?"
-echo -e ${red}"WARNING: Linaro 4.9 is not supported anymore, use it as a template only!"${restore}
+echo -e ${yellow}"WARNING: Linaro 4.9 is not supported anymore, use it as a template only!"${restore}
 select choice in Linaro-4.9 Dorimanx-5.4 Dorimanx-6.1
 do
 case "$choice" in
@@ -384,11 +398,21 @@ done
 
 DATE_END=$(date +"%s")
 DIFF=$(($DATE_END - $DATE_START))
-echo -e "${red}"
-echo "                 \                  "
-echo "                 /\                 "
-echo "                /  \                "
-echo "               /    \               "
-echo ''
-echo "Completed in $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."
-echo -e "${restore}"
+if [ "$COMPILATION" = sucks ]; then
+	echo -e "${blink_red}"
+	echo "                 \                  "
+	echo "                 /\                 "
+	echo "                /  \                "
+	echo "               /    \               "
+	echo -e "${restore}"
+	echo -e ${blink_red}"You tried your best and you failed miserably."${restore}
+	echo -e ${blink_red}"The lesson is, NEVER TRY!"${restore}
+else
+	echo -e "${blink_green}"
+	echo "                 \                  "
+	echo "                 /\                 "
+	echo "                /  \                "
+	echo "               /    \               "
+	echo -e "${restore}"
+	echo -e ${blink_green}"Completed in $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."${restore}
+fi;
