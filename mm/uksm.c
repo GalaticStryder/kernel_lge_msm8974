@@ -168,7 +168,7 @@ static int is_full_zero(const void *s1, size_t len)
 #else
 static int is_full_zero(const void *s1, size_t len)
 {
-	unsigned long *src = s1;
+	const unsigned long *src = s1;
 	int i;
 
 	len /= sizeof(*src);
@@ -568,7 +568,7 @@ static unsigned long long uksm_sleep_times;
 
 #define UKSM_RUN_STOP	0
 #define UKSM_RUN_MERGE	1
-static unsigned int uksm_run = 1;
+static unsigned int uksm_run = 0;
 
 static DECLARE_WAIT_QUEUE_HEAD(uksm_thread_wait);
 static DEFINE_MUTEX(uksm_thread_mutex);
@@ -1337,10 +1337,10 @@ static inline u32 page_hash(struct page *page, unsigned long hash_strength,
 	u32 val;
 	unsigned long delta;
 
-	void *addr = kmap_atomic(page, KM_USER0);
+	void *addr = kmap_atomic(page);
 
 	val = random_sample_hash(addr, hash_strength);
-	kunmap_atomic(addr, KM_USER0);
+	kunmap_atomic(addr);
 
 	if (cost_accounting) {
 		if (HASH_STRENGTH_FULL > hash_strength)
@@ -1360,11 +1360,11 @@ static int memcmp_pages(struct page *page1, struct page *page2,
 	char *addr1, *addr2;
 	int ret;
 
-	addr1 = kmap_atomic(page1, KM_USER0);
-	addr2 = kmap_atomic(page2, KM_USER1);
+	addr1 = kmap_atomic(page1);
+	addr2 = kmap_atomic(page2);
 	ret = memcmp(addr1, addr2, PAGE_SIZE);
-	kunmap_atomic(addr2, KM_USER1);
-	kunmap_atomic(addr1, KM_USER0);
+	kunmap_atomic(addr2);
+	kunmap_atomic(addr1);
 
 	if (cost_accounting)
 		inc_rshash_neg(memcmp_cost);
@@ -1382,9 +1382,9 @@ static inline int is_page_full_zero(struct page *page)
 	char *addr;
 	int ret;
 
-	addr = kmap_atomic(page, KM_USER0);
+	addr = kmap_atomic(page);
 	ret = is_full_zero(addr, PAGE_SIZE);
-	kunmap_atomic(addr, KM_USER0);
+	kunmap_atomic(addr);
 
 	return ret;
 }
@@ -1542,11 +1542,11 @@ static inline u32 page_hash_max(struct page *page, u32 hash_old)
 	u32 hash_max = 0;
 	void *addr;
 
-	addr = kmap_atomic(page, KM_USER0);
+	addr = kmap_atomic(page);
 	hash_max = delta_hash(addr, hash_strength,
 			      HASH_STRENGTH_MAX, hash_old);
 
-	kunmap_atomic(addr, KM_USER0);
+	kunmap_atomic(addr);
 
 	if (!hash_max)
 		hash_max = 1;
@@ -1594,7 +1594,7 @@ static inline int check_collision(struct rmap_item *rmap_item,
 static struct page *page_trans_compound_anon(struct page *page)
 {
 	if (PageTransCompound(page)) {
-		struct page *head = compound_trans_head(page);
+		struct page *head = compound_head(page);
 		/*
 		 * head may actually be splitted and freed from under
 		 * us but it's ok here.
@@ -2661,7 +2661,7 @@ out:
  * to the next pass of ksmd - consider, for example, how ksmd might be
  * in cmp_and_merge_page on one of the rmap_items we would be removing.
  */
-inline int unmerge_uksm_pages(struct vm_area_struct *vma,
+static inline int unmerge_uksm_pages(struct vm_area_struct *vma,
 		      unsigned long start, unsigned long end)
 {
 	unsigned long addr;
@@ -3203,7 +3203,7 @@ static struct rmap_item *get_next_rmap_item(struct vma_slot *slot, u32 *hash)
 	if (slot->flags & UKSM_SLOT_NEED_RERAND) {
 		rand_range = slot->pages - scan_index;
 		BUG_ON(!rand_range);
-		swap_index = scan_index + (random32() % rand_range);
+		swap_index = scan_index + (prandom_u32() % rand_range);
 	}
 
 	if (swap_index != scan_index) {
@@ -3384,7 +3384,7 @@ void reset_current_scan(struct scan_rung *rung, int finished, int step_recalc)
 		BUG_ON(step_need_recalc(rung));
 	}
 
-	slot_iter_index = random32() % rung->step;
+	slot_iter_index = prandom_u32() % rung->step;
 	BUG_ON(!rung->vma_root.rnode);
 	slot = sradix_tree_next(&rung->vma_root, NULL, 0, slot_iter);
 	BUG_ON(!slot);
@@ -3751,11 +3751,11 @@ static void stable_tree_delta_hash(u32 prev_hash_strength)
 		if (node->tree_node) {
 			hash = node->tree_node->hash;
 
-			addr = kmap_atomic(node_page, KM_USER0);
+			addr = kmap_atomic(node_page);
 
 			hash = delta_hash(addr, prev_hash_strength,
 					  hash_strength, hash);
-			kunmap_atomic(addr, KM_USER0);
+			kunmap_atomic(addr);
 		} else {
 			/*
 			 *it was not inserted to rbtree due to collision in last
@@ -4680,7 +4680,8 @@ out:
 	return referenced;
 }
 
-int try_to_unmap_ksm(struct page *page, enum ttu_flags flags)
+int try_to_unmap_ksm(struct page *page, enum ttu_flags flags,
+			struct vm_area_struct *target_vma)
 {
 	struct stable_node *stable_node;
 	struct node_vma *node_vma;
@@ -5491,15 +5492,15 @@ static inline int cal_positive_negative_costs(void)
 	if (!p2)
 		return -ENOMEM;
 
-	addr1 = kmap_atomic(p1, KM_USER0);
-	addr2 = kmap_atomic(p2, KM_USER1);
-	memset(addr1, random32(), PAGE_SIZE);
+	addr1 = kmap_atomic(p1);
+	addr2 = kmap_atomic(p2);
+	memset(addr1, prandom_u32(), PAGE_SIZE);
 	memcpy(addr2, addr1, PAGE_SIZE);
 
 	/* make sure that the two pages differ in last byte */
 	addr2[PAGE_SIZE-1] = ~addr2[PAGE_SIZE-1];
-	kunmap_atomic(addr2, KM_USER1);
-	kunmap_atomic(addr1, KM_USER0);
+	kunmap_atomic(addr2);
+	kunmap_atomic(addr1);
 
 	time_start = jiffies;
 	while (jiffies - time_start < 100) {
@@ -5533,9 +5534,9 @@ static int init_zeropage_hash_table(void)
 	if (!page)
 		return -ENOMEM;
 
-	addr = kmap_atomic(page, KM_USER0);
+	addr = kmap_atomic(page);
 	memset(addr, 0, PAGE_SIZE);
-	kunmap_atomic(addr, KM_USER0);
+	kunmap_atomic(addr);
 
 	zero_hash_table = kmalloc(HASH_STRENGTH_MAX * sizeof(u32),
 		GFP_KERNEL);
@@ -5564,7 +5565,7 @@ static inline int init_random_sampling(void)
 		unsigned long rand_range, swap_index, tmp;
 
 		rand_range = HASH_STRENGTH_FULL - i;
-		swap_index = i + random32() % rand_range;
+		swap_index = i + prandom_u32() % rand_range;
 		tmp = random_nums[i];
 		random_nums[i] =  random_nums[swap_index];
 		random_nums[swap_index] = tmp;
@@ -5651,10 +5652,23 @@ int ksm_madvise(struct vm_area_struct *vma, unsigned long start,
 }
 
 /* Common interface to ksm, actually the same. */
-struct page *ksm_does_need_to_copy(struct page *page,
+struct page *ksm_might_need_to_copy(struct page *page,
 			struct vm_area_struct *vma, unsigned long address)
 {
+	struct anon_vma *anon_vma = page_anon_vma(page);
 	struct page *new_page;
+
+	if (PageKsm(page)) {
+		if (page_stable_node(page))
+			return page;	/* no need to copy it */
+	} else if (!anon_vma) {
+		return page;		/* no need to copy it */
+	} else if (anon_vma->root == vma->anon_vma->root &&
+		 page->index == linear_page_index(vma, address)) {
+		return page;		/* still no need to copy it */
+	}
+	if (!PageUptodate(page))
+		return page;		/* let do_swap_page report the error */
 
 	new_page = alloc_page_vma(GFP_HIGHUSER_MOVABLE, vma, address);
 	if (new_page) {
@@ -5662,13 +5676,7 @@ struct page *ksm_does_need_to_copy(struct page *page,
 
 		SetPageDirty(new_page);
 		__SetPageUptodate(new_page);
-		SetPageSwapBacked(new_page);
 		__set_page_locked(new_page);
-
-		if (page_evictable(new_page, vma))
-			lru_cache_add_lru(new_page, LRU_ACTIVE_ANON);
-		else
-			add_page_to_unevictable_list(new_page);
 	}
 
 	return new_page;
@@ -5744,4 +5752,3 @@ module_init(uksm_init)
 #else
 late_initcall(uksm_init);
 #endif
-
