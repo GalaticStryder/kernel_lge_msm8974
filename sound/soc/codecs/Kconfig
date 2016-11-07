@@ -511,12 +511,13 @@ config SND_SOC_ES325_SLIM
 
 config SOUND_CONTROL_HAX_3_GPL
 	tristate "GPL Sound Control 3.x"
-	default y
+	default n
 	help
 	  Controls the WCD93XX chipset tunables to allow userspace fine tuning.
 
 config STWEAKS_CONTROL
 	bool "STweaks for GPL Sound Control 3.x"
 	depends on SOUND_CONTROL_HAX_3_GPL
+	default n
 	help
 	  Whether the GPL Sound Control 3.x will support the STweaks tuning interface.
