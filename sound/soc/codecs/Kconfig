@@ -514,3 +514,9 @@ config SOUND_CONTROL_HAX_3_GPL
 	default y
 	help
 	  Controls the WCD93XX chipset tunables to allow userspace fine tuning.
+
+config STWEAKS_CONTROL
+	bool "STweaks for GPL Sound Control 3.x"
+	depends on SOUND_CONTROL_HAX_3_GPL
+	help
+	  Whether the GPL Sound Control 3.x will support the STweaks tuning interface.
