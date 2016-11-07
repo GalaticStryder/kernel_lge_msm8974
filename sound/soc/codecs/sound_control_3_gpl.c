@@ -29,7 +29,6 @@
 #ifdef CONFIG_STWEAKS_CONTROL
 static int lge_snd_ctrl_locked = 0;
 static int lge_stweaks_control = 0;
-int lge_snd_pa_ctrl_locked = 0;
 #endif
 
 extern struct snd_soc_codec *fauxsound_codec_ptr;
@@ -37,15 +36,16 @@ extern int wcd9xxx_hw_revision;
 
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
+int snd_pa_ctrl_locked = 1;
 
 unsigned int taiko_read(struct snd_soc_codec *codec, unsigned int reg);
 int taiko_write(struct snd_soc_codec *codec, unsigned int reg,
 		unsigned int value);
 
 #define REG_SZ  25
-static unsigned int cached_regs[] = {6, 6, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			    0, 0, 0, 0, 0 };
+static unsigned int cached_regs[] = {-1, -1, -1, -1, 0, 0, -1, -1, -1, -1,
+			    1, -1, -1, -1, -1, -1, 4, 4, -1, -1,
+			    -1, -1, -1, -1, -1};
 
 static unsigned int *cache_select(unsigned int reg)
 {
@@ -57,6 +57,12 @@ static unsigned int *cache_select(unsigned int reg)
 			break;
 		case TAIKO_A_RX_HPH_R_GAIN:
 			out = &cached_regs[1];
+			break;
+		case TAIKO_A_RX_HPH_L_STATUS:
+			out = &cached_regs[2];
+			break;
+		case TAIKO_A_RX_HPH_R_STATUS:
+			out = &cached_regs[3];
 			break;
 		case TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL:
 			out = &cached_regs[4];
@@ -148,6 +154,7 @@ int snd_hax_reg_access(unsigned int reg)
 	int ret = 1;
 
 	switch (reg) {
+#if 0 /* Causes weird playback behaviours on LA.BF.1.1.x HALs. */
 		/* Analog power amplifier */
 		case TAIKO_A_RX_HPH_L_GAIN:
 		case TAIKO_A_RX_HPH_R_GAIN:
@@ -159,9 +166,10 @@ int snd_hax_reg_access(unsigned int reg)
 				ret = 0;
 #endif
 			/* Check if FauxSound is locked. */
-			if (snd_rec_ctrl_locked > 0)
+			if (snd_ctrl_locked > 0)
 				ret = 0;
 			break;
+#endif
 		/* Digital headphones gain */
 		case TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL:
 		case TAIKO_A_CDC_RX2_VOL_CTL_B2_CTL:
@@ -182,7 +190,7 @@ int snd_hax_reg_access(unsigned int reg)
 				ret = 0;
 #endif
 			/* Check if FauxSound is locked. */
-			if (snd_rec_ctrl_locked > 0)
+			if (snd_ctrl_locked > 0)
 				ret = 0;
 			break;
 		case TAIKO_A_CDC_TX1_VOL_CTL_GAIN:
@@ -230,7 +238,7 @@ static bool calc_checksum(unsigned int a, unsigned int b, unsigned int c)
 static ssize_t lge_stweaks_control_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%d\n", lge_stweaks_control);
+	return sprintf(buf, "%d\n", lge_stweaks_control);
 }
 
 static ssize_t lge_stweaks_control_store(struct kobject *kobj,
@@ -241,24 +249,6 @@ static ssize_t lge_stweaks_control_store(struct kobject *kobj,
 	sscanf(buf, "%d", &val);
 
 	lge_stweaks_control = val;
-
-	return count;
-}
-
-static ssize_t lge_sound_pa_control_locked_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%d\n", lge_snd_pa_ctrl_locked);
-}
-
-static ssize_t lge_sound_pa_control_locked_store(struct kobject *kobj,
-                struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int inp;
-
-	sscanf(buf, "%d", &inp);
-
-	lge_snd_pa_ctrl_locked = inp;
 
 	return count;
 }
@@ -394,13 +384,30 @@ static ssize_t lge_headphone_pa_gain_store(struct kobject *kobj,
 }
 #endif
 
+static ssize_t sound_pa_control_locked_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", snd_pa_ctrl_locked);
+}
+
+static ssize_t sound_pa_control_locked_store(struct kobject *kobj,
+                struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int inp;
+
+	sscanf(buf, "%d", &inp);
+
+	snd_pa_ctrl_locked = inp;
+
+	return count;
+}
+
 static ssize_t cam_mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
         return sprintf(buf, "%u\n",
 		taiko_read(fauxsound_codec_ptr,
 			TAIKO_A_CDC_TX6_VOL_CTL_GAIN));
-
 }
 
 static ssize_t cam_mic_gain_store(struct kobject *kobj,
@@ -644,7 +651,7 @@ static ssize_t sound_control_version_show(struct kobject *kobj,
 static ssize_t sound_control_locked_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%d\n", snd_ctrl_locked);
+	return sprintf(buf, "%d\n", snd_ctrl_locked);
 }
 
 static ssize_t sound_control_locked_store(struct kobject *kobj,
@@ -662,7 +669,7 @@ static ssize_t sound_control_locked_store(struct kobject *kobj,
 static ssize_t sound_control_rec_locked_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%d\n", snd_rec_ctrl_locked);
+	return sprintf(buf, "%d\n", snd_rec_ctrl_locked);
 }
 
 static ssize_t sound_control_rec_locked_store(struct kobject *kobj,
@@ -749,13 +756,13 @@ static struct kobj_attribute lge_stweaks_control_attribute =
 		0666,
 		lge_stweaks_control_show,
 		lge_stweaks_control_store);
-
-static struct kobj_attribute lge_sound_pa_control_locked_attribute =
-	__ATTR(lge_sound_pa_control_locked,
-		0666,
-		lge_sound_pa_control_locked_show,
-		lge_sound_pa_control_locked_store);
 #endif
+
+static struct kobj_attribute sound_pa_control_locked_attribute =
+	__ATTR(sound_pa_control_locked,
+		0666,
+		sound_pa_control_locked_show,
+		sound_pa_control_locked_store);
 
 static struct kobj_attribute headphone_gain_attribute =
 	__ATTR(gpl_headphone_gain,
@@ -803,8 +810,8 @@ static struct attribute *sound_control_attrs[] =
 		&lge_speaker_gain_attribute.attr,
 		&lge_headphone_pa_gain_attribute.attr,
 		&lge_stweaks_control_attribute.attr,
-		&lge_sound_pa_control_locked_attribute.attr,
 #endif
+		&sound_pa_control_locked_attribute.attr,
 		&headphone_gain_attribute.attr,
 		&headphone_pa_gain_attribute.attr,
 		&sound_control_locked_attribute.attr,
