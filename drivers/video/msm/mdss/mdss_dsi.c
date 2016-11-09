@@ -23,6 +23,11 @@
 #include <linux/regulator/consumer.h>
 #include <mach/board_lge.h>
 
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+bool scr_suspended;
+#endif
+
 #include "mdss.h"
 #include "mdss_panel.h"
 #include "mdss_dsi.h"
@@ -179,10 +184,10 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata, int enable)
 		}
 
 #ifdef CONFIG_LGE_MIPI_DZNY_JDI_INCELL_FHD_VIDEO_PANEL
-        //------------
-        // DSV Enable
-        //------------
-        dw8768_mode_change(1);
+		//------------
+		// DSV Enable
+		//------------
+		dw8768_mode_change(1);
 #endif
 
 		if (!pdata->panel_info.mipi.lp11_init) {
@@ -862,9 +867,9 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	mipi = &pdata->panel_info.mipi;
 
 #ifdef CONFIG_LGE_MIPI_DZNY_JDI_INCELL_FHD_VIDEO_PANEL
-        if(touch_driver_registered){
-            touch_notifier_call_chain(LCD_EVENT_TOUCH_LPWG_OFF, NULL);
-        }
+		if(touch_driver_registered){
+			touch_notifier_call_chain(LCD_EVENT_TOUCH_LPWG_OFF, NULL);
+		}
 #endif
 
 	ret = mdss_dsi_panel_power_on(pdata, 1);
@@ -1389,6 +1394,12 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		ctrl_pdata->ctrl_state |= CTRL_STATE_MDP_ACTIVE;
 		if (ctrl_pdata->on_cmds.link_state == DSI_HS_MODE)
 			rc = mdss_dsi_unblank(pdata);
+#ifdef CONFIG_STATE_NOTIFIER
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		scr_suspended = false;
+#endif
+		state_resume();
+#endif
 		break;
 	case MDSS_EVENT_BLANK:
 		if (ctrl_pdata->off_cmds.link_state == DSI_HS_MODE)
@@ -1400,9 +1411,15 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 			rc = mdss_dsi_blank(pdata);
 		rc = mdss_dsi_off(pdata);
 #if defined(CONFIG_LGE_MIPI_DZNY_JDI_INCELL_FHD_VIDEO_PANEL)
-        if(touch_driver_registered){
-            touch_notifier_call_chain(LCD_EVENT_TOUCH_LPWG_ON, NULL);
-        }
+		if(touch_driver_registered){
+			touch_notifier_call_chain(LCD_EVENT_TOUCH_LPWG_ON, NULL);
+		}
+#endif
+#ifdef CONFIG_STATE_NOTIFIER
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		scr_suspended = true;
+#endif
+		state_suspend();
 #endif
 		break;
 	case MDSS_EVENT_CONT_SPLASH_FINISH:
@@ -1646,7 +1663,7 @@ static int __devinit mdss_dsi_ctrl_probe(struct platform_device *pdev)
 	}
 
 #if defined(CONFIG_LGE_MIPI_DZNY_JDI_INCELL_FHD_VIDEO_PANEL)
-    touch_driver_registered = false;
+	touch_driver_registered = false;
 	ctrl_pdata->notif.notifier_call = lcd_notifier_callback;
 
 	if(touch_register_client(&ctrl_pdata->notif) != 0) {
@@ -1856,8 +1873,8 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	}
     ctrl_pdata->disp_en_gpio = -1;
 
-//	ctrl_pdata->dsv_manufacturer = dsv_array[lge_get_board_revno()];
-    ctrl_pdata->dsv_manufacturer = DSV_DW8768; // DSV_SM5107
+	// ctrl_pdata->dsv_manufacturer = dsv_array[lge_get_board_revno()];
+	ctrl_pdata->dsv_manufacturer = DSV_DW8768; // DSV_SM5107
 
 	ctrl_pdata->dsv_ena = of_get_named_gpio(ctrl_pdev->dev.of_node, "qcom,platform-avdd-gpio", 0);
 
@@ -1907,7 +1924,7 @@ int dsi_panel_device_register(struct device_node *pan_node,
 
 #if defined(CONFIG_MACH_MSM8974_G3) || defined(CONFIG_MACH_MSM8974_DZNY)
 {
-    u32 enable_array[13];
+	u32 enable_array[13];
 
 	rc = of_property_read_u32_array(ctrl_pdev->dev.of_node, "lge,num-of-dsv-enable-gpio", enable_array, 13);
 	if (rc) {

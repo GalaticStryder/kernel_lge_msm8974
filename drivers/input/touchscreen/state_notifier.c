@@ -9,19 +9,24 @@
  *
  */
 
-#include <linux/export.h>
-#include <linux/module.h>
 #include <linux/state_notifier.h>
+#include <linux/notifier.h>
+#include <linux/export.h>
+#include <linux/fb.h>
+#include <linux/module.h>
 #include <linux/delay.h>
 
-#define DEFAULT_SUSPEND_DEFER_TIME 	10
+#define DEFAULT_SUSPEND_DEFER_TIME	10
 #define STATE_NOTIFIER			"state_notifier"
 
 /*
  * debug = 1 will print all
  */
-static unsigned int debug=1;
+static unsigned int debug = 1;
 module_param_named(debug_mask, debug, uint, 0644);
+
+bool state_suspended;
+module_param_named(state_suspended, state_suspended, bool, 0444);
 
 #define dprintk(msg...)		\
 do {				\
@@ -29,15 +34,11 @@ do {				\
 		pr_info(msg);	\
 } while (0)
 
-static bool enabled;
-module_param_named(enabled, enabled, bool, 0664);
 static unsigned int suspend_defer_time = DEFAULT_SUSPEND_DEFER_TIME;
 module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
 static struct delayed_work suspend_work;
 static struct workqueue_struct *susp_wq;
 struct work_struct resume_work;
-bool state_suspended;
-module_param_named(state_suspended, state_suspended, bool, 0444);
 static bool suspend_in_progress;
 
 static BLOCKING_NOTIFIER_HEAD(state_notifier_list);
@@ -115,8 +116,11 @@ void state_resume(void)
 static int __init state_notifier_init(void)
 {
 	susp_wq = create_singlethread_workqueue("state_susp_wq");
-	if (!susp_wq)
+
+	if (!susp_wq) {
 		pr_err("State notifier failed to allocate suspend workqueue\n");
+		return 0;
+	}
 
 	INIT_DELAYED_WORK(&suspend_work, _suspend_work);
 	INIT_WORK(&resume_work, _resume_work);
