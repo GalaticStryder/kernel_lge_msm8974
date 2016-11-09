@@ -131,8 +131,8 @@ CONFIG_MSM_BIMC_BWMON=y
 #
 # Lambda ~ Memory Management
 #
-CONFIG_KSM=y
-CONFIG_UKSM=y
+# CONFIG_KSM is not set
+# CONFIG_UKSM is not set
 # CONFIG_KSM_LEGACY is not set
 # CONFIG_KSM_CHECK_PAGE is not set
 CONFIG_HAS_MACH_MEMUTILS=y
