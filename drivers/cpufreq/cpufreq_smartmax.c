@@ -119,19 +119,17 @@ static DEFINE_PER_CPU(struct smartmax_info_s, smartmax_info);
 enum {
 	SMARTMAX_DEBUG_JUMPS = 1,
 	SMARTMAX_DEBUG_LOAD = 2,
-	SMARTMAX_DEBUG_ALG = 4,
-	SMARTMAX_DEBUG_INPUT = 16,
-	SMARTMAX_DEBUG_SUSPEND = 32
+	SMARTMAX_DEBUG_ALG = 4
 };
 
 /*
  * Combination of the above debug flags.
  */
-//static unsigned long debug_mask = SMARTMAX_DEBUG_LOAD|SMARTMAX_DEBUG_JUMPS|SMARTMAX_DEBUG_ALG|SMARTMAX_DEBUG_BOOST|SMARTMAX_DEBUG_INPUT|SMARTMAX_DEBUG_SUSPEND;
-static unsigned long debug_mask;
+static unsigned long debug_mask = SMARTMAX_DEBUG_LOAD|SMARTMAX_DEBUG_JUMPS|SMARTMAX_DEBUG_ALG;
+//static unsigned long debug_mask;
 
-#define SMARTMAX_STAT 0
-#if SMARTMAX_STAT
+#define SMARTMAX_STAT
+#ifdef SMARTMAX_STAT
 static u64 timer_stat[4] = {0, 0, 0, 0};
 #endif
 
@@ -386,18 +384,10 @@ static void inline cpufreq_smartmax_calc_load(int j)
 		u64 cur_nice;
 		unsigned long cur_nice_jiffies;
 
-#ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_30
-		cur_nice = kstat_cpu(j).cpustat.nice - j_this_smartmax->prev_cpu_nice;
-		cur_nice_jiffies = (unsigned long) cputime64_to_jiffies64(cur_nice);
-
-		j_this_smartmax->prev_cpu_nice = kstat_cpu(j).cpustat.nice;
-#else
 		cur_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE] - j_this_smartmax->prev_cpu_nice;
 		cur_nice_jiffies = (unsigned long) cputime64_to_jiffies64(cur_nice);
 
 		j_this_smartmax->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
-
-#endif
 
 		idle_time += jiffies_to_usecs(cur_nice_jiffies);
 	}
@@ -426,7 +416,7 @@ static void cpufreq_smartmax_timer(struct smartmax_info_s *this_smartmax) {
 	//unsigned int load_at_max_freq = 0;
 	unsigned int cpu = this_smartmax->cpu;
 
-#if SMARTMAX_STAT
+#ifdef SMARTMAX_STAT
 	u64 diff = 0;
 
 	if (timer_stat[cpu])
@@ -491,11 +481,7 @@ static void update_idle_time(bool online) {
 				&j_this_smartmax->prev_cpu_wall, io_is_busy);
 
 		if (ignore_nice)
-#ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_30
-			j_this_smartmax->prev_cpu_nice = kstat_cpu(j) .cpustat.nice;
-#else
 			j_this_smartmax->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
-#endif
 	}
 }
 
