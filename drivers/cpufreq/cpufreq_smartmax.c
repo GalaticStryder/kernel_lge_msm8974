@@ -1,26 +1,12 @@
 /*
  * drivers/cpufreq/cpufreq_smartmax.c
  *
- * Copyright (C) 2013, 2014 maxwen
+ * Copyright (C) 2013-2014, maxwen
+ * Copyright (C) 2016, Ícaro Hoff <icarohoff@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- *
- * Author: maxwen
- *
- * Based on the ondemand and smartassV2 governor
- *
- * ondemand:
- *  Copyright (C)  2001 Russell King
- *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
- *                      Jun Nakajima <jun.nakajima@intel.com>
- *
- * smartassV2:
- * Author: Erasmux
- *
- * For a general overview of CPU governors see the relavent part in
- * Documentation/cpu-freq/governors.txt
  *
  */
 
@@ -40,38 +26,35 @@
 
 /******************** Tunable parameters: ********************/
 
-/*
- * The "ideal" frequency to use. The governor will ramp up faster
- * towards the ideal frequency and slower after it has passed it. Similarly,
- * lowering the frequency towards the ideal frequency is faster than below it.
- */
-
-#define CONFIG_CPU_FREQ_GOV_SMARTMAX_SHAMU
-#ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_SHAMU
-#define DEFAULT_IDEAL_FREQ 1267200
+#define DEFAULT_IDEAL_FREQ 729600
 #define DEFAULT_RAMP_UP_STEP 200000
 #define DEFAULT_RAMP_DOWN_STEP 200000
-#define DEFAULT_MAX_CPU_LOAD 80
-#define DEFAULT_MIN_CPU_LOAD 50
+#define DEFAULT_MAX_CPU_LOAD 70
+#define DEFAULT_MIN_CPU_LOAD 30
 #define DEFAULT_UP_RATE 30000
 #define DEFAULT_DOWN_RATE 60000
 #define DEFAULT_SAMPLING_RATE 30000
 #define DEFAULT_IO_IS_BUSY 0
 #define DEFAULT_IGNORE_NICE 1
-#endif
 
-static unsigned int ideal_freq;
 /*
- * Freqeuncy delta when ramping up above the ideal freqeuncy.
+ * The "ideal" frequency to use. The governor will ramp up faster
+ * towards the ideal frequency and slower after it has passed it. Similarly,
+ * lowering the frequency towards the ideal frequency is faster than below it.
+ */
+static unsigned int ideal_freq;
+
+/*
+ * Frequency delta when ramping up above the ideal frequency.
  * Zero disables and causes to always jump straight to max frequency.
- * When below the ideal freqeuncy we always ramp up to the ideal freq.
+ * When below the ideal frequency we always ramp up to the ideal freq.
  */
 static unsigned int ramp_up_step;
 
 /*
- * Freqeuncy delta when ramping down below the ideal freqeuncy.
+ * Frequency delta when ramping down below the ideal frequency.
  * Zero disables and will calculate ramp down according to load heuristic.
- * When above the ideal freqeuncy we always ramp down to the ideal freq.
+ * When above the ideal frequency we always ramp down to the ideal freq.
  */
 static unsigned int ramp_down_step;
 
@@ -205,7 +188,6 @@ inline static void smartmax_update_min_max(
 			policy->min < ideal_freq ?
 					(ideal_freq < policy->max ? ideal_freq : policy->max) :
 					policy->min;
-
 }
 
 inline static void smartmax_update_min_max_allcpus(void) {
@@ -762,7 +744,6 @@ static struct attribute * smartmax_attributes[] = {
 	&io_is_busy_attr.attr,
 	&ignore_nice_attr.attr,
 	&ideal_freq_attr.attr,
-	&suspend_ideal_freq_attr.attr,
 	&min_sampling_rate_attr.attr,
 	NULL , };
 
@@ -808,9 +789,6 @@ static int cpufreq_governor_smartmax(struct cpufreq_policy *new_policy,
 				mutex_unlock(&dbs_mutex);
 				return rc;
 			}
-#ifdef CONFIG_POWERSUSPEND
-			register_power_suspend(&smartmax_power_suspend_handler);
-#endif
 			/* policy latency is in nS. Convert it to uS first */
 			latency = new_policy->cpuinfo.transition_latency / 1000;
 			if (latency == 0)
@@ -854,9 +832,6 @@ static int cpufreq_governor_smartmax(struct cpufreq_policy *new_policy,
 
 		if (!dbs_enable){
 			sysfs_remove_group(cpufreq_global_kobject, &smartmax_attr_group);
-#ifdef CONFIG_POWERSUSPEND
-			unregister_power_suspend(&smartmax_power_suspend_handler);
-#endif
 		}
 
 		mutex_unlock(&dbs_mutex);
@@ -941,5 +916,6 @@ static void __exit cpufreq_smartmax_exit(void) {
 module_exit(cpufreq_smartmax_exit);
 
 MODULE_AUTHOR("maxwen");
+MODULE_AUTHOR("Ícaro Hoff <icarohoff@gmail.com>");
 MODULE_DESCRIPTION("'cpufreq_smartmax' - A smart cpufreq governor");
 MODULE_LICENSE("GPL");

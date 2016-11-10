@@ -135,9 +135,6 @@ config CPU_FREQ_DEFAULT_GOV_SMARTMAX
 	  Use the CPUFreq governor 'smartmax' as default. This allows
 	  you to get a full dynamic frequency capable system by simply
 	  loading your cpufreq low-level hardware driver.
-	  Be aware that not all cpufreq drivers support the smartmax
-	  governor. If unsure have a look at the help section of the
-	  driver. Fallback governor will be the performance governor.
 
 endchoice
 
