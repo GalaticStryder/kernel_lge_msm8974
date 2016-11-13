@@ -216,7 +216,7 @@ static int msm_cpufreq_init(struct cpufreq_policy *policy)
 	 * the optimal value, 2.2GHz for the MSM8974 SoC.
 	 */
 #ifdef CONFIG_MSM_CPU_OVERCLOCK
-	policy->max = 2803200;
+	policy->max = 2572800;
 	policy->min = 300000;
 #else
 	policy->max = 2265600;
