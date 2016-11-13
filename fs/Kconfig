@@ -10,7 +10,7 @@ config DCACHE_WORD_ACCESS
 
 config FS_SYNC
 	bool "Filesystem Sync"
-	default n
+	default y
 	help
 	  A simple switcher to make filesystem sync opt-out
 	  to increase read/write performance.
