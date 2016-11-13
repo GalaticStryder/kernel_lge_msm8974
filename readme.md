@@ -8,7 +8,7 @@ A general purpose custom Kernel for the **LG G2** that embraces freedom and spee
 Information
 -------------------------
 
-- Linux version: **3.4.112**
+- Linux version: **3.4.113**
 - Dorimanx's toolchain: **GCC 5.4** - **GCC 6.1**
 - Android targets: **Marhsmallow** - **Nougat**
 - Packager: **AnyKernel2**
@@ -43,13 +43,13 @@ I don't use Ubuntu but the dependencies are generically the same with a couple d
 
 If you're running Arch Linux you probably already have the dependencies needed, in any case you can install them running:
 
-	sudo pacman -S base-devel kmod inetutils bc libelf
+	sudo pacman -S base-devel kmod inetutils bc libelf dtc
 
 If you really follow the K.I.S.S. principle you'll probably only need the **base-devel** and it's present in 99% of the installations.
 
-As of now, fully cacche support must be present to compile the kernel as well as the device tree parser. Also, if the host kernel was not compressed with lz4, you might not have that package installed, install it if you don't.
+Also, if the host kernel was not compressed with lz4, you might not have that package installed, install it if you don't.
 
-	sudo pacman -S dtc lz4
+	sudo pacman -S lz4
 
 ###### Unconventional
 
