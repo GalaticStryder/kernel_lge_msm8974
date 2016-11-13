@@ -82,6 +82,7 @@ config DEVFREQ_GOV_MSM_ADRENO_TZ
 config ADRENO_IDLER
 	tristate "MSM Adreno Idler"
 	depends on DEVFREQ_GOV_MSM_ADRENO_TZ
+	default n
 	help
 	  Uses a different calculation method on top of Adreno TZ
 	  just for calculating frequency for idle to reduce the

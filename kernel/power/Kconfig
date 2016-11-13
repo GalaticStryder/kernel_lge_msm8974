@@ -21,14 +21,6 @@ config SUSPEND_FREEZER
 config HIBERNATE_CALLBACKS
 	bool
 
-config HAS_WAKELOCK
-	bool
-	default y
-
-config WAKELOCK
-	bool
-	default y
-
 config HIBERNATION
 	bool "Hibernation (aka 'suspend to disk')"
 	depends on SWAP && ARCH_HIBERNATION_POSSIBLE
@@ -306,10 +298,18 @@ config SUSPEND_TIME
 	  keeps statistics on the time spent in suspend in
 	  /sys/kernel/debug/suspend_time
 
+config HAS_WAKELOCK
+	bool
+	default n
+
+config WAKELOCK
+	bool
+	default n
+
 config QUICK_WAKEUP
 	bool "Quick wakeup"
 	depends on SUSPEND
-	default y
+	default n
 	---help---
 	  Allow kernel driver to do periodic jobs without resuming the full system
 	  This option can increase battery life on android powered smartphone.
