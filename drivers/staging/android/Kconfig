@@ -71,9 +71,9 @@ config ANDROID_TIMED_GPIO
 
 config ANDROID_LOW_MEMORY_KILLER
 	bool "Android Low Memory Killer"
-	default N
+	default n
 	---help---
-	  Register processes to be killed when memory is low
+	  Register processes to be killed when memory is low.
 
 config ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 	bool "Android Low Memory Killer: detect oom_adj values"
@@ -83,6 +83,14 @@ config ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 	  Detect oom_adj values written to
 	  /sys/module/lowmemorykiller/parameters/adj and convert them
 	  to oom_score_adj values.
+
+config ANDROID_LMK_ADJ_RBTREE
+	bool "Use RBTREE for Android Low Memory Killer"
+	depends on ANDROID_LOW_MEMORY_KILLER
+	default n
+	---help---
+	  Use oom_score_adj rbtree to select the best proecss to kill
+	  when system in low memory status.
 
 source "drivers/staging/android/switch/Kconfig"
 
@@ -99,14 +107,6 @@ config VIBRATOR_PM8941_HAPTIC
 	tristate "Support for vibrator power control using pm8974"
 	help
 	  This option enables support for the vibrator power control.
-
-config ANDROID_LMK_ADJ_RBTREE
-	bool "Use RBTREE for Android Low Memory Killer"
-	depends on ANDROID_LOW_MEMORY_KILLER
-	default N
-	---help---
-	  Use oom_score_adj rbtree to select the best proecss to kill
-	  when system in low memory status.
 
 endif # if ANDROID
 
