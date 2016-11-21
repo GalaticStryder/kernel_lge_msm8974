@@ -83,7 +83,7 @@ CONFIG_MSM_CPU_VOLTAGE_CONTROL=y
 #
 # Lambda ~ Hotplugging
 #
-# CONFIG_MSM_HOTPLUG is not set
+CONFIG_MSM_HOTPLUG=y
 # CONFIG_AUTOSMP is not set
 # CONFIG_BRICKED_HOTPLUG is not set
 # CONFIG_BLU_PLUG is not set
