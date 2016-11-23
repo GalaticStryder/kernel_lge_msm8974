@@ -9,14 +9,12 @@
  *
  */
 
-#include <linux/state_notifier.h>
-#include <linux/notifier.h>
 #include <linux/export.h>
-#include <linux/fb.h>
 #include <linux/module.h>
+#include <linux/state_notifier.h>
 #include <linux/delay.h>
 
-#define DEFAULT_SUSPEND_DEFER_TIME	10
+#define DEFAULT_SUSPEND_DEFER_TIME 	10
 #define STATE_NOTIFIER			"state_notifier"
 
 /*
@@ -25,20 +23,21 @@
 static unsigned int debug = 1;
 module_param_named(debug_mask, debug, uint, 0644);
 
-bool state_suspended;
-module_param_named(state_suspended, state_suspended, bool, 0444);
-
 #define dprintk(msg...)		\
 do {				\
 	if (debug)		\
 		pr_info(msg);	\
 } while (0)
 
+static bool enabled;
+module_param_named(enabled, enabled, bool, 0664);
 static unsigned int suspend_defer_time = DEFAULT_SUSPEND_DEFER_TIME;
 module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
 static struct delayed_work suspend_work;
 static struct workqueue_struct *susp_wq;
 struct work_struct resume_work;
+bool state_suspended;
+module_param_named(state_suspended, state_suspended, bool, 0444);
 static bool suspend_in_progress;
 
 static BLOCKING_NOTIFIER_HEAD(state_notifier_list);
@@ -86,19 +85,25 @@ static void _suspend_work(struct work_struct *work)
 static void _resume_work(struct work_struct *work)
 {
 	state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
-	msleep_interruptible(50);
+	msleep_interruptible(100);
 	state_suspended = false;
 	dprintk("%s: resume completed.\n", STATE_NOTIFIER);
 }
 
 void state_suspend(void)
 {
-	if (state_suspended || suspend_in_progress)
-		return;
-
 	dprintk("%s: suspend called.\n", STATE_NOTIFIER);
+	if (state_suspended || suspend_in_progress || !enabled) {
+		dprintk("%s: suspend deactivated.\n", STATE_NOTIFIER);
+		return;
+	}
 	suspend_in_progress = true;
 
+	/*
+	 * Queue suspend_work if the sanity checks have passed.
+	 * If the driver is not enabled, we'll always bypass the
+	 * suspend_work queue.
+	 */
 	queue_delayed_work(susp_wq, &suspend_work, 
 		msecs_to_jiffies(suspend_defer_time * 1000));
 }
@@ -108,17 +113,24 @@ void state_resume(void)
 	dprintk("%s: resume called.\n", STATE_NOTIFIER);
 	cancel_delayed_work_sync(&suspend_work);
 	suspend_in_progress = false;
+	if (!state_suspended || !enabled) {
+		dprintk("%s: resume deactivated.\n", STATE_NOTIFIER);
+		return;
+	}
 
-	if (state_suspended)
-		queue_work(susp_wq, &resume_work);
+	/*
+	 * Queue resume_work if the sanity checks have passed.
+	 * If the driver is not enabled, we'll always bypass the
+	 * resume_work queue.
+	 */
+	queue_work(susp_wq, &resume_work);
 }
 
 static int __init state_notifier_init(void)
 {
 	susp_wq = create_singlethread_workqueue("state_susp_wq");
-
 	if (!susp_wq) {
-		pr_err("State notifier failed to allocate suspend workqueue\n");
+		pr_err("%s: failed to allocate suspend workqueue\n", STATE_NOTIFIER);
 		return 0;
 	}
 
