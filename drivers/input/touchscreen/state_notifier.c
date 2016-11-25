@@ -76,17 +76,16 @@ EXPORT_SYMBOL_GPL(state_notifier_call_chain);
 
 static void _suspend_work(struct work_struct *work)
 {
-	state_notifier_call_chain(STATE_NOTIFIER_SUSPEND, NULL);
 	state_suspended = true;
+	state_notifier_call_chain(STATE_NOTIFIER_SUSPEND, NULL);
 	suspend_in_progress = false;
 	dprintk("%s: suspend completed.\n", STATE_NOTIFIER);
 }
 
 static void _resume_work(struct work_struct *work)
 {
-	state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
-	msleep_interruptible(100);
 	state_suspended = false;
+	state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
 	dprintk("%s: resume completed.\n", STATE_NOTIFIER);
 }
 
@@ -104,7 +103,7 @@ void state_suspend(void)
 	 * If the driver is not enabled, we'll always bypass the
 	 * suspend_work queue.
 	 */
-	queue_delayed_work(susp_wq, &suspend_work, 
+	queue_delayed_work_on(0, susp_wq, &suspend_work, 
 		msecs_to_jiffies(suspend_defer_time * 1000));
 }
 
@@ -123,7 +122,7 @@ void state_resume(void)
 	 * If the driver is not enabled, we'll always bypass the
 	 * resume_work queue.
 	 */
-	queue_work(susp_wq, &resume_work);
+	queue_work_on(0, susp_wq, &resume_work);
 }
 
 static int __init state_notifier_init(void)
