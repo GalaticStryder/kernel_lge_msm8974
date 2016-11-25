@@ -44,7 +44,7 @@ int taiko_write(struct snd_soc_codec *codec, unsigned int reg,
 
 #define REG_SZ  25
 static unsigned int cached_regs[] = {-1, -1, -1, -1, 0, 0, -1, -1, -1, -1,
-			    1, -1, -1, -1, -1, -1, 4, 4, -1, -1,
+			    4, -1, -1, -1, -1, -1, 4, 4, -1, -1,
 			    -1, -1, -1, -1, -1};
 
 static unsigned int *cache_select(unsigned int reg)
