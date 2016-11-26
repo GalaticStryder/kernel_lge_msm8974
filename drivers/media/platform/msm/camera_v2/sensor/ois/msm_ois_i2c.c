@@ -8,7 +8,6 @@
 #include "msm_ois_i2c.h"
 
 #define I2C_NUM_BYTE		 (6)  //QCT maximum size is 6!
-#define I2C_SEQ_REG_DATA_MAX 20
 
 int32_t RamWriteA( uint16_t RamAddr, uint16_t RamData )
 {
