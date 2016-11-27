@@ -983,13 +983,13 @@ int lge_pm_get_battery_condition(void)
 	return batt_condition;
 }
 
-static int get_bat_age(void *data, u64 *val)
+static int __maybe_unused get_bat_age(void *data, u64 *val)
 {
 	*val = g_batt_age;
 	return 0;
 }
 
-static int set_bat_age(void *data, u64 val)
+static int __maybe_unused set_bat_age(void *data, u64 val)
 {
 	int bat_age;
 
@@ -1004,7 +1004,7 @@ static int set_bat_age(void *data, u64 val)
 
 	return 0;
 }
-DEFINE_SIMPLE_ATTRIBUTE(bat_age_fops, get_bat_age, set_bat_age, "%llu\n");
+/* DEFINE_SIMPLE_ATTRIBUTE(bat_age_fops, get_bat_age, set_bat_age, "%llu\n"); */
 #endif
 
 #define DEFAULT_TEMP		250
