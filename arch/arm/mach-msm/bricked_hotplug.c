@@ -38,7 +38,6 @@
 #define DEFAULT_MIN_CPUS_ONLINE		1
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
-#define DEFAULT_SUSPEND_DEFER_TIME	10
 #define DEFAULT_DOWN_LOCK_DUR		500
 
 enum {
@@ -55,7 +54,6 @@ static struct workqueue_struct *hotplug_wq;
 static struct cpu_hotplug {
 	unsigned int startdelay;
 	unsigned int suspended;
-	unsigned int suspend_defer_time;
 	unsigned int min_cpus_online_res;
 	unsigned int max_cpus_online_res;
 	unsigned int max_cpus_online_susp;
@@ -70,7 +68,6 @@ static struct cpu_hotplug {
 } hotplug = {
 	.startdelay = MSM_MPDEC_STARTDELAY,
 	.suspended = 0,
-	.suspend_defer_time = DEFAULT_SUSPEND_DEFER_TIME,
 	.min_cpus_online_res = DEFAULT_MIN_CPUS_ONLINE,
 	.max_cpus_online_res = DEFAULT_MAX_CPUS_ONLINE,
 	.max_cpus_online_susp = DEFAULT_MAX_CPUS_ONLINE_SUSP,
@@ -418,7 +415,6 @@ show_one(down_lock_duration, down_lock_dur);
 show_one(min_cpus_online, min_cpus_online);
 show_one(max_cpus_online, max_cpus_online);
 show_one(max_cpus_online_susp, max_cpus_online_susp);
-show_one(suspend_defer_time, suspend_defer_time);
 show_one(bricked_enabled, bricked_enabled);
 
 #define define_one_twts(file_name, arraypos)				\
@@ -625,21 +621,6 @@ static ssize_t store_max_cpus_online_susp(struct device *dev,
 	return count;
 }
 
-static ssize_t store_suspend_defer_time(struct device *dev,
-				    struct device_attribute *bricked_hotplug_attrs,
-				    const char *buf, size_t count)
-{
-	int ret;
-	unsigned int val;
-	ret = sscanf(buf, "%u", &val);
-	if (ret != 1)
-		return -EINVAL;
-
-	hotplug.suspend_defer_time = val;
-
-	return count;
-}
-
 static ssize_t store_bricked_enabled(struct device *dev,
 				struct device_attribute *bricked_hotplug_attrs,
 				const char *buf, size_t count)
@@ -680,7 +661,6 @@ static DEVICE_ATTR(max_cpus, 644, show_max_cpus_online, store_max_cpus_online);
 static DEVICE_ATTR(min_cpus_online, 644, show_min_cpus_online, store_min_cpus_online);
 static DEVICE_ATTR(max_cpus_online, 644, show_max_cpus_online, store_max_cpus_online);
 static DEVICE_ATTR(max_cpus_online_susp, 644, show_max_cpus_online_susp, store_max_cpus_online_susp);
-static DEVICE_ATTR(suspend_defer_time, 644, show_suspend_defer_time, store_suspend_defer_time);
 static DEVICE_ATTR(enabled, 644, show_bricked_enabled, store_bricked_enabled);
 
 static struct attribute *bricked_hotplug_attrs[] = {
@@ -693,7 +673,6 @@ static struct attribute *bricked_hotplug_attrs[] = {
 	&dev_attr_min_cpus_online.attr,
 	&dev_attr_max_cpus_online.attr,
 	&dev_attr_max_cpus_online_susp.attr,
-	&dev_attr_suspend_defer_time.attr,
 	&dev_attr_enabled.attr,
 	&dev_attr_twts_threshold_0.attr,
 	&dev_attr_twts_threshold_1.attr,
