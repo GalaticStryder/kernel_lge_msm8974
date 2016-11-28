@@ -146,7 +146,7 @@ void get_dt_cn_prop_str(const char *name, char *value)
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
 static struct ram_console_platform_data ram_console_pdata = {
-	.bootinfo = "UTS_VERSION\n",
+	.bootinfo = "Lambda Kernel\n",
 };
 
 static struct platform_device ram_console_device = {
