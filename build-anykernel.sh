@@ -7,7 +7,7 @@
 #             /  \
 #            /    \
 #
-export SCRIPT_VERSION="2.9 (Namasthe Khan Khan)"
+export SCRIPT_VERSION="3.0 (#ForçaChape)"
 
 # Colorize
 red='\033[01;31m'
@@ -34,7 +34,6 @@ export SUBARCH=arm
 KERNEL_DIR=`pwd`
 REPACK_DIR="${KERNEL_DIR}/../anykernel"
 TOOLCHAINS_DIR="${KERNEL_DIR}/../toolchains"
-LINARO_DIR="${TOOLCHAINS_DIR}/linaro"
 DORIMANX5_DIR="${TOOLCHAINS_DIR}/dorimanx-5.x"
 DORIMANX6_DIR="${TOOLCHAINS_DIR}/dorimanx-6.x"
 PATCH_DIR="${REPACK_DIR}/patch"
@@ -69,41 +68,17 @@ function checkout_branches {
 }
 
 function ccache_setup {
-	export USE_CCACHE="1" # Force the use of cache.
-	echo "Cache information:"
+	if [ $USE_CCACHE == true ]; then
+		CCACHE=`which ccache`
+	else
+		# Empty if USE_CCACHE is not set.
+		CCACHE=""
+	fi;
+	echo -e ${yellow}"Ccache information:"${restore}
+	# Print binary location as well.
+	echo "binary location                     $CCACHE_BINARY"
 	ccache -s
-	echo
-}
-
-function clean_ccache {
-	echo -e ${green}"Type Y here if you are going to flash the generated image (.zip)."${restore}
-	echo -e ${red}"Type N here if you are just compiling to test the code and look for errors."${restore}
-	while read -p "Would you like to clean ccache (Y/N)? " cchoice
-	do
-	case "$cchoice" in
-		y|Y)
-			echo
-			echo "Cleaning ccache and stats..."
-			ccache -C -z
-			echo
-			break
-			;;
-		n|N)
-			echo
-			echo "Using stored ccache nodes..."
-			echo "Don't flash the image (.zip) in this case!"
-			echo
-			break
-			;;
-		* )
-			echo
-			echo "Cleaning ccache and stats..."
-			ccache -C -z
-			echo
-			break
-			;;
-	esac
-	done
+	echo ""
 }
 
 function prepare_all {
@@ -175,7 +150,13 @@ echo -e "${blink_blue}" "This is the ultimate Kernel build script, $USER. " "${r
 echo -e "${blink_green}" "Version: $SCRIPT_VERSION " "${restore}"
 echo ""
 check_folders
-#ccache_setup
+if [ $USE_CCACHE == true ]; then
+	ccache_setup
+else
+	echo -e ${blue}"Optional:"${restore}
+	echo -e ${yellow}"Add 'export USE_CCACHE=true' to your shell configuration to enable ccache."${restore}
+	echo ""
+fi;
 
 echo "Which is the build tag?"
 select choice in Stable Beta Experimental
@@ -338,28 +319,35 @@ echo -e ${blue}"Using the Linux tag: $LOCALVERSION."${restore}
 echo ""
 
 echo "Which toolchain you would like to use?"
-echo -e ${yellow}"WARNING: Linaro 4.9 is not supported anymore, use it as a template only!"${restore}
-select choice in Linaro-4.9 Dorimanx-5.4 Dorimanx-6.1
+select choice in Dorimanx-5.4 Dorimanx-6.1 #Linaro-4.9 (This is a template, add custom choices here...)
 do
 case "$choice" in
-	"Linaro-4.9")
-		export TOOLCHAIN="Linaro 4.9"
-		export CROSS_COMPILE="${LINARO_DIR}/4.9/bin/arm-eabi-"
-		break;;
 	"Dorimanx-5.4")
 		export TOOLCHAIN="Dorimanx 5.4"
 		export CROSS_COMPILE="${DORIMANX5_DIR}/bin/arm-eabi-"
-		export SYSROOT="${DORIMANX5_DIR}/arm-LG-linux-gnueabi/sysroot/"
+		export SYSROOT="$CCACHE ${DORIMANX5_DIR}/arm-LG-linux-gnueabi/sysroot/"
 		export CC="${DORIMANX5_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
 		export STRIP="${DORIMANX5_DIR}/bin/arm-eabi-strip"
 		break;;
 	"Dorimanx-6.1")
 		export TOOLCHAIN="Dorimanx 6.1"
-		export CROSS_COMPILE="${DORIMANX6_DIR}/bin/arm-eabi-"
+		export CROSS_COMPILE="$CCACHE ${DORIMANX6_DIR}/bin/arm-eabi-"
 		export SYSROOT="${DORIMANX6_DIR}/arm-LG-linux-gnueabi/sysroot/"
 		export CC="${DORIMANX6_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
 		export STRIP="${DORIMANX6_DIR}/bin/arm-eabi-strip"
 		break;;
+	#
+	# Template:
+	# This is a template for any other GCC compiler you'd like to use. Just put
+	# the compiler in a given folder under toolchains directory and point it here,
+	# the subfolder is used to keep the directory organized. The executables are
+	# the only thing that matters, make sure you point them properly taking the
+	# prefix 'arm-eabi-' as the normal executable naming for ARM 32-bit toolchains.
+	#
+	#"Linaro-4.9")
+		#export TOOLCHAIN="Linaro 4.9"
+		#export CROSS_COMPILE="$CCACHE ${TOOLCHAINS_DIR}/linaro/4.9/bin/arm-eabi-"
+		#break;;
 esac
 done
 
@@ -368,7 +356,6 @@ echo "You have chosen to use $TOOLCHAIN."
 
 echo
 
-#clean_ccache
 while read -p "Are you ready to start (Y/N)? " dchoice
 do
 case "$dchoice" in
