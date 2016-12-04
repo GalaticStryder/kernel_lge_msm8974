@@ -9,8 +9,8 @@ Information
 -------------------------
 
 - Linux version: **3.4.113**
-- Dorimanx's toolchain: **GCC 5.4** - **GCC 6.1**
-- Android targets: **Marhsmallow** - **Nougat**
+- Compiler: **Dorimanx GCC 6.1**
+- Android: **Nougat**
 - Packager: **AnyKernel2**
 
 Dependencies
@@ -38,7 +38,7 @@ I don't use Ubuntu but the dependencies are generically the same with a couple d
 
 	sudo apt-get install build-essential libncurses5 libncurses5-dev libelf-dev binutils-dev liblz4-tool device-tree-compiler open-jdk-8-jdk git
 	sudo apt-get build-dep build-essential libncurses5 libncurses5-dev libelf-dev binutils-dev # This step may be needed for VM environments.
-	
+
 ###### Arch Linux
 
 If you're running Arch Linux you probably already have the dependencies needed, in any case you can install them running:
@@ -60,17 +60,17 @@ Here's a brief exchange of the tools you'll need on **Gentoo**:
 
 	su
 	emerge --sync
-	emerge lz4 # Located in app-arch/lz4.
-	emerge dtc # Located in sys-apps/dtc.
+	emerge --ask app-arch/lz4
+	emerge --ask sys-apps/dtc
 
 You can also punch everything into one single command, compat or declare the ebuild path at will. It's up to you.
 
 Compilation
 -------------------------
 
-To make the **guide** easier, I've created some headers for: **obligatory**, **optional** and **example** steps. Make sure you're reading everything carefully and following those headers.
+To make the **guide** easier, I've created some headers for: **obligatory** and **optional** steps. Make sure you're reading everything carefully and following those headers.
 
-###### Obligatory
+###### Optional - Creating the folders
 
 Create a development folder if you don't have one yet.
 
@@ -81,34 +81,16 @@ Create the kernel folder inside the development folder.
 	mkdir -p kernel/lambda # To avoid conflicts with any other kernel you might already have.
 	cd kernel/lambda
 
-We have an automated downloader script to get everything needed per **Android** version to be checked out after sync. Currently, anykernel is the only repo that benefits of this branch selector since the kernel is **common** for both **Android** versions.
+###### Obligatory - Download the source code
 
-	curl https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/886ff1cc57a0f19b7af71a22e3d14861ad394be0/sync-lambda.sh | sh
+We have an automated downloader script to get everything needed per **Android** version to be checked out after sync. This utility is also used when you want to get the latest version of the **Kernel** without "troubles" doing weird merges yourself.
 
-###### Optional
+	wget https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/a70a5aa2eaf49fd7e40da19bcae11fc981b44d64/sync-lambda.sh
+	./sync-lambda.sh nougat
 
-This script uses **HTTPS** protocol. It's also possible that you want to use **git**. You'll need to **wget** the script locally and edit to use that protocol.
-
-	wget https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/886ff1cc57a0f19b7af71a22e3d14861ad394be0/sync-lambda.sh
-	chmod sync-lambda.sh
-	$EDITOR sync-lambda.sh
-
-Change the "https://github.com/" to "git@github.com:" in both cloning processes.
-
-###### Obligatory
+###### Obligatory - Getting the main toolchain
 
 And then finally, download the **GCC compiler**. Also known as **toolchain**.
-
-###### Example
-
-A fair advise, the current state of **Lambda Kernel** on this particular device **will not** allow the usage of old toolchains. Though you can use this **Linaro 4.9** __example__ to download your own **custom** toolchain. If I were you I'd just skip to the next instruction block.
-
-	mkdir -p toolchains/linaro/4.9
-	git clone https://github.com/Christopher83/arm-cortex_a15-linux-gnueabihf-linaro_4.9 toolchains/linaro/4.9 # Don't follow this command at all!
-
-Modify the **build-anykernel** script to point to your custom toolchain following the Linaro 4.9 **example** as well.
-
-###### Obligatory
 
 The **"right"** toolchain we use for this particular device comes from **@dorimanx**, you **must** use it as of now. The current version is **GCC 6.1**.
 
@@ -122,9 +104,9 @@ The **"right"** toolchain we use for this particular device comes from **@dorima
 	mv ../toolchains/android-toolchain ../toolchains/dorimanx-6.x # This is just a renaming method.
 	git checkout lambda # This will get into lambda kernel tree back again.
 
-If you want to use an **older** version of his toolchain, you can checkout his tree at any point in git history that contains that specific version.
+###### Optional - Getting an older version of the main toolhain
 
-###### Example
+If you want to use an **older** version of his toolchain for whatever reason, you can checkout his tree at any point in git history that contains that specific version.
 
 Go to dorimanx kernel tree as you did **above**.
 
@@ -137,13 +119,69 @@ The master branch uses always the latest **GCC** version. To get the older one i
 	mv ../toolchains/android-toolchain ../toolchains/dorimanx-5.x # This is just a renaming method.
 	git checkout lambda # This will get into lambda kernel tree back again.
 
-###### Obligatory
+###### Optional - Using custom toolchains
+
+If you want to use a completely different toolchain set, although not recommended, you're able to do so by editing the template for **Linaro 4.9** in _build-anykernel.sh_. Here's an example on how you'd do to use **Linaro 4.9** compiler for **ARM Cortex A15**.
+
+	mkdir -p ../toolchains/linaro/4.9
+	git clone https://github.com/Christopher83/arm-cortex_a15-linux-gnueabihf-linaro_4.9 ../toolchains/linaro/4.9 # Don't follow this command at all!
+
+Uncomment the **Linaro 4.9** template related code and read the information on top of it. Modify it as you wish to point the new compiler executables and the _information/name_ for the new compiler.
+
+	$EDITOR build-anykernel.sh
+
+###### Obligatory - Starting the compilation
 
 Finally, everything will be settled down and ready to compile, just **run**:
 
 	./build-anykernel.sh
 
-Follow the on-screen guide to compile your variant for a given **Android** version compatibility.
+Follow the on-screen guide to compile **Lambda Kernel**. The products will be located under the **store/** folder already _zipped_ with _md5_ files, ready to be flashed on _recovery_.
+
+###### Optional - Compiling with ccache tunneling
+
+The **Kernel** build script identifies the **USE_CCACHE** variable from the environment and tell the compiler to use it. Make sure you have **ccache** installed when using it, it's usually called **ccache** in most **GNU/Linux** distributions.
+
+- **Fedora/CentOS/RHEL**
+
+		 sudo dnf install ccache
+
+- **Ubuntu/Debian**
+
+		 sudo apt-get install ccache
+
+- **Arch Linux**
+
+		 sudo pacman -S ccache
+
+- **Gentoo/Funtoo**
+
+		 emerge --ask dev-util/ccache
+
+You'll be able to speed up your builds considerably by compling the **Kernel** with ccache enabled, which "memorizes" the common parts of a _c_ file in a folder instead of reading the whole file again. This is very useful for this device due to the number of variants it has.
+In order to enable it, just open your shell configuration file _(e.g.: ~/.zshrc, ~/.bashrc...)_ and add the following lines somewhere:
+
+	export USE_CCACHE="true"
+	export CCACHE_DIR="/home/$USER/.ccache"
+
+Last but not least, add the binary folder to your **$PATH** under the **ccache** variables. Generally located under _/usr/lib/ccache/_.
+
+	export PATH="/usr/lib/ccache:$PATH
+
+This will add and not replace the other **$PATH** variables already set. Exit the editor and set the **ccache** size in the terminal, usually **2G** is enough for many compilations.
+
+	ccache -M 2G
+
+Clear the cache and reset the stats every once in a while to avoid clutter on our system.
+
+	ccache -C -z
+
+###### Optional - Pushing the files with ADB
+
+This is how I organize my **Kernel** files on the device, under the _/sdcard/Flash/_ directory which is a alphabetical recovery flashing queue.
+
+	adb shell mkdir /sdcard/Flash;
+	adb push store/Lambda-Infinito-Nougat-Experimental-N311-EX-D800-12042016.zip* /sdcard/Flash;
 
 Contributors
 -------------------------
