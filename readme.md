@@ -10,7 +10,7 @@ Information
 
 - Linux version: **3.4.113**
 - Compiler: **Dorimanx GCC 6.1**
-- Android: **Nougat**
+- Android: **Marshmallow/Nougat**
 - Packager: **AnyKernel2**
 
 Dependencies
@@ -86,7 +86,7 @@ Create the kernel folder inside the development folder.
 We have an automated downloader script to get everything needed per **Android** version to be checked out after sync. This utility is also used when you want to get the latest version of the **Kernel** without "troubles" doing weird merges yourself.
 
 	wget https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/a70a5aa2eaf49fd7e40da19bcae11fc981b44d64/sync-lambda.sh
-	./sync-lambda.sh nougat
+	./sync-lambda.sh nougat # You can also set 'marshmallow' here to check out this Android version.
 
 ###### Obligatory - Getting the main toolchain
 
@@ -137,6 +137,14 @@ Finally, everything will be settled down and ready to compile, just **run**:
 	./build-anykernel.sh
 
 Follow the on-screen guide to compile **Lambda Kernel**. The products will be located under the **store/** folder already _zipped_ with _md5_ files, ready to be flashed on _recovery_.
+
+###### Optional - Compiling all variants in a row
+
+The script is also capable to detect arguments such as _'serialized'_, with two dashes and without the quotes obviously. This will compile all variants explicitly referenced inside the script per **Android** version and naming.
+
+	./build-anykernel.sh --serialized
+
+Follow the on-screen guide to compile **Lambda Kernel**. All products will be located under the **store/** folder already _zipped_ with _md5_ files, ready to be shared _online_.
 
 ###### Optional - Compiling with ccache tunneling
 
