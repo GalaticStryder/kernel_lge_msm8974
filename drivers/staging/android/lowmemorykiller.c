@@ -154,6 +154,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	if (pressure >= VM_PRESSURE_ADAPTIVE_STOP) {
 		other_file = global_page_state(NR_FILE_PAGES) -
 			global_page_state(NR_SHMEM) -
+			global_page_state(NR_UNEVICTABLE) -
 			total_swapcache_pages;
 		other_free = global_page_state(NR_FREE_PAGES);
 
@@ -167,6 +168,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 
 		other_file = global_page_state(NR_FILE_PAGES) -
 			global_page_state(NR_SHMEM) -
+			global_page_state(NR_UNEVICTABLE) -
 			total_swapcache_pages;
 
 		other_free = global_page_state(NR_FREE_PAGES);
