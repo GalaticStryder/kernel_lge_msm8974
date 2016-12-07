@@ -7,7 +7,7 @@
 #             /  \
 #            /    \
 #
-export SCRIPT_VERSION="3.0 (#ForçaChape)"
+export SCRIPT_VERSION="3.1 (#ForçaChape)"
 
 # Colorize
 red='\033[01;31m'
@@ -22,6 +22,9 @@ restore='\033[0m'
 
 # Clean
 clear
+
+# Arguments
+first=${1};
 
 # Resources
 THREAD="-j$(grep -c ^processor /proc/cpuinfo)"
@@ -65,6 +68,39 @@ function checkout_branches {
 	cd $REPACK_DIR
 	git checkout $ANYBRANCH
 	cd $KERNEL_DIR
+}
+
+function variant_assign {
+	spec=${1};
+	if [ "$ANDROID" = Nougat ]; then
+		DEFCONFIG="nougat_'$spec'_defconfig"
+	else
+		DEFCONFIG="marshmallow_'$spec'_defconfig"
+	fi
+	if [ "$spec" == d800 ]; then
+		VARIANT="D800"
+	else if [ "$spec" == d801 ]; then
+		VARIANT="D801"
+	else if [ "$spec" == d802 ]; then
+		VARIANT="D802"
+	else if [ "$spec" == d803 ]; then
+		VARIANT="D803"
+	else if [ "$spec" == f320 ]; then
+		VARIANT="F320"
+	else if [ "$spec" == l01f ]; then
+		VARIANT="L01F"
+	else if [ "$spec" == ls980 ]; then
+		VARIANT="LS980"
+	else if [ "$spec" == vs980 ]; then
+		VARIANT="VS980"
+	fi # D800
+	fi # D801
+	fi # D802
+	fi # D803
+	fi # F320
+	fi # L01F
+	fi # LS980
+	fi # VS980
 }
 
 function ccache_setup {
@@ -118,14 +154,30 @@ function changelog {
 
 function make_zip {
 	cd $REPACK_DIR
-	if [ -f zImage ]; then
-		zip -x@zipexclude -r9 "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip *;
-		mv "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip $ZIP_MOVE;
-		export COMPILATION="success"
-	else
-		echo ""
-		echo -e ${red}"Kernel image not found, compilation failed."${restore}
-		export COMPILATION="sucks"
+	if [ ! "$first" == "--serialized" ]; then
+		if [ -f zImage ]; then
+			zip -x@zipexclude -r9 "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip *;
+			mv "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip $ZIP_MOVE;
+			export COMPILATION="success"
+		else
+			echo ""
+			echo -e ${red}"Kernel image not found, compilation failed."${restore}
+			export COMPILATION="sucks"
+		fi;
+	else if [ "$first" == "--serialized" ]; then
+		spec=${1};
+		if [ -f zImage ]; then
+			zip -x@zipexclude -r9 "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip *;
+			mv "$VERSION"-"$VARIANT"-"$BUILD_DATE".zip $ZIP_MOVE;
+			echo ""
+			echo -e ${green}"Successfully built Lambda Kernel for $i"${restore}
+			export COMPILATION="success"
+		else
+			echo ""
+			echo -e ${red}"Kernel image not found, compilation failed for $i."${restore}
+			export COMPILATION="sucks"
+		fi;
+	fi;
 	fi;
 	cd $KERNEL_DIR;
 }
@@ -241,82 +293,84 @@ if [ "$STATE" = experimental ]; then
 	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG-N$TAG_NUMBER-$TAG_COMMENT
 fi
 
-echo "Would you mind picking an LG G2 variant?"
-select choice in d800 d801 d802 d803 f320 l01f ls980 vs980
-do
-case "$choice" in
-	"d800")
-		VARIANT="D800"
-		if [ "$ANDROID" = Nougat ]; then
-			DEFCONFIG="nougat_d800_defconfig"
-		else
-			DEFCONFIG="marshmallow_d800_defconfig"
-		fi
-		break;;
-	"d801")
-		VARIANT="D801"
-		if [ "$ANDROID" = Nougat ]; then
-			DEFCONFIG="nougat_d801_defconfig"
-		else
-			DEFCONFIG="marshmallow_d801_defconfig"
-		fi
-		break;;
-	"d802")
-		VARIANT="D802"
-		if [ "$ANDROID" = Nougat ]; then
-			DEFCONFIG="nougat_d802_defconfig"
-		else
-			DEFCONFIG="marshmallow_d802_defconfig"
-		fi
-		break;;
-	"d803")
-		VARIANT="D803"
-		if [ "$ANDROID" = Nougat ]; then
-			DEFCONFIG="nougat_d803_defconfig"
-		else
-			DEFCONFIG="marshmallow_d803_defconfig"
-		fi
-		break;;
-	"f320")
-		VARIANT="F320"
-		if [ "$ANDROID" = Nougat ]; then
-			DEFCONFIG="nougat_f320_defconfig"
-		else
-			DEFCONFIG="marshmallow_f320_defconfig"
-		fi
-		break;;
-	"l01f")
-		VARIANT="L01F"
-		if [ "$ANDROID" = Nougat ]; then
-			DEFCONFIG="nougat_l01f_defconfig"
-		else
-			DEFCONFIG="marshmallow_l01f_defconfig"
-		fi
-		break;;
-	"ls980")
-		VARIANT="LS980"
-		if [ "$ANDROID" = Nougat ]; then
-			DEFCONFIG="nougat_ls980_defconfig"
-		else
-			DEFCONFIG="marshmallow_ls980_defconfig"
-		fi
-		break;;
-	"vs980")
-		VARIANT="VS980"
-		if [ "$ANDROID" = Nougat ]; then
-			DEFCONFIG="nougat_vs980_defconfig"
-		else
-			DEFCONFIG="marshmallow_vs980_defconfig"
-		fi
-		break;;
-esac
-done
+if [ ! "$first" == "--serialized" ]; then
+	echo "Would you mind picking an LG G2 variant?"
+	select choice in d800 d801 d802 d803 f320 l01f ls980 vs980
+	do
+	case "$choice" in
+		"d800")
+			VARIANT="D800"
+			if [ "$ANDROID" = Nougat ]; then
+				DEFCONFIG="nougat_d800_defconfig"
+			else
+				DEFCONFIG="marshmallow_d800_defconfig"
+			fi
+			break;;
+		"d801")
+			VARIANT="D801"
+			if [ "$ANDROID" = Nougat ]; then
+				DEFCONFIG="nougat_d801_defconfig"
+			else
+				DEFCONFIG="marshmallow_d801_defconfig"
+			fi
+			break;;
+		"d802")
+			VARIANT="D802"
+			if [ "$ANDROID" = Nougat ]; then
+				DEFCONFIG="nougat_d802_defconfig"
+			else
+				DEFCONFIG="marshmallow_d802_defconfig"
+			fi
+			break;;
+		"d803")
+			VARIANT="D803"
+			if [ "$ANDROID" = Nougat ]; then
+				DEFCONFIG="nougat_d803_defconfig"
+			else
+				DEFCONFIG="marshmallow_d803_defconfig"
+			fi
+			break;;
+		"f320")
+			VARIANT="F320"
+			if [ "$ANDROID" = Nougat ]; then
+				DEFCONFIG="nougat_f320_defconfig"
+			else
+				DEFCONFIG="marshmallow_f320_defconfig"
+			fi
+			break;;
+		"l01f")
+			VARIANT="L01F"
+			if [ "$ANDROID" = Nougat ]; then
+				DEFCONFIG="nougat_l01f_defconfig"
+			else
+				DEFCONFIG="marshmallow_l01f_defconfig"
+			fi
+			break;;
+		"ls980")
+			VARIANT="LS980"
+			if [ "$ANDROID" = Nougat ]; then
+				DEFCONFIG="nougat_ls980_defconfig"
+			else
+				DEFCONFIG="marshmallow_ls980_defconfig"
+			fi
+			break;;
+		"vs980")
+			VARIANT="VS980"
+			if [ "$ANDROID" = Nougat ]; then
+				DEFCONFIG="nougat_vs980_defconfig"
+			else
+				DEFCONFIG="marshmallow_vs980_defconfig"
+			fi
+			break;;
+	esac
+	done
 
-echo ""
-echo -e ${blue}"You are going to build $VERSION for the $VARIANT variant."${restore}
-export LOCALVERSION=-$NAME-$RELEASE-$TAG-$VARIANT
-echo -e ${blue}"Using the Linux tag: $LOCALVERSION."${restore}
-echo ""
+	echo ""
+	echo -e ${blue}"You are going to build $VERSION for the $VARIANT variant."${restore}
+	export LOCALVERSION=-$NAME-$RELEASE-$TAG-$VARIANT
+	echo -e ${blue}"Using the Linux tag: $LOCALVERSION."${restore}
+	echo ""
+fi
 
 echo "Which toolchain you would like to use?"
 select choice in Dorimanx-5.4 Dorimanx-6.1 #Linaro-4.9 (This is a template, add custom choices here...)
@@ -356,54 +410,107 @@ echo "You have chosen to use $TOOLCHAIN."
 
 echo
 
-while read -p "Are you ready to start (Y/N)? " dchoice
-do
-case "$dchoice" in
-	y|Y)
-		prepare_all
-		echo
-		echo "Flowing..."
-		checkout_branches
-		echo "Building kernel with $THREAD argument..."
-		make_zImage
-		create_dtimg
-		changelog
-		make_zip
-		generate_md5
-		break
-		;;
-	n|N)
-		echo
-		echo "This can't be happening... Tell me you're OK,"
-		echo "Snake! Snaaaake!"
-		echo
-		exit
-		;;
-	* )
-		echo
-		echo "Stop peeing yourself, coward!"
-		echo
-		;;
-esac
-done
+if [ ! "$first" == "--serialized" ]; then
+	while read -p "Are you ready to start (Y/N)? " dchoice
+	do
+	case "$dchoice" in
+		y|Y)
+			prepare_all
+			echo
+			echo "Flowing..."
+			checkout_branches
+			echo "Building kernel with $THREAD argument..."
+			make_zImage
+			create_dtimg
+			changelog
+			make_zip
+			generate_md5
+			break
+			;;
+		n|N)
+			echo
+			echo "This can't be happening... Tell me you're OK,"
+			echo "Snake! Snaaaake!"
+			echo
+			exit
+			;;
+		* )
+			echo
+			echo "Stop peeing yourself, coward!"
+			echo
+			;;
+	esac
+	done
+else if [ "$first" == "--serialized" ]; then
+	if [ "$ANDROID" = Nougat ]; then
+		variant=( d800 d801 d802 d803 f320 ls980 vs980 )
+	else
+		variant=( d800 d801 d802 d803 f320 l01f ls980 vs980 )
+	fi
+	function build {
+		spec=("$@")
+		for i in "${spec[@]}";
+			do
+				prepare_all
+				echo
+				echo "Flowing..."
+				checkout_branches
+				echo ""
+				echo "Building kernel with $THREAD argument..."
+				variant_assign "$i"
+				echo ""
+				echo -e ${blue}"Building the following variant: $i"${restore}
+				export LOCALVERSION=-$NAME-$RELEASE-$TAG-$VARIANT
+				echo -e ${blue}"Using the Linux tag: $LOCALVERSION."${restore}
+				make_zImage
+				create_dtimg
+				changelog
+				make_zip "$i"
+				echo ""
+				generate_md5
+			done
+	}
+	build "${variant[@]}"
+fi
+fi
 
 DATE_END=$(date +"%s")
 DIFF=$(($DATE_END - $DATE_START))
-if [ "$COMPILATION" = sucks ]; then
-	echo -e "${blink_red}"
-	echo "                 \                  "
-	echo "                 /\                 "
-	echo "                /  \                "
-	echo "               /    \               "
-	echo -e "${restore}"
-	echo -e ${blink_red}"You tried your best and you failed miserably."${restore}
-	echo -e ${blink_red}"The lesson is, NEVER TRY!"${restore}
+if [ "$first" == "--serialized" ]; then
+	if [ "$COMPILATION" = sucks ]; then
+		echo -e ${blink_red}"                 \                  "
+		echo "                 /\                 "
+		echo "                /  \                "
+		echo "               /    \               "
+		echo -e "${restore}"
+		echo -e ${blink_red}"Serialized mode finished, one or more variants failed to compile."${restore}
+		echo -e ${blink_red}"The lesson is, GIVE UP!"${restore}
+	else
+		echo -e ${blink_yellow}"                 \                  "
+		echo "                 /\                 "
+		echo "                /  \                "
+		echo "               /    \               "
+		echo -e "${restore}"
+		echo -e ${blink_yellow}"Serialized mode finished, all variants compiled."${restore}
+		echo -e ${blink_yellow}"Completed in $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."${restore}
+	fi;
 else
-	echo -e "${blink_green}"
-	echo "                 \                  "
-	echo "                 /\                 "
-	echo "                /  \                "
-	echo "               /    \               "
-	echo -e "${restore}"
-	echo -e ${blink_green}"Completed in $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."${restore}
+	if [ "$COMPILATION" = sucks ]; then
+		echo -e "${blink_red}"
+		echo "                 \                  "
+		echo "                 /\                 "
+		echo "                /  \                "
+		echo "               /    \               "
+		echo -e "${restore}"
+		echo -e ${blink_red}"You tried your best and you failed miserably."${restore}
+		echo -e ${blink_red}"The lesson is, NEVER TRY!"${restore}
+	else
+		echo -e "${blink_green}"
+		echo "                 \                  "
+		echo "                 /\                 "
+		echo "                /  \                "
+		echo "               /    \               "
+		echo -e "${restore}"
+		echo -e ${blink_green}"Completed in $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."${restore}
+	fi;
 fi;
