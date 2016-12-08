@@ -47,7 +47,7 @@ If you're running Arch Linux you probably already have the dependencies needed, 
 
 If you really follow the K.I.S.S. principle you'll probably only need the **base-devel** and it's present in 99% of the installations.
 
-Also, if the host kernel was not compressed with lz4, you might not have that package installed, install it if you don't.
+Also, if the host Kernel was not compressed with lz4, you might not have that package installed, install it if you don't.
 
 	sudo pacman -S lz4
 
@@ -76,57 +76,47 @@ Create a development folder if you don't have one yet.
 
 	mkdir Development && cd Development # Name it as you'd like, this is not hardcoded.
 
-Create the kernel folder inside the development folder.
+Create the Kernel folder inside the development folder.
 
-	mkdir -p kernel/lambda # To avoid conflicts with any other kernel you might already have.
-	cd kernel/lambda
+	mkdir lambda # Create the folder as you wish, this is not hardcoded.
+	cd lambda
 
 ###### Obligatory - Download the source code
 
-We have an automated downloader script to get everything needed per **Android** version to be checked out after sync. This utility is also used when you want to get the latest version of the **Kernel** without "troubles" doing weird merges yourself.
+We have an automated downloader script to get everything needed per **Android** version to be checked out after sync. This utility is also used when you want to get the latest version of the **Kernel** without "troubles" doing weird merges yourself. Just run it anytime you want to upgrade your local **Lambda** tree.
 
-	wget https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/d4a7fb1244773b53a9928c6f0f54fbfa7ea13395/sync-lambda.sh
+The script will download the following **three objects** and place them correctly as the _build-anykernel_ compilation script wants, it's all handled automatically.
+
+| Object        | Description           |
+| ------------- |:---------------------:|
+| [Kernel](https://github.com/GalaticStryder/kernel_lge_msm8974) | Lambda Kernel for the LG G2 |
+| [AnyKernel](https://github.com/GalaticStryder/kernel_lge_msm8974) | AnyKernel for the LG G2 |
+| [Toolchain](https://github.com/dorimanx/DORIMANX_LG_STOCK_LP_KERNEL) | Dorimanx's GCC 6.1 |
+
+	wget https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/01cb669f2a3a506272fc7fbf535e1ebd3f3b8b75/sync-lambda.sh
 	chmod a+x sync-lambda.sh
-	./sync-lambda.sh nougat # You can also set 'marshmallow' here to check out this Android version.
+	./sync-lambda.sh nougat # You can also set 'marshmallow' here to check out this Android version specifically.
 
 ###### Optional - Using SSH instead of HTTPS
 
 When downloading the source code, the automated script uses **HTTPS** by default, although, if you have a configured **git** on your computer, you can use this protocol instead. Just pass the argument _ssh_ in **sync-lambda.sh**.
 
-	./sync-lambda.sh marshmallow ssh # To download the source code using git protocol and check out marshmallow.
-
-###### Obligatory - Getting the main toolchain
-
-And then finally, download the **GCC compiler**. Also known as **toolchain**.
-
-The **"right"** toolchain we use for this particular device comes from **@dorimanx**, you **must** use it as of now. The current version is **GCC 6.1**.
-
-	# OBS: Dorimanx's toolchain is hosted in his own LG G2 kernel.
-	cd lge_msm8974
-	mkdir -p ../toolchains
-	git remote add dorimanx https://github.com/dorimanx/DORIMANX_LG_STOCK_LP_KERNEL
-	git fetch dorimanx master
-	git checkout dorimanx/master # This will get into dorimanx kernel tree.
-	cp -R android-toolchain/ ../toolchains/
-	mv ../toolchains/android-toolchain ../toolchains/dorimanx-6.x # This is just a renaming method.
-	git checkout lambda # This will get into lambda kernel tree back again.
+	./sync-lambda.sh marshmallow ssh # To download the source code and toolchain using git protocol and check out marshmallow.
 
 ###### Optional - Getting an older version of the main toolhain
 
-If you want to use an **older** version of his toolchain for whatever reason, you can checkout his tree at any point in git history that contains that specific version.
+If you want to use an **older** version of the main toolchain for whatever reason, you can checkout dorimanx's tree, which was already downloaded before, at any point in **git** history that contains that specific version.
 
-Go to dorimanx kernel tree as you did **above**.
+	git checkout dorimanx/master # This will get into dorimanx Kernel tree again.
 
-	git checkout dorimanx/master # This will get into dorimanx kernel tree again.
-
-The master branch uses always the latest **GCC** version. To get the older one in place, take a look at the commit history and copy the commit **SHA** and check it out.
+Remember, the master branch uses always the latest **GCC** version. To get the older one in place, take a look at the commit history and copy the commit **SHA** to check it out.
 
 	git checkout 993282bdb9eb4156a724c07782bf058f42d6470e # This is GCC 5.4 by the way.
 	cp -R android-toolchain/ ../toolchains/
-	mv ../toolchains/android-toolchain ../toolchains/dorimanx-5.x # This is just a renaming method.
-	git checkout lambda # This will get into lambda kernel tree back again.
+	mv ../toolchains/android-toolchain ../toolchains/dorimanx-5.x # This is just a renaming method to avoid conflicts.
+	git checkout lambda # This will get into lambda Kernel tree back again.
 
-###### Optional - Using custom toolchains
+###### Optional - Using custom a toolchain
 
 If you want to use a completely different toolchain set, although not recommended, you're able to do so by editing the template for **Linaro 4.9** in _build-anykernel.sh_. Here's an example on how you'd do to use **Linaro 4.9** compiler for **ARM Cortex A15**.
 
