@@ -85,8 +85,15 @@ Create the kernel folder inside the development folder.
 
 We have an automated downloader script to get everything needed per **Android** version to be checked out after sync. This utility is also used when you want to get the latest version of the **Kernel** without "troubles" doing weird merges yourself.
 
-	wget https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/a70a5aa2eaf49fd7e40da19bcae11fc981b44d64/sync-lambda.sh
+	wget https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/d4a7fb1244773b53a9928c6f0f54fbfa7ea13395/sync-lambda.sh
+	chmod a+x sync-lambda.sh
 	./sync-lambda.sh nougat # You can also set 'marshmallow' here to check out this Android version.
+
+###### Optional - Using SSH instead of HTTPS
+
+When downloading the source code, the automated script uses **HTTPS** by default, although, if you have a configured **git** on your computer, you can use this protocol instead. Just pass the argument _ssh_ in **sync-lambda.sh**.
+
+	./sync-lambda.sh marshmallow ssh # To download the source code using git protocol and check out marshmallow.
 
 ###### Obligatory - Getting the main toolchain
 
