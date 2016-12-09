@@ -125,8 +125,8 @@ enum {
 /*
  * Combination of the above debug flags.
  */
-static unsigned long debug_mask = SMARTMAX_DEBUG_LOAD|SMARTMAX_DEBUG_JUMPS|SMARTMAX_DEBUG_ALG;
-//static unsigned long debug_mask;
+//static unsigned long debug_mask = SMARTMAX_DEBUG_LOAD|SMARTMAX_DEBUG_JUMPS|SMARTMAX_DEBUG_ALG;
+static unsigned long debug_mask;
 
 #define SMARTMAX_STAT
 #ifdef SMARTMAX_STAT
