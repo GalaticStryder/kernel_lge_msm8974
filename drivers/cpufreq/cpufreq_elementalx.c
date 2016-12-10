@@ -452,7 +452,7 @@ static int ex_init(struct dbs_data *dbs_data)
 	tuners->up_threshold = DEF_FREQUENCY_UP_THRESHOLD;
 	tuners->down_differential = DEF_FREQUENCY_DOWN_DIFFERENTIAL;
 	tuners->ignore_nice_load = 0;
-	tuners->gboost = 1;
+	tuners->gboost = 0;
 	tuners->gboost_min_freq = DEF_GBOOST_MIN_FREQ;
 	tuners->active_floor_freq = DEF_ACTIVE_FLOOR_FREQ;
 	tuners->sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR;
