@@ -252,7 +252,6 @@ static int check_modem_reset(struct modem_data *drv)
 		ret = 1;
 	} else {
 		wmb();
-		drv->ignore_errors = true;
 		subsys_modem_restart();
 		ret = 0;
 	}
