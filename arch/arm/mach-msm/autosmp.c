@@ -249,11 +249,6 @@ static void autosmp_input_event(struct input_handle *handle, unsigned int type,
 	if (!asmp_param.enabled)
 		return;
 
-#ifdef CONFIG_STATE_NOTIFIER
-	if (state_suspended)
-		return;
-#endif
-
 	now = ktime_to_us(ktime_get());
 	if (now - last_boost_time < MIN_INPUT_INTERVAL)
 		return;
@@ -353,7 +348,7 @@ static int hotplug_start(void)
 #ifdef CONFIG_STATE_NOTIFIER
 	asmp_param.notif.notifier_call = state_notifier_callback;
 	if (state_register_client(&asmp_param.notif)) {
-		pr_err("%s: Failed to register State notifier callback\n",
+		pr_err("%s: Failed to register state notifier callback\n",
 			ASMP_TAG);
 		goto err_notif;
 	}
