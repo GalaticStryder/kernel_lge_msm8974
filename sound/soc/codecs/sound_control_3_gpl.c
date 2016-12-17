@@ -27,12 +27,16 @@
 #define SOUND_CONTROL_MINOR_VERSION	7
 
 #ifdef CONFIG_STWEAKS_CONTROL
-static int lge_snd_ctrl_locked = 0;
-static int lge_stweaks_control = 0;
+static int lge_snd_ctrl_locked = 1;
+static int lge_stweaks_control = 1;
 #endif
 
 extern struct snd_soc_codec *fauxsound_codec_ptr;
+#ifdef CONFIG_MACH_LGE
+static int wcd9xxx_hw_revision = 1;
+#else
 extern int wcd9xxx_hw_revision;
+#endif
 
 static int snd_ctrl_locked = 0;
 static int snd_rec_ctrl_locked = 0;
@@ -243,10 +247,12 @@ int snd_hax_reg_access(unsigned int reg)
 		/* Digital headphones gain */
 		case TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL:
 		case TAIKO_A_CDC_RX2_VOL_CTL_B2_CTL:
+#ifndef CONFIG_MACH_LGE
 		case TAIKO_A_CDC_RX3_VOL_CTL_B2_CTL:
 		case TAIKO_A_CDC_RX4_VOL_CTL_B2_CTL:
 		case TAIKO_A_CDC_RX5_VOL_CTL_B2_CTL:
 		case TAIKO_A_CDC_RX6_VOL_CTL_B2_CTL:
+#endif
 		/* Speaker gain */
 		case TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL:
 		/* Line-out gain */
@@ -263,18 +269,22 @@ int snd_hax_reg_access(unsigned int reg)
 			if (snd_ctrl_locked > 0)
 				ret = 0;
 			break;
+#ifndef CONFIG_MACH_LGE
 		case TAIKO_A_CDC_TX1_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX2_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX3_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX4_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX5_VOL_CTL_GAIN:
+#endif
 		/* In-call microphone gain */
 		case TAIKO_A_CDC_TX6_VOL_CTL_GAIN:
 		/* Camera microphone gain */
 		case TAIKO_A_CDC_TX7_VOL_CTL_GAIN:
+#ifndef CONFIG_MACH_LGE
 		case TAIKO_A_CDC_TX8_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX9_VOL_CTL_GAIN:
 		case TAIKO_A_CDC_TX10_VOL_CTL_GAIN:
+#endif
 #ifdef CONFIG_STWEAKS_CONTROL
 			/* Check if STweaks is locked. */
 			if (lge_snd_ctrl_locked > 0)
@@ -543,11 +553,23 @@ static ssize_t cam_mic_gain_store(struct kobject *kobj,
 static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u %u\n",
-			taiko_read(fauxsound_codec_ptr,
-				TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL),
-			taiko_read(fauxsound_codec_ptr,
-				TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL));
+#ifndef CONFIG_MACH_LGE
+	return sprintf(buf, "%u %u\n",
+		taiko_read(fauxsound_codec_ptr,
+			TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL),
+		taiko_read(fauxsound_codec_ptr,
+			TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL));
+#else
+	unsigned int retl, retr;
+
+	retl = taiko_read(fauxsound_codec_ptr,
+		TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL);
+	retr = taiko_read(fauxsound_codec_ptr,
+		TAIKO_A_CDC_RX7_VOL_CTL_B2_CTL);
+
+	return sprintf(buf, "%u %u\n",
+		retl == 24 ? 0 : retl, retr == 24 ? 0 : retr);
+#endif
 }
 
 static ssize_t speaker_gain_store(struct kobject *kobj,
