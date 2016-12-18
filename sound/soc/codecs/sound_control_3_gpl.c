@@ -48,7 +48,7 @@ int taiko_write(struct snd_soc_codec *codec, unsigned int reg,
 
 #define REG_SZ  25
 static unsigned int cached_regs[] = {-1, -1, -1, -1, 0, 0, -1, -1, -1, -1,
-			    1, -1, -1, -1, -1, -1, 3, 3, -1, -1,
+			    0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 			    -1, -1, -1, -1, -1};
 
 void snd_hax_cache_write(unsigned int reg, unsigned int value)
