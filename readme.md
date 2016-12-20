@@ -3,14 +3,13 @@ Lambda Kernel for the LG G2
 
 > There’s only one horizon, yet it can be found.
 
-A general purpose custom Kernel for the **LG G2** that embraces freedom and speed on a **CAF** oriented shape.
+A general purpose custom **Kernel** for the **LG G2** that embraces freedom and speed on a **CAF** oriented shape.
 
 Information
 -------------------------
 
 - Linux version: **3.4.113**
 - Compiler: **Dorimanx GCC 6.1**
-- Android: **Marshmallow/Nougat**
 - Packager: **AnyKernel2**
 
 Dependencies
@@ -93,15 +92,15 @@ The script will download the following **three objects** and place them correctl
 | [AnyKernel](https://github.com/GalaticStryder/kernel_lge_msm8974) | AnyKernel for the LG G2 |
 | [Toolchain](https://github.com/dorimanx/DORIMANX_LG_STOCK_LP_KERNEL) | Dorimanx's GCC 6.1 |
 
-	wget https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/01cb669f2a3a506272fc7fbf535e1ebd3f3b8b75/sync-lambda.sh
+	wget https://gist.githubusercontent.com/GalaticStryder/d4f189e6dac50f755f2c5e1e7dcdad92/raw/a55eba3a07e0b8f4d884ff1a5fd0582598935002/sync-lambda.sh
 	chmod a+x sync-lambda.sh
-	./sync-lambda.sh nougat # You can also set 'marshmallow' here to check out this Android version specifically.
+	./sync-lambda.sh
 
 ###### Optional - Using SSH instead of HTTPS
 
 When downloading the source code, the automated script uses **HTTPS** by default, although, if you have a configured **git** on your computer, you can use this protocol instead. Just pass the argument _ssh_ in **sync-lambda.sh**.
 
-	./sync-lambda.sh marshmallow ssh # To download the source code and toolchain using git protocol and check out marshmallow.
+	./sync-lambda.sh ssh # To download the source code and toolchain using git protocol.
 
 ###### Optional - Getting an older version of the main toolhain
 
@@ -137,7 +136,7 @@ Follow the on-screen guide to compile **Lambda Kernel**. The products will be lo
 
 ###### Optional - Compiling all variants in a row
 
-The script is also capable to detect arguments such as _'serialized'_, with two dashes and without the quotes obviously. This will compile all variants explicitly referenced inside the script per **Android** version and naming.
+The script is also capable to detect arguments such as _'serialized'_, with two dashes and without the quotes obviously.
 
 	./build-anykernel.sh --serialized
 
@@ -183,10 +182,10 @@ Clear the cache and reset the stats every once in a while to avoid clutter on ou
 
 ###### Optional - Pushing the files with ADB
 
-This is how I organize my **Kernel** files on the device, under the _/sdcard/Flash/_ directory which is a alphabetical recovery flashing queue.
+This is how I organize my **Kernel** files on the device, under the _/sdcard/Flash/_ directory which is an alphabetical recovery flashing queue.
 
 	adb shell mkdir /sdcard/Flash;
-	adb push store/Lambda-Infinito-Nougat-Experimental-N311-EX-D800-12042016.zip* /sdcard/Flash;
+	adb push store/Lambda-Infinito-Experimental-N348-WILD-D802-12202016.zip* /sdcard/Flash;
 
 Contributors
 -------------------------

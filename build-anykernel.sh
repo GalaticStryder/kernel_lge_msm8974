@@ -7,7 +7,7 @@
 #             /  \
 #            /    \
 #
-export SCRIPT_VERSION="3.1 (#ForçaChape)"
+export SCRIPT_VERSION="3.2.1 (#ForçaChape)"
 
 # Colorize
 red='\033[01;31m'
@@ -32,6 +32,9 @@ THREAD="-j$(grep -c ^processor /proc/cpuinfo)"
 # Variables
 export ARCH=arm
 export SUBARCH=arm
+
+# Branches
+ANYBRANCH="lambda"
 
 # Paths
 KERNEL_DIR=`pwd`
@@ -72,35 +75,24 @@ function checkout_branches {
 
 function variant_assign {
 	spec=${1};
-	if [ "$ANDROID" = Nougat ]; then
-		DEFCONFIG="nougat_'$spec'_defconfig"
-	else
-		DEFCONFIG="marshmallow_'$spec'_defconfig"
-	fi
+	DEFCONFIG="lambda_'$spec'_defconfig"
 	if [ "$spec" == d800 ]; then
 		VARIANT="D800"
-	else if [ "$spec" == d801 ]; then
+	elif [ "$spec" == d801 ]; then
 		VARIANT="D801"
-	else if [ "$spec" == d802 ]; then
+	elif [ "$spec" == d802 ]; then
 		VARIANT="D802"
-	else if [ "$spec" == d803 ]; then
+	elif [ "$spec" == d803 ]; then
 		VARIANT="D803"
-	else if [ "$spec" == f320 ]; then
+	elif [ "$spec" == f320 ]; then
 		VARIANT="F320"
-	else if [ "$spec" == l01f ]; then
+	elif [ "$spec" == l01f ]; then
 		VARIANT="L01F"
-	else if [ "$spec" == ls980 ]; then
+	elif [ "$spec" == ls980 ]; then
 		VARIANT="LS980"
-	else if [ "$spec" == vs980 ]; then
+	elif [ "$spec" == vs980 ]; then
 		VARIANT="VS980"
-	fi # D800
-	fi # D801
-	fi # D802
-	fi # D803
-	fi # F320
-	fi # L01F
-	fi # LS980
-	fi # VS980
+	fi
 }
 
 function ccache_setup {
@@ -231,46 +223,12 @@ echo "You have chosen the tag: $STATE!"
 
 echo
 
-echo -e ${blue}"Marshmallow -> Type M"${restore}
-echo -e ${green}"Nougat -> Type N"${restore}
-echo ""
-while read -p "Please, select the Android version (M/N)? " achoice
-do
-case "$achoice" in
-	m|M)
-		echo
-		echo -e ${blue}"Building marshmallow compatible kernel..."${restore}
-		ANDROID="Marshmallow"
-		ANYBRANCH="marshmallow"
-		echo
-		break
-		;;
-	n|N)
-		echo
-		echo -e ${green}"Building nougat compatible kernel..."${restore}
-		ANDROID="Nougat"
-		ANYBRANCH="nougat"
-		echo
-		break
-		;;
-	* )
-		echo
-		echo -e ${blue}"Assuming marshmallow as Android version..."${restore}
-		ANDROID="Marshmallow"
-		ANYBRANCH="marshmallow"
-		echo
-		break
-		;;
-esac
-done
-
 # Versioning
 NAME="Lambda"
 RELEASE="Infinito"
-BUILD_DATE=$(date -u +%m%d%Y)
 if [ "$STATE" = stable ]; then
 	TAG="Stable"
-	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG
+	VERSION="$NAME-$RELEASE-$TAG"
 fi
 if [ "$STATE" = beta ]; then
 	TAG="Beta"
@@ -278,7 +236,7 @@ if [ "$STATE" = beta ]; then
 	read -e tag_number
 	TAG_NUMBER="$tag_number"
 	echo ""
-	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG-N$TAG_NUMBER
+	VERSION="$NAME-$RELEASE-$TAG-N$TAG_NUMBER"
 fi
 if [ "$STATE" = experimental ]; then
 	TAG="Experimental"
@@ -290,8 +248,10 @@ if [ "$STATE" = experimental ]; then
 	read -e tag_comment
 	TAG_COMMENT="$tag_comment"
 	echo ""
-	export VERSION=$NAME-$RELEASE-$ANDROID-$TAG-N$TAG_NUMBER-$TAG_COMMENT
+	VERSION="$NAME-$RELEASE-$TAG-N$TAG_NUMBER-$TAG_COMMENT"
 fi
+export LOCALVERSION=-$VERSION
+BUILD_DATE=$(date -u +%m%d%Y)
 
 if [ ! "$first" == "--serialized" ]; then
 	echo "Would you mind picking an LG G2 variant?"
@@ -300,74 +260,41 @@ if [ ! "$first" == "--serialized" ]; then
 	case "$choice" in
 		"d800")
 			VARIANT="D800"
-			if [ "$ANDROID" = Nougat ]; then
-				DEFCONFIG="nougat_d800_defconfig"
-			else
-				DEFCONFIG="marshmallow_d800_defconfig"
-			fi
+			DEFCONFIG="lambda_d800_defconfig"
 			break;;
 		"d801")
 			VARIANT="D801"
-			if [ "$ANDROID" = Nougat ]; then
-				DEFCONFIG="nougat_d801_defconfig"
-			else
-				DEFCONFIG="marshmallow_d801_defconfig"
-			fi
+			DEFCONFIG="lambda_d801_defconfig"
 			break;;
 		"d802")
 			VARIANT="D802"
-			if [ "$ANDROID" = Nougat ]; then
-				DEFCONFIG="nougat_d802_defconfig"
-			else
-				DEFCONFIG="marshmallow_d802_defconfig"
-			fi
+			DEFCONFIG="lambda_d802_defconfig"
 			break;;
 		"d803")
 			VARIANT="D803"
-			if [ "$ANDROID" = Nougat ]; then
-				DEFCONFIG="nougat_d803_defconfig"
-			else
-				DEFCONFIG="marshmallow_d803_defconfig"
-			fi
+			DEFCONFIG="lambda_d803_defconfig"
 			break;;
 		"f320")
 			VARIANT="F320"
-			if [ "$ANDROID" = Nougat ]; then
-				DEFCONFIG="nougat_f320_defconfig"
-			else
-				DEFCONFIG="marshmallow_f320_defconfig"
-			fi
+			DEFCONFIG="lambda_f320_defconfig"
 			break;;
 		"l01f")
 			VARIANT="L01F"
-			if [ "$ANDROID" = Nougat ]; then
-				DEFCONFIG="nougat_l01f_defconfig"
-			else
-				DEFCONFIG="marshmallow_l01f_defconfig"
-			fi
+			DEFCONFIG="lambda_l01f_defconfig"
 			break;;
 		"ls980")
 			VARIANT="LS980"
-			if [ "$ANDROID" = Nougat ]; then
-				DEFCONFIG="nougat_ls980_defconfig"
-			else
-				DEFCONFIG="marshmallow_ls980_defconfig"
-			fi
+			DEFCONFIG="lambda_ls980_defconfig"
 			break;;
 		"vs980")
 			VARIANT="VS980"
-			if [ "$ANDROID" = Nougat ]; then
-				DEFCONFIG="nougat_vs980_defconfig"
-			else
-				DEFCONFIG="marshmallow_vs980_defconfig"
-			fi
+			DEFCONFIG="lambda_vs980_defconfig"
 			break;;
 	esac
 	done
 
 	echo ""
 	echo -e ${blue}"You are going to build $VERSION for the $VARIANT variant."${restore}
-	export LOCALVERSION=-$NAME-$RELEASE-$TAG-$VARIANT
 	echo -e ${blue}"Using the Linux tag: $LOCALVERSION."${restore}
 	echo ""
 fi
@@ -442,11 +369,6 @@ if [ ! "$first" == "--serialized" ]; then
 	esac
 	done
 else if [ "$first" == "--serialized" ]; then
-	if [ "$ANDROID" = Nougat ]; then
-		variant=( d800 d801 d802 d803 f320 ls980 vs980 )
-	else
-		variant=( d800 d801 d802 d803 f320 l01f ls980 vs980 )
-	fi
 	function build {
 		spec=("$@")
 		for i in "${spec[@]}";
@@ -460,7 +382,7 @@ else if [ "$first" == "--serialized" ]; then
 				variant_assign "$i"
 				echo ""
 				echo -e ${blue}"Building the following variant: $i"${restore}
-				export LOCALVERSION=-$NAME-$RELEASE-$TAG-$VARIANT
+				export LOCALVERSION=-$NAME-$RELEASE-$TAG
 				echo -e ${blue}"Using the Linux tag: $LOCALVERSION."${restore}
 				make_zImage
 				create_dtimg
@@ -470,6 +392,8 @@ else if [ "$first" == "--serialized" ]; then
 				generate_md5
 			done
 	}
+	# We want all of them right now!
+	variant=( d800 d801 d802 d803 f320 l01f ls980 vs980 )
 	build "${variant[@]}"
 fi
 fi
