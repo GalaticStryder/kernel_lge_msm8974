@@ -200,6 +200,8 @@ int wcd9xxx_reg_read_safe(struct wcd9xxx_core_resource *core_res,
 			  unsigned short reg);
 #ifdef CONFIG_STWEAKS_CONTROL
 extern int lge_snd_pa_ctrl_locked;
+#else
+extern int snd_pa_ctrl_locked;
 #endif
 #endif
 
