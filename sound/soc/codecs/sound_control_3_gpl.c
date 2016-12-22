@@ -30,6 +30,8 @@
 static int lge_snd_ctrl_locked = 1;
 static int lge_stweaks_control = 1;
 int lge_snd_pa_ctrl_locked = 1;
+#else
+int snd_pa_ctrl_locked = 1;
 #endif
 
 extern struct snd_soc_codec *fauxsound_codec_ptr;
@@ -483,6 +485,24 @@ static ssize_t lge_headphone_pa_gain_store(struct kobject *kobj,
 
 	return count;
 }
+#else
+static ssize_t sound_pa_control_locked_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", snd_pa_ctrl_locked);
+}
+
+static ssize_t sound_pa_control_locked_store(struct kobject *kobj,
+                struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int inp;
+
+	sscanf(buf, "%d", &inp);
+
+	snd_pa_ctrl_locked = inp;
+
+	return count;
+}
 #endif
 
 static ssize_t mic_gain_show(struct kobject *kobj,
@@ -856,6 +876,12 @@ static struct kobj_attribute lge_headphone_gain_attribute =
 		0666,
 		headphone_gain_show,
 		lge_headphone_gain_store);
+#else
+static struct kobj_attribute sound_pa_control_locked_attribute =
+	__ATTR(sound_pa_control_locked,
+		0666,
+		sound_pa_control_locked_show,
+		sound_pa_control_locked_store);
 #endif
 
 static struct kobj_attribute headphone_gain_attribute =
@@ -905,6 +931,8 @@ static struct attribute *sound_control_attrs[] =
 		&lge_mic_gain_attribute.attr,
 		&lge_speaker_gain_attribute.attr,
 		&lge_headphone_pa_gain_attribute.attr,
+#else
+		&sound_pa_control_locked_attribute.attr,
 #endif
 		&headphone_gain_attribute.attr,
 		&headphone_pa_gain_attribute.attr,
