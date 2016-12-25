@@ -23,12 +23,14 @@
 #include <linux/cpufreq.h>
 #include <linux/err.h>
 #include <linux/kernel.h>
+#include <linux/msm_tsens.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/qpnp/qpnp-adc.h>
 #include <linux/slab.h>
 
+#define TSENS_SENSOR 5
 #define DEFAULT_SAMPLING_MS 3000
 
 /* Sysfs attr group must be manually updated in order to change this */
@@ -41,12 +43,15 @@ struct throttle_policy {
 	uint32_t freq;
 };
 
-struct thermal_config {
-	struct qpnp_vadc_chip *vadc_dev;
-	enum qpnp_vadc_channels adc_chan;
+struct tsens_config {
 	uint8_t enabled;
 	uint32_t sampling_ms;
 	uint32_t user_maxfreq;
+};
+
+struct vadc_config {
+	struct qpnp_vadc_chip *vadc_dev;
+	enum qpnp_vadc_channels adc_chan;
 };
 
 struct thermal_zone {
@@ -58,7 +63,8 @@ struct thermal_zone {
 struct thermal_policy {
 	spinlock_t lock;
 	struct delayed_work dwork;
-	struct thermal_config conf;
+	struct tsens_config conf;
+	struct vadc_config vadc;
 	struct throttle_policy throttle;
 	struct thermal_zone zone[NR_THERMAL_ZONES];
 	struct workqueue_struct *wq;
@@ -70,19 +76,26 @@ static void update_online_cpu_policy(void);
 
 static void msm_thermal_main(struct work_struct *work)
 {
+	struct tsens_device tsens_dev;
 	struct thermal_policy *t = container_of(work, typeof(*t), dwork.work);
 	struct qpnp_vadc_result result;
 	int32_t curr_zone, old_zone;
 	int32_t i, ret;
-	int64_t temp;
+	unsigned long temp;
 
-	ret = qpnp_vadc_read(t->conf.vadc_dev, t->conf.adc_chan, &result);
+	tsens_dev.sensor_num = TSENS_SENSOR;
+	ret = tsens_get_temp(&tsens_dev, &temp);
+	if (ret || temp > 1000) {
+		pr_err("Unable to read tsens sensor #%d\n", tsens_dev.sensor_num);
+		goto reschedule;
+	}
+
+	ret = qpnp_vadc_read(t->vadc.vadc_dev, t->vadc.adc_chan, &result);
 	if (ret) {
 		pr_err("Unable to read ADC channel\n");
 		goto reschedule;
 	}
 
-	temp = result.physical;
 	old_zone = t->throttle.curr_zone;
 
 	spin_lock(&t->lock);
@@ -134,6 +147,7 @@ static void msm_thermal_main(struct work_struct *work)
 			t->throttle.curr_zone = UNTHROTTLE_ZONE;
 			break;
 		}
+		pr_info("CPU temperature at %luC\n", temp);
 	}
 
 	curr_zone = t->throttle.curr_zone;
@@ -142,10 +156,13 @@ static void msm_thermal_main(struct work_struct *work)
 	 * Update throttle freq. Setting throttle.freq to 0
 	 * tells the CPU notifier to unthrottle.
 	 */
-	if (curr_zone == UNTHROTTLE_ZONE)
+	if (curr_zone == UNTHROTTLE_ZONE) {
 		t->throttle.freq = 0;
-	else
+		pr_info("Setting CPU to unthrottled zone.\n");
+	} else {
 		t->throttle.freq = t->zone[curr_zone].freq;
+		pr_info("Setting CPU to %uKHz!\n", t->throttle.freq);
+	}
 
 	spin_unlock(&t->lock);
 
@@ -394,18 +411,19 @@ static int msm_thermal_parse_dt(struct platform_device *pdev,
 	struct device_node *np = pdev->dev.of_node;
 	int ret;
 
-	t->conf.vadc_dev = qpnp_get_vadc(&pdev->dev, "thermal");
-	if (IS_ERR(t->conf.vadc_dev)) {
-		ret = PTR_ERR(t->conf.vadc_dev);
+	pr_info("Probing VADC properties...\n");
+
+	t->vadc.vadc_dev = qpnp_get_vadc(&pdev->dev, "thermal");
+	if (IS_ERR(t->vadc.vadc_dev)) {
+		ret = PTR_ERR(t->vadc.vadc_dev);
 		if (ret != -EPROBE_DEFER)
 			pr_err("VADC property missing\n");
 		return ret;
 	}
 
-	ret = of_property_read_u32(np, "qcom,adc-channel", &t->conf.adc_chan);
+	ret = of_property_read_u32(np, "qcom,adc-channel", &t->vadc.adc_chan);
 	if (ret)
 		pr_err("ADC-channel property missing\n");
-
 	return ret;
 }
 
