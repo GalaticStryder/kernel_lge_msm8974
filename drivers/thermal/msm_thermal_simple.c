@@ -50,6 +50,7 @@ struct tsens_config {
 };
 
 struct vadc_config {
+	uint8_t vadc;
 	struct qpnp_vadc_chip *vadc_dev;
 	enum qpnp_vadc_channels adc_chan;
 };
@@ -76,11 +77,11 @@ static void update_online_cpu_policy(void);
 
 static void msm_thermal_main(struct work_struct *work)
 {
-	struct tsens_device tsens_dev;
 	struct thermal_policy *t = container_of(work, typeof(*t), dwork.work);
+	struct tsens_device tsens_dev;
 	struct qpnp_vadc_result result;
 	int32_t curr_zone, old_zone;
-	int32_t i, ret;
+	int32_t i, ret, val;
 	unsigned long temp;
 
 	tsens_dev.sensor_num = TSENS_SENSOR;
@@ -90,11 +91,15 @@ static void msm_thermal_main(struct work_struct *work)
 		goto reschedule;
 	}
 
-	ret = qpnp_vadc_read(t->vadc.vadc_dev, t->vadc.adc_chan, &result);
-	if (ret) {
+	val = qpnp_vadc_read(t->vadc.vadc_dev, t->vadc.adc_chan, &result);
+	if (val) {
 		pr_err("Unable to read ADC channel\n");
 		goto reschedule;
 	}
+
+	/* Poll VADC result for temperature if VADC is enabled. */
+	if (t->vadc.vadc)
+		temp = result.physical;
 
 	old_zone = t->throttle.curr_zone;
 
@@ -147,7 +152,10 @@ static void msm_thermal_main(struct work_struct *work)
 			t->throttle.curr_zone = UNTHROTTLE_ZONE;
 			break;
 		}
-		pr_info("CPU temperature at %luC\n", temp);
+		if (t->vadc.vadc)
+			pr_info("CPU temperature at %lluC\n", result.physical);
+		else
+			pr_info("CPU temperature at %luC\n", temp);
 	}
 
 	curr_zone = t->throttle.curr_zone;
@@ -259,6 +267,32 @@ static ssize_t enabled_write(struct device *dev,
 	return size;
 }
 
+static ssize_t vadc_write(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct thermal_policy *t = t_policy_g;
+	uint32_t data;
+	int ret;
+
+	ret = sscanf(buf, "%u", &data);
+	if (ret != 1)
+		return -EINVAL;
+
+	t->vadc.vadc = data;
+
+	cancel_delayed_work_sync(&t->dwork);
+
+	if (data) {
+		pr_info("Restarting driver into VADC mode.\n");
+		queue_delayed_work(t->wq, &t->dwork, 0);
+	} else {
+		pr_info("Restarting driver into TSENS mode.\n");
+		queue_delayed_work(t->wq, &t->dwork, 0);
+	}
+
+	return size;
+}
+
 static ssize_t sampling_ms_write(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
@@ -326,6 +360,14 @@ static ssize_t enabled_read(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%u\n", t->conf.enabled);
 }
 
+static ssize_t vadc_read(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct thermal_policy *t = t_policy_g;
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", t->vadc.vadc);
+}
+
 static ssize_t sampling_ms_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -355,6 +397,7 @@ static ssize_t user_maxfreq_read(struct device *dev,
 }
 
 static DEVICE_ATTR(enabled, 0644, enabled_read, enabled_write);
+static DEVICE_ATTR(vadc, 0644, vadc_read, vadc_write);
 static DEVICE_ATTR(sampling_ms, 0644, sampling_ms_read, sampling_ms_write);
 static DEVICE_ATTR(user_maxfreq, 0644, user_maxfreq_read, user_maxfreq_write);
 static DEVICE_ATTR(zone0, 0644, thermal_zone_read, thermal_zone_write);
@@ -368,6 +411,7 @@ static DEVICE_ATTR(zone7, 0644, thermal_zone_read, thermal_zone_write);
 
 static struct attribute *msm_thermal_attr[] = {
 	&dev_attr_enabled.attr,
+	&dev_attr_vadc.attr,
 	&dev_attr_sampling_ms.attr,
 	&dev_attr_user_maxfreq.attr,
 	&dev_attr_zone0.attr,
