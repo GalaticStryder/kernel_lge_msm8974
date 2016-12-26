@@ -30,7 +30,11 @@
 #include <linux/qpnp/qpnp-adc.h>
 #include <linux/slab.h>
 
-#define TSENS_SENSOR 5
+#ifdef CONFIG_SMB349_CHARGER
+#include <linux/i2c/smb349_charger.h>
+#endif
+
+#define TSENS_SENSOR 0
 #define DEFAULT_SAMPLING_MS 3000
 
 /* Sysfs attr group must be manually updated in order to change this */
@@ -51,6 +55,7 @@ struct tsens_config {
 
 struct vadc_config {
 	uint8_t vadc;
+	uint8_t batt;
 	struct qpnp_vadc_chip *vadc_dev;
 	enum qpnp_vadc_channels adc_chan;
 };
@@ -80,9 +85,11 @@ static void msm_thermal_main(struct work_struct *work)
 	struct thermal_policy *t = container_of(work, typeof(*t), dwork.work);
 	struct tsens_device tsens_dev;
 	struct qpnp_vadc_result result;
+	unsigned long temp;
 	int32_t curr_zone, old_zone;
 	int32_t i, ret, val;
-	unsigned long temp;
+	int32_t batt_temp;
+	int64_t vadc_temp;
 
 	tsens_dev.sensor_num = TSENS_SENSOR;
 	ret = tsens_get_temp(&tsens_dev, &temp);
@@ -91,15 +98,35 @@ static void msm_thermal_main(struct work_struct *work)
 		goto reschedule;
 	}
 
+#ifdef CONFIG_MACH_LGE
+	if (t->vadc.vadc) {
+		if (t->vadc.batt) {
+			batt_temp = smb349_get_batt_temp_origin();
+			vadc_temp = batt_temp / 10;
+		} else {
+			val = qpnp_vadc_read_lge(LR_MUX3_PU2_XO_THERM, &result);
+			vadc_temp = result.physical;
+			if (val) {
+				pr_err("Unable to read ADC channel\n");
+				goto reschedule;
+			}
+		}
+	}
+#else
 	val = qpnp_vadc_read(t->vadc.vadc_dev, t->vadc.adc_chan, &result);
+	vadc_temp = result.physical;
 	if (val) {
 		pr_err("Unable to read ADC channel\n");
 		goto reschedule;
 	}
+#endif
 
 	/* Poll VADC result for temperature if VADC is enabled. */
-	if (t->vadc.vadc)
-		temp = result.physical;
+	if (t->vadc.vadc) {
+		pr_info("VADC temperature at %lld\n", vadc_temp);
+	} else {
+		pr_info("TSENS sensor #%d temperature at %luC\n", tsens_dev.sensor_num, temp);
+	}
 
 	old_zone = t->throttle.curr_zone;
 
@@ -121,41 +148,71 @@ static void msm_thermal_main(struct work_struct *work)
 			break;
 		}
 
-		if (temp > t->zone[i].reset_degC) {
-			/*
-			 * If temp is less than the trip temp for the next
-			 * thermal zone and is greater than or equal to the
-			 * trip temp for the current zone, then exit here and
-			 * use the current index as the thermal zone.
-			 * Otherwise, keep iterating until this is true (or
-			 * until we hit the highest thermal zone).
-			 */
-			if (temp < t->zone[i + 1].trip_degC &&
-				(temp >= t->zone[i].trip_degC ||
-				old_zone != UNTHROTTLE_ZONE)) {
-				t->throttle.curr_zone = i;
-				break;
-			} else if (!i && old_zone == UNTHROTTLE_ZONE &&
-				temp < t->zone[0].trip_degC) {
+		if (t->vadc.vadc) {
+			if (vadc_temp > t->zone[i].reset_degC) {
 				/*
-				 * Don't keep looping if the CPU is currently
-				 * unthrottled and the temp is below the first
-				 * zone's trip point.
-				 */
+				* If temp is less than the trip temp for the next
+				* thermal zone and is greater than or equal to the
+				* trip temp for the current zone, then exit here and
+				* use the current index as the thermal zone.
+				* Otherwise, keep iterating until this is true (or
+				* until we hit the highest thermal zone).
+				*/
+				if (vadc_temp < t->zone[i + 1].trip_degC &&
+					(vadc_temp >= t->zone[i].trip_degC ||
+					old_zone != UNTHROTTLE_ZONE)) {
+					t->throttle.curr_zone = i;
+					break;
+				} else if (!i && old_zone == UNTHROTTLE_ZONE &&
+					vadc_temp < t->zone[0].trip_degC) {
+					/*
+					* Don't keep looping if the CPU is currently
+					* unthrottled and the temp is below the first
+					* zone's trip point.
+					*/
+					break;
+				}
+			} else if (!i) {
+				/*
+				* Unthrottle CPU if temp is at or below the first
+				* zone's reset temp.
+				*/
+				t->throttle.curr_zone = UNTHROTTLE_ZONE;
 				break;
 			}
-		} else if (!i) {
-			/*
-			 * Unthrottle CPU if temp is at or below the first
-			 * zone's reset temp.
-			 */
-			t->throttle.curr_zone = UNTHROTTLE_ZONE;
-			break;
+		} else {
+			if (temp > t->zone[i].reset_degC) {
+				/*
+				* If temp is less than the trip temp for the next
+				* thermal zone and is greater than or equal to the
+				* trip temp for the current zone, then exit here and
+				* use the current index as the thermal zone.
+				* Otherwise, keep iterating until this is true (or
+				* until we hit the highest thermal zone).
+				*/
+				if (temp < t->zone[i + 1].trip_degC &&
+					(temp >= t->zone[i].trip_degC ||
+					old_zone != UNTHROTTLE_ZONE)) {
+					t->throttle.curr_zone = i;
+					break;
+				} else if (!i && old_zone == UNTHROTTLE_ZONE &&
+					temp < t->zone[0].trip_degC) {
+					/*
+					* Don't keep looping if the CPU is currently
+					* unthrottled and the temp is below the first
+					* zone's trip point.
+					*/
+					break;
+				}
+			} else if (!i) {
+				/*
+				* Unthrottle CPU if temp is at or below the first
+				* zone's reset temp.
+				*/
+				t->throttle.curr_zone = UNTHROTTLE_ZONE;
+				break;
+			}
 		}
-		if (t->vadc.vadc)
-			pr_info("CPU temperature at %lluC\n", result.physical);
-		else
-			pr_info("CPU temperature at %luC\n", temp);
 	}
 
 	curr_zone = t->throttle.curr_zone;
@@ -164,13 +221,12 @@ static void msm_thermal_main(struct work_struct *work)
 	 * Update throttle freq. Setting throttle.freq to 0
 	 * tells the CPU notifier to unthrottle.
 	 */
-	if (curr_zone == UNTHROTTLE_ZONE) {
+	if (curr_zone == UNTHROTTLE_ZONE)
 		t->throttle.freq = 0;
-		pr_info("Setting CPU to unthrottled zone.\n");
-	} else {
+	else
 		t->throttle.freq = t->zone[curr_zone].freq;
-		pr_info("Setting CPU to %uKHz!\n", t->throttle.freq);
-	}
+
+	pr_info("Setting CPU to %uKHz!\n", t->throttle.freq);
 
 	spin_unlock(&t->lock);
 
@@ -293,6 +349,34 @@ static ssize_t vadc_write(struct device *dev,
 	return size;
 }
 
+#ifdef CONFIG_MACH_LGE
+static ssize_t vadc_batt_write(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct thermal_policy *t = t_policy_g;
+	uint32_t data;
+	int ret;
+
+	ret = sscanf(buf, "%u", &data);
+	if (ret != 1)
+		return -EINVAL;
+
+	t->vadc.batt = data;
+
+	cancel_delayed_work_sync(&t->dwork);
+
+	if (data) {
+		pr_info("Polling VADC at battery\n");
+		queue_delayed_work(t->wq, &t->dwork, 0);
+	} else {
+		pr_info("Polling VADC at LCD\n");
+		queue_delayed_work(t->wq, &t->dwork, 0);
+	}
+
+	return size;
+}
+#endif
+
 static ssize_t sampling_ms_write(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
@@ -368,6 +452,16 @@ static ssize_t vadc_read(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%u\n", t->vadc.vadc);
 }
 
+#ifdef CONFIG_MACH_LGE
+static ssize_t vadc_batt_read(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct thermal_policy *t = t_policy_g;
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", t->vadc.batt);
+}
+#endif
+
 static ssize_t sampling_ms_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -398,6 +492,9 @@ static ssize_t user_maxfreq_read(struct device *dev,
 
 static DEVICE_ATTR(enabled, 0644, enabled_read, enabled_write);
 static DEVICE_ATTR(vadc, 0644, vadc_read, vadc_write);
+#ifdef CONFIG_MACH_LGE
+static DEVICE_ATTR(vadc_batt, 0644, vadc_batt_read, vadc_batt_write);
+#endif
 static DEVICE_ATTR(sampling_ms, 0644, sampling_ms_read, sampling_ms_write);
 static DEVICE_ATTR(user_maxfreq, 0644, user_maxfreq_read, user_maxfreq_write);
 static DEVICE_ATTR(zone0, 0644, thermal_zone_read, thermal_zone_write);
@@ -412,6 +509,9 @@ static DEVICE_ATTR(zone7, 0644, thermal_zone_read, thermal_zone_write);
 static struct attribute *msm_thermal_attr[] = {
 	&dev_attr_enabled.attr,
 	&dev_attr_vadc.attr,
+#ifdef CONFIG_MACH_LGE
+	&dev_attr_vadc_batt.attr,
+#endif
 	&dev_attr_sampling_ms.attr,
 	&dev_attr_user_maxfreq.attr,
 	&dev_attr_zone0.attr,
