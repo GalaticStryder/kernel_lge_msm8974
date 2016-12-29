@@ -149,6 +149,12 @@ config CPU_FREQ_DEFAULT_GOV_DARKNESS
 	help
 	  Use the CPUFreq governor 'darkness' as default.
 
+config CPU_FREQ_DEFAULT_GOV_NIGHTMARE
+	bool "nightmare"
+	select CPU_FREQ_GOV_NIGHTMARE
+	help
+	  Use the CPUFreq governor 'nightmare' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -284,6 +290,15 @@ config CPU_FREQ_GOV_DARKNESS
 	help
 	  'darkness' - This driver is a rather simple implementation of a timer
 	  based governor.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_NIGHTMARE
+	tristate "'nightmare' cpufreq policy governor"
+	depends on CPU_FREQ
+	help
+	  'nightmare' - This driver provides a very complete solution for
+	  frequency manipulation across many tunables.
 
 	  If in doubt, say N.
 
