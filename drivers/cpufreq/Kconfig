@@ -143,6 +143,12 @@ config CPU_FREQ_DEFAULT_GOV_ELEMENTALX
 	help
 	  Use the CPUFreq governor 'elementalx' as default.
 
+config CPU_FREQ_DEFAULT_GOV_DARKNESS
+	bool "darkness"
+	select CPU_FREQ_GOV_DARKNESS
+	help
+	  Use the CPUFreq governor 'darkness' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -269,6 +275,15 @@ config CPU_FREQ_GOV_ELEMENTALX
 	  module will be called cpufreq_elementalx.
 
 	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_DARKNESS
+	tristate "'darkness' cpufreq policy governor"
+	depends on CPU_FREQ
+	help
+	  'darkness' - This driver is a rather simple implementation of a timer
+	  based governor.
 
 	  If in doubt, say N.
 
