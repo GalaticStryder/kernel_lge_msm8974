@@ -382,7 +382,6 @@ else if [ "$first" == "--serialized" ]; then
 				variant_assign "$i"
 				echo ""
 				echo -e ${blue}"Building the following variant: $i"${restore}
-				export LOCALVERSION=-$NAME-$RELEASE-$TAG
 				echo -e ${blue}"Using the Linux tag: $LOCALVERSION."${restore}
 				make_zImage
 				create_dtimg
