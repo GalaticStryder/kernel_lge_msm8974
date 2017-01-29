@@ -300,7 +300,7 @@ if [ ! "$first" == "--serialized" ]; then
 fi
 
 echo "Which toolchain you would like to use?"
-select choice in Dorimanx-5.4 Dorimanx-6.1 #Linaro-4.9 (This is a template, add custom choices here...)
+select choice in Dorimanx-5.4 Dorimanx-6.2 #Linaro-4.9 (This is a template, add custom choices here...)
 do
 case "$choice" in
 	"Dorimanx-5.4")
@@ -310,8 +310,8 @@ case "$choice" in
 		export CC="${DORIMANX5_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
 		export STRIP="${DORIMANX5_DIR}/bin/arm-eabi-strip"
 		break;;
-	"Dorimanx-6.1")
-		export TOOLCHAIN="Dorimanx 6.1"
+	"Dorimanx-6.2")
+		export TOOLCHAIN="Dorimanx 6.2"
 		export CROSS_COMPILE="$CCACHE ${DORIMANX6_DIR}/bin/arm-eabi-"
 		export SYSROOT="${DORIMANX6_DIR}/arm-LG-linux-gnueabi/sysroot/"
 		export CC="${DORIMANX6_DIR}/bin/arm-eabi-gcc --sysroot=$SYSROOT"
