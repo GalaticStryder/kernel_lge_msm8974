@@ -973,6 +973,12 @@ config CC_OPTIMIZE_MORE
 
 endchoice
 
+config FAST_LANE
+	bool "Use advanced compilation flags"
+
+config FAST_LANE_ARM
+	bool "Use advanced compilation flags for ARM v7"
+
 config SYSCTL
 	bool
 
