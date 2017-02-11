@@ -45,7 +45,7 @@ FAST_LANE_ARM_OPT := -mtune=cortex-a15 \
 FAST_LANE_OPT_FLAGS := -g0 \
 	-DNDEBUG \
 	-ftree-vectorize \
-	-funsafe-math-optimizations
+	-funsafe-math-optimizations \
 	$(FAST_LANE_ARM_OPT)
 KBUILD_CFLAGS	+= $(FAST_LANE_OPT_FLAGS)
 endif
